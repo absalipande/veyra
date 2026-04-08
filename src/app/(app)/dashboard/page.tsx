@@ -1,5 +1,6 @@
 import { ArrowUpRight, BadgeDollarSign, CreditCard, PiggyBank, ReceiptText } from "lucide-react";
 
+import { DashboardFoundationStatus } from "@/components/app/dashboard-foundation-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,6 +107,8 @@ export default function DashboardPage() {
           );
         })}
       </section>
+
+      <DashboardFoundationStatus />
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
         <Card className="border-white/75 bg-white/78 shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)]">

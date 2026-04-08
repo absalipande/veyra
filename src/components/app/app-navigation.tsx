@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import {
   BadgeDollarSign,
   CreditCard,
@@ -10,6 +8,8 @@ import {
   Settings2,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 

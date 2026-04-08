@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { ClerkProvider } from "@clerk/nextjs";
 
+import { AppProviders } from "@/components/providers/app-providers";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const geistSans = Geist({
@@ -34,7 +35,9 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         <ClerkProvider afterSignOutUrl="/sign-in">
-          <TooltipProvider>{children}</TooltipProvider>
+          <AppProviders>
+            <TooltipProvider>{children}</TooltipProvider>
+          </AppProviders>
         </ClerkProvider>
       </body>
     </html>
