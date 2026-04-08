@@ -63,6 +63,7 @@ export async function createAccount(
       institution: input.institution || null,
       type: input.type,
       balance: input.balance,
+      creditLimit: input.type === "credit" ? input.creditLimit : 0,
     })
     .returning();
 
@@ -102,6 +103,7 @@ export async function updateAccount(
       institution: input.institution || null,
       type: input.type,
       balance: input.balance,
+      creditLimit: input.type === "credit" ? input.creditLimit : 0,
       updatedAt: new Date(),
     })
     .where(eq(accounts.id, input.id))

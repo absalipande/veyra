@@ -31,9 +31,9 @@ const items = [
   },
   {
     label: "Transactions",
-    href: "",
+    href: "/transactions",
     icon: BadgeDollarSign,
-    available: false,
+    available: true,
   },
   {
     label: "Budgets",

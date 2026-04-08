@@ -331,6 +331,235 @@ Institution should support:
 - curated known PH banks/providers
 - custom fallback entry
 
+## Transactions Architecture
+
+Transactions is the most important domain in Veyra.
+
+It should not be treated as a single flat “income/expense tracker” feature.
+
+Veyra transactions must support:
+- income
+- expense
+- transfer
+- credit payment
+- loan disbursement
+
+Over time it may also support:
+- loan repayment
+- scheduled transactions
+- imported transactions
+- rule-based categorization
+
+### Domain Rule
+
+In Veyra, the user performs a financial event.
+
+That event may create one or more account effects underneath.
+
+Examples:
+- Expense
+  - one account balance decreases
+- Income
+  - one account balance increases
+- Transfer
+  - source account decreases
+  - destination account increases
+- Credit payment
+  - cash/bank account decreases
+  - credit liability decreases
+- Loan disbursement
+  - loan liability increases
+  - receiving cash/bank account increases
+- Credit interest
+  - do not model as a standalone event for now; users typically pay the statement amount that already includes it
+
+This means Veyra should be modeled around financial events, not just a generic transaction row with many special cases.
+
+### Recommended Data Model
+
+Build the transactions feature around these concepts:
+
+- `transaction_events`
+  The user-facing action or business event.
+- `ledger_entries`
+  The account-level effects created by the event.
+- `accounts`
+  The account record and current balance snapshot.
+
+`transaction_events` should store:
+- event type
+- primary amount
+- optional fee amount
+- date
+- description / payee
+- notes
+- category reference when relevant
+- metadata for event-specific details
+- user ownership
+
+`ledger_entries` should store:
+- event id
+- account id
+- amount delta
+- currency
+- entry role
+- ordering / line context if needed
+
+### Event Types
+
+The initial event type set should be explicit:
+
+- `income`
+- `expense`
+- `transfer`
+- `credit_payment`
+- `loan_disbursement`
+
+Do not hide these as ambiguous combinations of fields.
+
+The UI can stay simple, but the server model should be strict.
+
+### Server Responsibilities
+
+Transactions service should:
+- validate event input
+- generate ledger entries
+- update affected account balances
+- enforce account compatibility rules
+- return a normalized event result
+
+Additional rules:
+- transfer fees should be modeled explicitly and deducted from the source account in addition to the transfer amount
+- credit payment fees should be modeled explicitly and deducted from the payment account in addition to the amount paid
+- credit limit is absolute and belongs to the account record, not to transaction events
+- a credit account balance may exceed its credit limit because of fees, interest, or over-limit usage
+
+Routers should stay thin and only call transactions services.
+
+### UI Responsibilities
+
+The UI should present clean intent-based actions:
+- add income
+- add expense
+- transfer money
+- pay credit card
+- record loan disbursement
+
+Do not force all of these through a single visually identical flow if that harms clarity.
+
+The first version can share structure, but the user intent should stay obvious.
+
+### Transactions Folder Structure
+
+Preferred structure:
+
+```txt
+src/features/transactions/
+  components/
+  lib/
+  server/
+    schema.ts
+    service.ts
+  types/
+```
+
+Potential future additions:
+
+```txt
+src/features/transactions/
+  components/
+    forms/
+    lists/
+    calendar/
+    sheets/
+  hooks/
+  lib/
+    formatters.ts
+    mappers.ts
+  server/
+    schema.ts
+    service.ts
+    balance-engine.ts
+```
+
+### Transactions v1 Scope
+
+Transactions v1 should include:
+- list events
+- create event
+- edit event
+- delete event
+- support the initial event types
+- filter by account/date/type
+- mobile-safe list UX
+
+Transactions v1 should not include:
+- CSV import
+- calendar view
+- bulk actions
+- AI overlays
+
+Those can be added later after the domain model is stable.
+
+### Transactions Phased Rollout
+
+#### Phase 1: Domain Foundation
+
+Build the core schema and service design first.
+
+Deliverables:
+- `transactions` feature folder
+- event schemas
+- service methods for event creation and deletion
+- DB tables for event + ledger entries
+- thin router
+- account balance update rules in one place
+
+#### Phase 2: Ledger Screen v1
+
+Build the main transactions workspace.
+
+Deliverables:
+- transactions page shell
+- filterable event list
+- account/date/type filters
+- mobile-friendly rows
+- create/edit/delete flows
+
+#### Phase 3: Money Movement Flows
+
+Add the multi-account event types.
+
+Deliverables:
+- transfer flow
+- credit payment flow
+- loan disbursement flow
+- transfer fee support
+- credit payment fee support
+- proper event-specific validation
+- event detail normalization in the list UI
+
+#### Phase 4: Insights and Productivity
+
+Add higher-level workflows once the base model is trusted.
+
+Deliverables:
+- summaries
+- recurring rules
+- import
+- calendar
+- bulk actions
+
+### Production Readiness Rule
+
+Do not optimize transactions around the old Mynt UI structure.
+
+Preserve the real-world finance coverage, but rebuild the internals around:
+- explicit event types
+- centralized balance rules
+- feature-owned services
+- clean transport boundaries
+
 ## Modal Guidelines
 
 Forms and dialogs should feel:

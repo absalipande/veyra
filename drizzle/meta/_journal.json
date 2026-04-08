@@ -15,6 +15,27 @@
       "when": 1775624372486,
       "tag": "0001_silly_energizer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775637308364,
+      "tag": "0002_living_wendell_rand",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775640502988,
+      "tag": "0003_credit_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775641918129,
+      "tag": "0004_rich_lady_vermin",
+      "breakpoints": true
     }
   ]
 }

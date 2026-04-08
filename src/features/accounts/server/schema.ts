@@ -8,6 +8,7 @@ export const createAccountSchema = z.object({
   institution: z.string().trim().max(80).optional().or(z.literal("")),
   type: z.enum(["cash", "credit", "loan", "wallet"]),
   balance: z.number().int(),
+  creditLimit: z.number().int().nonnegative().default(0),
 });
 
 export const updateAccountSchema = createAccountSchema.extend({

@@ -34,7 +34,10 @@ const accountTypeOptions = [
 ] as const;
 
 type CreateState = {
+  creditInputMode: "available" | "balance";
   balance: string;
+  availableCredit: string;
+  creditLimit: string;
   currency: (typeof supportedCurrencies)[number];
   name: string;
   type: (typeof accountTypeOptions)[number]["value"];
@@ -45,7 +48,10 @@ type AccountItem = RouterOutputs["accounts"]["list"][number];
 type DeleteTarget = { id: string; name: string } | null;
 
 const initialState: CreateState = {
+  creditInputMode: "balance",
+  availableCredit: "",
   balance: "",
+  creditLimit: "",
   currency: "PHP",
   name: "",
   type: "cash",
@@ -93,6 +99,31 @@ function getAccountTypeLabel(type: AccountItem["type"]) {
     default:
       return type;
   }
+}
+
+function formatAccountBalanceLabel(account: AccountItem) {
+  if (account.type === "credit") {
+    return "Outstanding";
+  }
+
+  if (account.type === "loan") {
+    return "Loan balance";
+  }
+
+  return "Balance";
+}
+
+function formatAccountBalanceDetail(account: AccountItem) {
+  if (account.type === "credit") {
+    const available = Math.max(account.creditLimit - account.balance, 0);
+
+    return `Limit ${formatCurrencyMiliunits(account.creditLimit, account.currency)} · Avail ${formatCurrencyMiliunits(
+      available,
+      account.currency
+    )}`;
+  }
+
+  return null;
 }
 
 function getAccountMetaTone(type: AccountItem["type"]) {
@@ -221,7 +252,7 @@ function AccountSection({
           </div>
         ) : (
           <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8]">
-            <div className="hidden grid-cols-[minmax(0,1.8fr)_170px_132px] items-center gap-4 border-b border-border/70 px-6 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
+            <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_112px] items-center gap-4 border-b border-border/70 px-6 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
               <p>Account</p>
               <p className="text-right">Balance</p>
               <p className="text-right">Actions</p>
@@ -231,7 +262,7 @@ function AccountSection({
               {accounts.map((account) => (
                 <div
                   key={account.id}
-                  className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1.8fr)_170px_132px] md:items-center md:gap-4 md:px-6"
+                  className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1.65fr)_220px_112px] md:items-center md:gap-4 md:px-6"
                 >
                   <div className="min-w-0 md:min-w-0">
                     <div className="min-w-0">
@@ -250,12 +281,17 @@ function AccountSection({
 
                   <div className="flex items-start justify-between gap-3 md:block md:text-right">
                     <div>
-                    <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground md:hidden">
-                      Balance
-                    </p>
-                    <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-[#10292B] md:mt-0">
-                      {formatCurrencyMiliunits(account.balance, account.currency)}
-                    </p>
+                      <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground md:hidden">
+                        {formatAccountBalanceLabel(account)}
+                      </p>
+                      <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-[#10292B] md:mt-0">
+                        {formatCurrencyMiliunits(account.balance, account.currency)}
+                      </p>
+                      {formatAccountBalanceDetail(account) ? (
+                        <p className="mt-1 text-[0.68rem] leading-5 text-muted-foreground md:ml-auto md:max-w-[220px] md:text-right">
+                          {formatAccountBalanceDetail(account)}
+                        </p>
+                      ) : null}
                     </div>
 
                     <div className="flex gap-2 md:hidden">
@@ -429,6 +465,18 @@ export function AccountsWorkspace() {
     return Math.round(numeric * 1000);
   }, [form.balance]);
 
+  const parsedCreditLimit = useMemo(() => {
+    const numeric = Number(form.creditLimit);
+    if (Number.isNaN(numeric)) return 0;
+    return Math.max(Math.round(numeric * 1000), 0);
+  }, [form.creditLimit]);
+
+  const parsedAvailableCredit = useMemo(() => {
+    const numeric = Number(form.availableCredit);
+    if (Number.isNaN(numeric)) return 0;
+    return Math.max(Math.round(numeric * 1000), 0);
+  }, [form.availableCredit]);
+
   const accountGroups = useMemo(() => {
     const accounts = accountsQuery.data ?? [];
 
@@ -468,14 +516,86 @@ export function AccountsWorkspace() {
   };
 
   const startEdit = (account: AccountItem) => {
+    const availableCredit =
+      account.type === "credit" ? Math.max(account.creditLimit - account.balance, 0) : 0;
+
     setEditingId(account.id);
     setForm({
+      creditInputMode: "balance",
+      availableCredit: account.type === "credit" ? (availableCredit / 1000).toFixed(2) : "",
       balance: (account.balance / 1000).toFixed(2),
+      creditLimit: account.type === "credit" ? (account.creditLimit / 1000).toFixed(2) : "",
       currency: isSupportedCurrency(account.currency) ? account.currency : "PHP",
       name: account.name,
       type: account.type,
     });
     setOpen(true);
+  };
+
+  const setCreditBalanceValue = (value: string) => {
+    setForm((current) => {
+      const numericBalance = Number(value);
+      const numericLimit = Number(current.creditLimit);
+      const nextAvailable =
+        Number.isNaN(numericBalance) || Number.isNaN(numericLimit)
+          ? ""
+          : Math.max(numericLimit - numericBalance, 0).toFixed(2);
+
+      return {
+        ...current,
+        balance: value,
+        availableCredit: nextAvailable,
+      };
+    });
+  };
+
+  const setAvailableCreditValue = (value: string) => {
+    setForm((current) => {
+      const numericAvailable = Number(value);
+      const numericLimit = Number(current.creditLimit);
+      const nextBalance =
+        Number.isNaN(numericAvailable) || Number.isNaN(numericLimit)
+          ? ""
+          : Math.max(numericLimit - numericAvailable, 0).toFixed(2);
+
+      return {
+        ...current,
+        availableCredit: value,
+        balance: nextBalance,
+      };
+    });
+  };
+
+  const setCreditLimitValue = (value: string) => {
+    setForm((current) => {
+      const numericLimit = Number(value);
+      const nextState = {
+        ...current,
+        creditLimit: value,
+      };
+
+      if (Number.isNaN(numericLimit)) {
+        return nextState;
+      }
+
+      if (current.creditInputMode === "available") {
+        const numericAvailable = Number(current.availableCredit);
+        return {
+          ...nextState,
+          balance: Number.isNaN(numericAvailable)
+            ? ""
+            : Math.max(numericLimit - numericAvailable, 0).toFixed(2),
+        };
+      }
+
+      const numericBalance = Number(current.balance);
+      return {
+        ...nextState,
+        availableCredit: Number.isNaN(numericBalance)
+          ? ""
+          : Math.max(numericLimit - numericBalance, 0).toFixed(2),
+      };
+    });
   };
 
   const onSubmit = () => {
@@ -489,6 +609,7 @@ export function AccountsWorkspace() {
         institution: "",
         type: form.type,
         balance: parsedBalance,
+        creditLimit: form.type === "credit" ? parsedCreditLimit : 0,
       });
       return;
     }
@@ -499,6 +620,7 @@ export function AccountsWorkspace() {
       institution: "",
       type: form.type,
       balance: parsedBalance,
+      creditLimit: form.type === "credit" ? parsedCreditLimit : 0,
     });
   };
 
@@ -711,24 +833,106 @@ export function AccountsWorkspace() {
                     </div>
                   </div>
 
-                  <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
-                    <label className={accountFieldLabelClassName}>Opening balance</label>
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      value={form.balance}
-                      onChange={(event) =>
-                        setForm((current) => ({ ...current, balance: event.target.value }))
-                      }
-                      placeholder="0.00"
-                      className={accountFieldClassName}
-                    />
-                  </div>
+                  {form.type !== "credit" ? (
+                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                      <label className={accountFieldLabelClassName}>
+                        {form.type === "loan" ? "Current loan balance" : "Opening balance"}
+                      </label>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        value={form.balance}
+                        onChange={(event) =>
+                          setForm((current) => ({ ...current, balance: event.target.value }))
+                        }
+                        placeholder="0.00"
+                        className={accountFieldClassName}
+                      />
+                    </div>
+                  ) : null}
+
+                  {form.type === "credit" ? (
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                        <label className={accountFieldLabelClassName}>Credit limit</label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={form.creditLimit}
+                          onChange={(event) => setCreditLimitValue(event.target.value)}
+                          placeholder="0.00"
+                          className={accountFieldClassName}
+                        />
+                      </div>
+
+                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                        <label className={accountFieldLabelClassName}>Input mode</label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            { label: "I know balance", value: "balance" as const },
+                            { label: "I know available", value: "available" as const },
+                          ].map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                setForm((current) => ({
+                                  ...current,
+                                  creditInputMode: option.value,
+                                }))
+                              }
+                              className={`min-h-13 rounded-[1.35rem] border px-4 py-2.5 text-[0.88rem] transition ${
+                                form.creditInputMode === option.value
+                                  ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                                  : "border-border/80 bg-background text-foreground hover:bg-muted/70"
+                              }`}
+                            >
+                              {option.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                        <label className={accountFieldLabelClassName}>
+                          {form.creditInputMode === "available"
+                            ? "Available credit"
+                            : "Current balance"}
+                        </label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={form.creditInputMode === "available" ? form.availableCredit : form.balance}
+                          onChange={(event) =>
+                            form.creditInputMode === "available"
+                              ? setAvailableCreditValue(event.target.value)
+                              : setCreditBalanceValue(event.target.value)
+                          }
+                          placeholder="0.00"
+                          className={accountFieldClassName}
+                        />
+                      </div>
+
+                      <div className="space-y-3 rounded-[1.4rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-4">
+                        <label className={accountFieldLabelClassName}>
+                          {form.creditInputMode === "available"
+                            ? "Computed current balance"
+                            : "Computed available credit"}
+                        </label>
+                        <div className="flex min-h-13 items-center rounded-[1.35rem] border border-border/80 bg-background px-5 text-[0.95rem] text-muted-foreground">
+                          {form.creditInputMode === "available"
+                            ? formatCurrencyMiliunits(parsedBalance, form.currency)
+                            : formatCurrencyMiliunits(parsedAvailableCredit, form.currency)}
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
 
                   <div className="rounded-[1.25rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3">
                     <p className="text-[0.9rem] leading-6 text-muted-foreground">
-                      Balances are stored in each account&apos;s native currency. Cross-currency rollups can
-                      be layered on later.
+                      {form.type === "credit"
+                        ? "For credit cards, credit limit stays fixed while current balance tracks what you owe. If you only know the available credit from your banking app, Veyra can derive the balance for you."
+                        : "Balances are stored in each account&apos;s native currency. Cross-currency rollups can be layered on later."}
                     </p>
                   </div>
 
