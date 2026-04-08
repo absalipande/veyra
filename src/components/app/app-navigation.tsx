@@ -22,9 +22,9 @@ const items = [
   },
   {
     label: "Accounts",
-    href: "",
+    href: "/accounts",
     icon: CreditCard,
-    available: false,
+    available: true,
   },
   {
     label: "Transactions",

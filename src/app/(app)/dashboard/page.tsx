@@ -1,4 +1,5 @@
 import { ArrowUpRight, BadgeDollarSign, CreditCard, PiggyBank, ReceiptText } from "lucide-react";
+import Link from "next/link";
 
 import { DashboardFoundationStatus } from "@/components/app/dashboard-foundation-status";
 import { Badge } from "@/components/ui/badge";
@@ -44,9 +45,11 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-3">
-            <Button className="rounded-full bg-white text-[#153638] hover:bg-white/92">
+            <Button asChild className="rounded-full bg-white text-[#153638] hover:bg-white/92">
+              <Link href="/accounts">
               Begin accounts foundation
               <ArrowUpRight className="size-4" />
+              </Link>
             </Button>
             <Button
               variant="outline"

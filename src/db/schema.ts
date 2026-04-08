@@ -1,7 +1,7 @@
 import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const userPreferences = pgTable(
-  "user_preferences",
+  "veyra_user_preferences",
   {
     id: text("id").primaryKey(),
     clerkUserId: text("clerk_user_id").notNull().unique(),
@@ -11,12 +11,12 @@ export const userPreferences = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
-    clerkUserIdx: index("user_preferences_clerk_user_idx").on(table.clerkUserId),
+    clerkUserIdx: index("veyra_user_preferences_clerk_user_idx").on(table.clerkUserId),
   })
 );
 
 export const accounts = pgTable(
-  "accounts",
+  "veyra_accounts",
   {
     id: text("id").primaryKey(),
     clerkUserId: text("clerk_user_id").notNull(),
@@ -32,6 +32,6 @@ export const accounts = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
-    clerkUserIdx: index("accounts_clerk_user_idx").on(table.clerkUserId),
+    clerkUserIdx: index("veyra_accounts_clerk_user_idx").on(table.clerkUserId),
   })
 );
