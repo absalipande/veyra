@@ -196,6 +196,9 @@ src/
       components/
       lib/
       server/
+    transactions/
+      components/
+      server/
   lib/
   server/
     api/
@@ -224,6 +227,105 @@ src/features/<feature>/
     service.ts
   types/
 ```
+
+Current feature ownership should be treated as:
+
+```txt
+src/features/accounts/
+  components/
+    accounts-workspace.tsx
+  lib/
+    institutions.ts
+  server/
+    schema.ts
+    service.ts
+
+src/features/transactions/
+  components/
+    transactions-workspace.tsx
+  server/
+    schema.ts
+    service.ts
+```
+
+Shared shell/UI should stay in:
+
+```txt
+src/components/app/
+src/components/auth/
+src/components/brand/
+src/components/providers/
+src/components/ui/
+```
+
+Use `src/components` for shared cross-feature UI only.
+If a component is primarily owned by one feature, move it into that feature folder instead of
+growing `src/components` indefinitely.
+
+## Current Architecture By Layer
+
+### Accounts
+
+Accounts currently follow the desired split:
+- router:
+  - `src/server/api/routers/accounts.ts`
+- feature schemas and logic:
+  - `src/features/accounts/server/schema.ts`
+  - `src/features/accounts/server/service.ts`
+- feature UI:
+  - `src/features/accounts/components/accounts-workspace.tsx`
+
+Accounts responsibilities:
+- maintain user-scoped accounts
+- keep balances in native currency
+- support `Bank`, `Wallet`, `Credit`, and `Loan` account types
+- treat credit cards with:
+  - absolute `creditLimit`
+  - live owed `balance`
+  - derived available credit
+
+### Transactions
+
+Transactions are built as financial events, not just flat rows.
+
+Current transaction event types:
+- `income`
+- `expense`
+- `transfer`
+- `credit_payment`
+- `loan_disbursement`
+
+Current transaction architecture:
+- router:
+  - `src/server/api/routers/transactions.ts`
+- feature schemas and logic:
+  - `src/features/transactions/server/schema.ts`
+  - `src/features/transactions/server/service.ts`
+- feature UI:
+  - `src/features/transactions/components/transactions-workspace.tsx`
+
+Transaction rules:
+- `income`
+  - applies to a bank or wallet account
+- `expense`
+  - applies to a bank, wallet, or credit account
+  - on credit, it increases debt
+- `transfer`
+  - moves money between liquid accounts
+  - may include a fee
+- `credit_payment`
+  - reduces debt from a liquid account
+  - may include a fee
+- `loan_disbursement`
+  - increases the loan account and the receiving liquid account
+
+Architectural rule:
+- the user creates one event
+- the service generates the corresponding ledger entries
+- account balances are updated centrally in service logic
+
+This is intentionally better-structured than legacy Mynt behavior, where too much of the finance
+logic was implicitly carried by UI assumptions.
 
 ## Design System Direction
 
@@ -290,6 +392,22 @@ Avoid:
 - “next step”, “foundation”, “this layout works” style filler
 - references to implementation details
 - text that feels like a prototype explanation
+
+Dashboard-specific note:
+- until more core modules are implemented, the dashboard should stay intentionally light
+- do not fill it with placeholder product-strategy cards or artificial widgets just to occupy space
+- prefer a restrained home screen with:
+  - top-level money posture
+  - recent movement
+  - important accounts
+  - quick routes into real modules
+- the dashboard should be repopulated incrementally as features become real
+
+Current dashboard decision:
+- keep the dashboard minimal for now
+- wait until more key features are implemented before expanding it again
+- avoid ticker-style or market-terminal energy
+- prefer a calm finance briefing over a dense widget wall
 
 ## Layout Guidelines
 

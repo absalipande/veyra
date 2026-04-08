@@ -9,31 +9,31 @@ const summaryConfig = [
   {
     key: "liquidAccounts",
     label: "Liquid accounts",
-    helper: "Bank and wallet balances kept ready for day-to-day cash flow",
+    helper: "Bank and wallet accounts currently available for day-to-day use",
     icon: Landmark,
   },
   {
     key: "liabilityAccounts",
     label: "Liabilities",
-    helper: "Credit cards and loans being monitored in the workspace",
+    helper: "Credit and loan accounts that should stay visible in regular review",
     icon: CreditCard,
   },
   {
     key: "totalEvents",
-    label: "Events logged",
-    helper: "Money movements recorded across income, spending, transfers, and payments",
+    label: "Events recorded",
+    helper: "Income, spending, transfers, payments, and disbursements in the ledger",
     icon: ReceiptText,
   },
   {
     key: "internalMovement",
     label: "Internal movement",
-    helper: "Transfers and credit payments already flowing through the ledger",
+    helper: "Transfers and card payments moving value between your own accounts",
     icon: ArrowRightLeft,
   },
   {
     key: "activeCurrencies",
     label: "Currencies in use",
-    helper: "Balances stay native to each account currency without forced rollups",
+    helper: "Balances remain native to each account instead of being flattened too early",
     icon: Globe2,
   },
 ] as const;
@@ -67,8 +67,7 @@ export function DashboardLiveSummary() {
           <CardHeader>
             <CardTitle className="text-xl tracking-tight">Couldn’t load live summary</CardTitle>
             <CardDescription>
-              The dashboard is connected to live procedures, but this summary strip could not read
-              the latest data yet.
+              The latest account and transaction totals are not available right now.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -94,7 +93,7 @@ export function DashboardLiveSummary() {
         return (
           <Card
             key={card.key}
-            className="border-white/75 bg-white/78 shadow-[0_20px_70px_-55px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_70px_-50px_rgba(0,0,0,0.6)]"
+            className="border-white/75 bg-white/80 shadow-[0_20px_70px_-55px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_70px_-50px_rgba(0,0,0,0.6)]"
           >
             <CardHeader className="flex flex-row items-start justify-between gap-4 pb-2">
               <div className="space-y-1">
