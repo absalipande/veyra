@@ -196,6 +196,9 @@ src/
       components/
       lib/
       server/
+    budgets/
+      lib/
+      server/
     transactions/
       components/
       server/
@@ -243,6 +246,13 @@ src/features/accounts/
 src/features/transactions/
   components/
     transactions-workspace.tsx
+  server/
+    schema.ts
+    service.ts
+
+src/features/budgets/
+  lib/
+    period-engine.ts
   server/
     schema.ts
     service.ts
@@ -318,6 +328,50 @@ Transaction rules:
   - may include a fee
 - `loan_disbursement`
   - increases the loan account and the receiving liquid account
+
+### Budgets
+
+Budgets should stay period-aware and transaction-derived.
+
+Current budget architecture:
+- router:
+  - `src/server/api/routers/budgets.ts`
+- feature schemas and logic:
+  - `src/features/budgets/server/schema.ts`
+  - `src/features/budgets/server/service.ts`
+- feature period logic:
+  - `src/features/budgets/lib/period-engine.ts`
+
+Current budget rules:
+- budgets are user-scoped
+- Veyra supports:
+  - `daily`
+  - `weekly`
+  - `bi-weekly`
+  - `monthly`
+- `bi-weekly` budgets may use `salaryDates`
+- `parentBudgetId` enables roll-up from child budgets into a parent budget
+- budget spending is derived from `expense` transaction events only
+- `transactionEvents.budgetId` is the linkage point for budget-scoped spending
+- budget status levels are:
+  - `safe`
+  - `warning`
+  - `danger`
+  - `exceeded`
+
+Budget implementation guidance:
+- keep the period engine as the single source of truth for active budget windows
+- do not duplicate period logic inside routers or UI components
+- do not manually store spent totals on the budget record
+- derive spent / remaining / percentage from transaction events in the active window
+- keep insights, rollover behavior, and recurring planning out of Phase 1
+
+Phase 1 budget scope:
+- table + router + service foundation
+- active window calculation
+- spending roll-up
+- parent/child support
+- no budget workspace UI yet
 
 Architectural rule:
 - the user creates one event

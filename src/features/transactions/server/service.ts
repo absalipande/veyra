@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { accounts, ledgerEntries, transactionEvents } from "@/db/schema";
+import { accounts, budgets, ledgerEntries, transactionEvents } from "@/db/schema";
 import {
   createTransactionEventSchema,
   deleteTransactionEventSchema,
@@ -104,6 +104,25 @@ async function getUserAccounts(
     .where(and(eq(accounts.clerkUserId, userId), inArray(accounts.id, uniqueIds)));
 
   return new Map(rows.map((account) => [account.id, account]));
+}
+
+async function requireBudgetForUser(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  budgetId: string
+) {
+  const userId = assertUserId(ctx.userId);
+  const budget = await ctx.db.query.budgets.findFirst({
+    where: and(eq(budgets.id, budgetId), eq(budgets.clerkUserId, userId)),
+  });
+
+  if (!budget) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Budget not found.",
+    });
+  }
+
+  return budget;
 }
 
 function buildEntriesForEvent(
@@ -390,6 +409,10 @@ export async function createTransactionEvent(
 ) {
   const userId = assertUserId(ctx.userId);
 
+  if (input.type === "expense" && input.budgetId) {
+    await requireBudgetForUser(ctx, input.budgetId);
+  }
+
   const accountIds =
     input.type === "income" || input.type === "expense"
       ? [input.accountId]
@@ -415,6 +438,7 @@ export async function createTransactionEvent(
       amount: input.amount,
       feeAmount:
         input.type === "transfer" || input.type === "credit_payment" ? input.feeAmount : 0,
+      budgetId: input.type === "expense" ? input.budgetId ?? null : null,
       description: input.description,
       notes: input.notes || null,
       occurredAt: input.date,

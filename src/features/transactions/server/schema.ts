@@ -26,6 +26,7 @@ export const createTransactionEventSchema = z.discriminatedUnion("type", [
     type: z.literal("expense"),
     accountId: z.string().uuid(),
     amount: amountSchema,
+    budgetId: z.string().uuid().optional(),
   }),
   baseEventSchema.extend({
     type: z.literal("transfer"),

@@ -1,33 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import type { inferRouterOutputs } from "@trpc/server";
 import { Clock3, CreditCard, Landmark, Layers3, Wallet } from "lucide-react";
 import Link from "next/link";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
-import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-type RouterOutputs = inferRouterOutputs<AppRouter>;
-type AccountItem = RouterOutputs["accounts"]["list"][number];
-
-function getAccountTypeLabel(type: AccountItem["type"]) {
-  switch (type) {
-    case "cash":
-      return "Bank";
-    case "wallet":
-      return "Wallet";
-    case "credit":
-      return "Credit";
-    case "loan":
-      return "Loan";
-    default:
-      return type;
-  }
-}
 
 function formatActivityDate(value: Date | string) {
   const date = typeof value === "string" ? new Date(value) : value;
@@ -37,19 +17,6 @@ function formatActivityDate(value: Date | string) {
     day: "numeric",
     year: "numeric",
   }).format(date);
-}
-
-function getAccountHeadline(account: AccountItem) {
-  if (account.type === "credit") {
-    const available = Math.max(account.creditLimit - account.balance, 0);
-    return `Limit ${formatCurrencyMiliunits(account.creditLimit, account.currency)} · Available ${formatCurrencyMiliunits(available, account.currency)}`;
-  }
-
-  if (account.type === "loan") {
-    return `${getAccountTypeLabel(account.type)} · ${account.currency}`;
-  }
-
-  return `${getAccountTypeLabel(account.type)} · Ready to use`;
 }
 
 export function DashboardRecentActivity() {
@@ -141,8 +108,10 @@ export function DashboardRecentActivity() {
       <Card className="border-white/75 bg-white/78 shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_90px_-55px_rgba(0,0,0,0.62)]">
         <CardHeader className="flex flex-row items-start justify-between gap-4">
           <div className="space-y-2">
-            <CardTitle className="text-[1.6rem] tracking-tight">Balances worth checking</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-[1.35rem] tracking-tight sm:text-[1.45rem]">
+              Balances worth checking
+            </CardTitle>
+            <CardDescription className="max-w-[34rem] text-[0.95rem] leading-7">
               The accounts carrying the most weight in your workspace right now.
             </CardDescription>
           </div>
@@ -152,7 +121,7 @@ export function DashboardRecentActivity() {
         </CardHeader>
         <CardContent className="grid gap-5 lg:grid-cols-2">
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[0.95rem] font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 text-[0.9rem] font-medium text-muted-foreground">
               <Landmark className="size-4" />
               Liquid positions
             </div>
@@ -166,11 +135,10 @@ export function DashboardRecentActivity() {
                   key={account.id}
                   className="flex items-center justify-between gap-4 rounded-[1.5rem] border border-border/70 bg-background/72 px-4 py-4 dark:bg-[#12191b]"
                 >
-                  <div className="min-w-0 space-y-1">
-                    <p className="truncate text-[1.05rem] font-medium tracking-tight">{account.name}</p>
-                    <p className="text-sm text-muted-foreground">{getAccountHeadline(account)}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-[0.95rem] font-medium tracking-tight">{account.name}</p>
                   </div>
-                  <p className="shrink-0 text-[1.05rem] font-semibold tracking-tight">
+                  <p className="shrink-0 text-[0.95rem] font-semibold tracking-tight">
                     {formatCurrencyMiliunits(account.balance, account.currency)}
                   </p>
                 </div>
@@ -179,7 +147,7 @@ export function DashboardRecentActivity() {
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[0.95rem] font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 text-[0.9rem] font-medium text-muted-foreground">
               <CreditCard className="size-4" />
               Liabilities
             </div>
@@ -193,11 +161,10 @@ export function DashboardRecentActivity() {
                   key={account.id}
                   className="flex items-center justify-between gap-4 rounded-[1.5rem] border border-border/70 bg-background/72 px-4 py-4 dark:bg-[#12191b]"
                 >
-                  <div className="min-w-0 space-y-1">
-                    <p className="truncate text-[1.05rem] font-medium tracking-tight">{account.name}</p>
-                    <p className="text-sm text-muted-foreground">{getAccountHeadline(account)}</p>
+                  <div className="min-w-0">
+                    <p className="truncate text-[0.95rem] font-medium tracking-tight">{account.name}</p>
                   </div>
-                  <p className="shrink-0 text-[1.05rem] font-semibold tracking-tight">
+                  <p className="shrink-0 text-[0.95rem] font-semibold tracking-tight">
                     {formatCurrencyMiliunits(account.balance, account.currency)}
                   </p>
                 </div>
@@ -209,8 +176,8 @@ export function DashboardRecentActivity() {
 
       <Card className="border-white/75 bg-white/78 shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_90px_-55px_rgba(0,0,0,0.62)]">
         <CardHeader className="space-y-2">
-          <CardTitle className="text-[1.6rem] tracking-tight">What stands out</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-[1.35rem] tracking-tight sm:text-[1.45rem]">What stands out</CardTitle>
+          <CardDescription className="text-[0.95rem] leading-7">
             A few useful markers from the workspace at this moment.
           </CardDescription>
         </CardHeader>
@@ -221,14 +188,14 @@ export function DashboardRecentActivity() {
             return (
               <div
                 key={signal.label}
-                className="rounded-[1.5rem] border border-border/70 bg-background/72 px-4 py-4 dark:bg-[#12191b]"
+                className="rounded-[1.5rem] border border-border/70 bg-background/72 px-4 py-3.5 dark:bg-[#12191b]"
               >
-                <div className="flex items-center gap-2 text-[0.95rem] font-medium text-muted-foreground">
+                <div className="flex items-center gap-2 text-[0.9rem] font-medium text-muted-foreground">
                   <Icon className="size-4" />
                   {signal.label}
                 </div>
-                <p className="mt-2 text-[1.05rem] font-semibold tracking-tight">{signal.value}</p>
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">{signal.detail}</p>
+                <p className="mt-2 text-[0.95rem] font-semibold tracking-tight">{signal.value}</p>
+                <p className="mt-1 text-[0.9rem] leading-6 text-muted-foreground">{signal.detail}</p>
               </div>
             );
           })}

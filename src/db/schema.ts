@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const userPreferences = pgTable(
   "veyra_user_preferences",
@@ -38,6 +38,30 @@ export const accounts = pgTable(
   })
 );
 
+export const budgets = pgTable(
+  "veyra_budgets",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    name: text("name").notNull(),
+    amount: integer("amount").notNull(),
+    period: text("period", {
+      enum: ["daily", "weekly", "bi-weekly", "monthly"],
+    }).notNull(),
+    startDate: timestamp("start_date", { mode: "date" }).notNull(),
+    salaryDates: text("salary_dates"),
+    parentBudgetId: text("parent_budget_id"),
+    isActive: boolean("is_active").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_budgets_clerk_user_idx").on(table.clerkUserId),
+    parentBudgetIdx: index("veyra_budgets_parent_budget_idx").on(table.parentBudgetId),
+    periodIdx: index("veyra_budgets_period_idx").on(table.period),
+  })
+);
+
 export const transactionEvents = pgTable(
   "veyra_transaction_events",
   {
@@ -55,6 +79,7 @@ export const transactionEvents = pgTable(
     currency: text("currency").default("PHP").notNull(),
     amount: integer("amount").notNull(),
     feeAmount: integer("fee_amount").default(0).notNull(),
+    budgetId: text("budget_id").references(() => budgets.id, { onDelete: "set null" }),
     description: text("description").notNull(),
     notes: text("notes"),
     occurredAt: timestamp("occurred_at", { mode: "date" }).notNull(),
@@ -65,6 +90,7 @@ export const transactionEvents = pgTable(
     clerkUserIdx: index("veyra_transaction_events_clerk_user_idx").on(table.clerkUserId),
     occurredAtIdx: index("veyra_transaction_events_occurred_at_idx").on(table.occurredAt),
     typeIdx: index("veyra_transaction_events_type_idx").on(table.type),
+    budgetIdx: index("veyra_transaction_events_budget_idx").on(table.budgetId),
   })
 );
 
