@@ -1,31 +1,11 @@
-import { ArrowUpRight, BadgeDollarSign, CreditCard, PiggyBank, ReceiptText } from "lucide-react";
+import { ArrowUpRight, ReceiptText } from "lucide-react";
 import Link from "next/link";
 
 import { DashboardFoundationStatus } from "@/components/app/dashboard-foundation-status";
+import { DashboardLiveSummary } from "@/components/app/dashboard-live-summary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-const summaryCards = [
-  {
-    label: "Cash position",
-    value: "P0.00",
-    helper: "Will come from linked cash accounts",
-    icon: PiggyBank,
-  },
-  {
-    label: "Credit used",
-    value: "P0.00",
-    helper: "Reserved for cards and loans",
-    icon: CreditCard,
-  },
-  {
-    label: "Monthly spend",
-    value: "P0.00",
-    helper: "Driven by transactions and categories",
-    icon: BadgeDollarSign,
-  },
-];
 
 export default function DashboardPage() {
   return (
@@ -47,8 +27,8 @@ export default function DashboardPage() {
           <CardContent className="flex flex-wrap gap-3">
             <Button asChild className="rounded-full bg-white text-[#153638] hover:bg-white/92">
               <Link href="/accounts">
-              Begin accounts foundation
-              <ArrowUpRight className="size-4" />
+                Begin accounts foundation
+                <ArrowUpRight className="size-4" />
               </Link>
             </Button>
             <Button
@@ -85,31 +65,7 @@ export default function DashboardPage() {
         </Card>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
-
-          return (
-            <Card
-              key={card.label}
-              className="border-white/75 bg-white/78 shadow-[0_20px_70px_-55px_rgba(10,31,34,0.35)]"
-            >
-              <CardHeader className="flex flex-row items-start justify-between gap-4 pb-3">
-                <div className="space-y-1">
-                  <CardDescription>{card.label}</CardDescription>
-                  <CardTitle className="text-3xl tracking-tight">{card.value}</CardTitle>
-                </div>
-                <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Icon className="size-5" />
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0 text-sm leading-6 text-muted-foreground">
-                {card.helper}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </section>
+      <DashboardLiveSummary />
 
       <DashboardFoundationStatus />
 

@@ -47,7 +47,7 @@ export default async function SignUpPage() {
     <AuthShell
       badge="Create account"
       title="Create your account"
-      description="Start with a clean personal finance workspace built for clarity."
+      description="Create an account to start your Veyra workspace and return to it anytime."
       sideEyebrow="Personal finance, refined"
       sideTitle="A more thoughtful home for your money."
       sideDescription="Set up your account and step into a workspace shaped for day-to-day clarity, not clutter."
@@ -56,39 +56,49 @@ export default async function SignUpPage() {
       sideFootnote="Clear enough for everyday use. Polished enough to enjoy."
     >
       <ClerkLoaded>
-        <SignUp
-          path="/sign-up"
-          routing="path"
-          signInUrl="/sign-in"
-          fallbackRedirectUrl="/dashboard"
-          appearance={{
-            elements: {
-              rootBox: "mx-auto w-full max-w-[26rem]",
-              cardBox: "w-full shadow-none",
-              card: "w-full shadow-none border-0 bg-transparent p-0",
-              main: "gap-5",
-              header: "hidden",
-              headerTitle: "hidden",
-              headerSubtitle: "hidden",
-              socialButtonsBlock: "gap-3",
-              socialButtonsBlockButton:
-                "h-12 rounded-2xl border border-[#d7e3dc] bg-[#fbfcfa] shadow-none hover:bg-white",
-              socialButtonsBlockButtonText: "font-medium text-[#17393c]",
-              dividerLine: "bg-[#dfe8e2]",
-              dividerText: "text-[#7c918f]",
-              form: "gap-5",
-              formFieldRow: "gap-3",
-              formFieldLabel: "text-[#17393c] font-medium",
-              formFieldInput:
-                "h-12 rounded-2xl border border-[#d7e3dc] bg-white px-4 shadow-none focus:border-[#8fc8b3]",
-              formButtonPrimary:
-                "h-12 rounded-2xl bg-[#17393c] text-white shadow-[0_18px_40px_-24px_rgba(23,57,60,0.9)] hover:bg-[#1d4a4d]",
-              footer: "pt-5",
-              footerActionText: "text-[#6d8381]",
-              footerActionLink: "text-[#17393c] hover:text-[#10292b]",
-            },
-          }}
-        />
+        <div className="space-y-5">
+          <div className="space-y-2 text-center">
+            <h2 className="text-[1.85rem] font-semibold tracking-tight text-[#10292B]">
+              Create your veyra account
+            </h2>
+            <p className="text-[1rem] leading-7 text-[#6d8381]">
+              Set up your workspace and come back to it anytime.
+            </p>
+          </div>
+          <SignUp
+            path="/sign-up"
+            routing="path"
+            signInUrl="/sign-in"
+            fallbackRedirectUrl="/dashboard"
+            appearance={{
+              elements: {
+                rootBox: "mx-auto w-full max-w-[26rem]",
+                cardBox: "w-full shadow-none",
+                card: "w-full shadow-none border-0 bg-transparent p-0",
+                main: "gap-5",
+                header: "hidden",
+                headerTitle: "hidden",
+                headerSubtitle: "hidden",
+                socialButtonsBlock: "gap-3",
+                socialButtonsBlockButton:
+                  "h-12 rounded-2xl border border-[#d7e3dc] bg-[#fbfcfa] shadow-none hover:bg-white",
+                socialButtonsBlockButtonText: "font-medium text-[#17393c]",
+                dividerLine: "bg-[#dfe8e2]",
+                dividerText: "text-[#7c918f]",
+                form: "gap-5",
+                formFieldRow: "gap-3",
+                formFieldLabel: "text-[#17393c] font-medium",
+                formFieldInput:
+                  "h-12 rounded-2xl border border-[#d7e3dc] bg-white px-4 shadow-none focus:border-[#8fc8b3]",
+                formButtonPrimary:
+                  "h-12 rounded-2xl bg-[#17393c] text-white shadow-[0_18px_40px_-24px_rgba(23,57,60,0.9)] hover:bg-[#1d4a4d]",
+                footer: "pt-5",
+                footerActionText: "text-[#6d8381]",
+                footerActionLink: "text-[#17393c] hover:text-[#10292b]",
+              },
+            }}
+          />
+        </div>
       </ClerkLoaded>
       <ClerkLoading>
         <div className="flex min-h-[320px] items-center justify-center">

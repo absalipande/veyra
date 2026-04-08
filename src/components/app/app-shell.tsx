@@ -14,7 +14,7 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,rgba(248,246,239,0.96),rgba(243,247,244,0.94))]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px]">
-        <aside className="hidden w-[292px] shrink-0 border-r border-border/70 bg-white/72 px-5 py-6 backdrop-blur xl:flex xl:flex-col">
+        <aside className="sticky top-0 hidden h-screen w-[292px] shrink-0 self-start border-r border-border/70 bg-white/72 px-5 py-6 backdrop-blur xl:flex xl:flex-col">
           <div className="rounded-[2rem] border border-white/80 bg-white/75 p-4 shadow-[0_20px_60px_-45px_rgba(10,31,34,0.42)]">
             <VeyraWordmark />
             <p className="mt-3 text-sm leading-6 text-muted-foreground">

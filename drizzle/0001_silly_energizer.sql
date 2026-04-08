@@ -1,0 +1,1 @@
+ALTER TABLE "veyra_accounts" ADD COLUMN "currency" text DEFAULT 'PHP' NOT NULL;

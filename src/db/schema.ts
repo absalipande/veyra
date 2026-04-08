@@ -21,6 +21,7 @@ export const accounts = pgTable(
     id: text("id").primaryKey(),
     clerkUserId: text("clerk_user_id").notNull(),
     name: text("name").notNull(),
+    currency: text("currency").default("PHP").notNull(),
     type: text("type", {
       enum: ["cash", "credit", "loan", "wallet"],
     })

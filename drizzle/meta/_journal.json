@@ -8,6 +8,13 @@
       "when": 1775623164641,
       "tag": "0000_slimy_wind_dancer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775624372486,
+      "tag": "0001_silly_energizer",
+      "breakpoints": true
     }
   ]
 }
