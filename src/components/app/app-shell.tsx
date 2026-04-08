@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
-import { Menu, Search, Sparkles } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 
 import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
 import { Button } from "@/components/ui/button";
@@ -41,11 +41,7 @@ export function AppShell({ children }: AppShellProps) {
           <header className="sticky top-0 z-20 border-b border-border/70 bg-background/72 backdrop-blur-xl">
             <div className="flex items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
               <div className="xl:hidden">
-                <MobileAppNavigation>
-                  <Button variant="outline" size="icon" className="rounded-2xl">
-                    <Menu className="size-5" />
-                  </Button>
-                </MobileAppNavigation>
+                <MobileAppNavigation />
               </div>
 
               <div className="xl:hidden">

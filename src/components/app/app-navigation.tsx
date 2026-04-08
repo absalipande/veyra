@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import {
   BadgeDollarSign,
   CreditCard,
   LayoutDashboard,
+  Menu,
   PiggyBank,
   Settings2,
   Sparkles,
@@ -11,6 +13,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const items = [
@@ -46,7 +49,11 @@ const items = [
   },
 ];
 
-function NavigationList() {
+type NavigationListProps = {
+  onNavigate?: () => void;
+};
+
+function NavigationList({ onNavigate }: NavigationListProps) {
   const pathname = usePathname();
 
   return (
@@ -78,6 +85,7 @@ function NavigationList() {
           <Link
             key={item.label}
             href={item.href}
+            onClick={onNavigate}
             className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition ${
               isActive
                 ? "bg-[#17393c] text-white shadow-[0_18px_40px_-28px_rgba(23,57,60,0.9)]"
@@ -103,10 +111,17 @@ export function DesktopAppNavigation() {
   return <NavigationList />;
 }
 
-export function MobileAppNavigation({ children }: { children: React.ReactNode }) {
+export function MobileAppNavigation() {
+  const [open, setOpen] = useState(false);
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>{children}</SheetTrigger>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="icon" className="rounded-2xl">
+          <Menu className="size-5" />
+          <span className="sr-only">Open navigation</span>
+        </Button>
+      </SheetTrigger>
       <SheetContent side="left" className="w-[86vw] max-w-sm border-r border-border/70 bg-background/95 p-0">
         <div className="flex h-full flex-col">
           <div className="border-b border-border/70 px-6 py-6">
@@ -121,7 +136,7 @@ export function MobileAppNavigation({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="flex-1 px-4 py-5">
-            <NavigationList />
+            <NavigationList onNavigate={() => setOpen(false)} />
           </div>
         </div>
       </SheetContent>
