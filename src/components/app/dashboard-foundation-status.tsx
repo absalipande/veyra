@@ -33,7 +33,7 @@ export function DashboardFoundationStatus() {
         {Array.from({ length: 4 }).map((_, index) => (
           <div
             key={index}
-            className="h-36 rounded-[1.7rem] border border-border/70 bg-white/78 animate-pulse"
+            className="h-36 rounded-[1.7rem] border border-border/70 bg-white/78 animate-pulse dark:bg-[#182123]"
           />
         ))}
       </div>
@@ -42,7 +42,7 @@ export function DashboardFoundationStatus() {
 
   if (statusQuery.error || viewerQuery.error) {
     return (
-      <Card className="border-destructive/20 bg-white/75">
+      <Card className="border-destructive/20 bg-white/75 dark:bg-[#182123]">
         <CardHeader>
           <CardTitle className="text-xl">Foundation check failed</CardTitle>
         </CardHeader>
@@ -65,7 +65,7 @@ export function DashboardFoundationStatus() {
         return (
           <Card
             key={card.key}
-            className="border-white/75 bg-white/78 shadow-[0_20px_70px_-55px_rgba(10,31,34,0.35)]"
+            className="border-white/75 bg-white/78 shadow-[0_20px_70px_-55px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_70px_-50px_rgba(0,0,0,0.6)]"
           >
             <CardHeader className="flex flex-row items-start justify-between gap-4 pb-3">
               <div className="space-y-1">

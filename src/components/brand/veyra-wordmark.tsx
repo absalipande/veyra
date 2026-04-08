@@ -7,7 +7,7 @@ type VeyraWordmarkProps = {
 
 export function VeyraWordmark({
   iconClassName = "size-10",
-  textClassName = "text-2xl font-semibold tracking-tight text-[#10292B]",
+  textClassName = "text-2xl font-semibold tracking-tight text-[#10292B] dark:text-foreground",
 }: VeyraWordmarkProps) {
   return (
     <div className="flex items-center gap-3">

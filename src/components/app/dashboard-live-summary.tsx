@@ -35,7 +35,7 @@ export function DashboardLiveSummary() {
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={index}
-            className="h-36 animate-pulse rounded-[1.7rem] border border-border/70 bg-white/78"
+            className="h-36 animate-pulse rounded-[1.7rem] border border-border/70 bg-white/78 dark:bg-[#182123]"
           />
         ))}
       </section>
@@ -45,7 +45,7 @@ export function DashboardLiveSummary() {
   if (summaryQuery.error || !summaryQuery.data) {
     return (
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="border-destructive/20 bg-white/78 md:col-span-2 xl:col-span-3">
+        <Card className="border-destructive/20 bg-white/78 dark:bg-[#182123] md:col-span-2 xl:col-span-3">
           <CardHeader>
             <CardTitle className="text-xl tracking-tight">Couldn’t load live summary</CardTitle>
             <CardDescription>
@@ -68,7 +68,7 @@ export function DashboardLiveSummary() {
         return (
           <Card
             key={card.key}
-            className="border-white/75 bg-white/78 shadow-[0_20px_70px_-55px_rgba(10,31,34,0.35)]"
+            className="border-white/75 bg-white/78 shadow-[0_20px_70px_-55px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_70px_-50px_rgba(0,0,0,0.6)]"
           >
             <CardHeader className="flex flex-row items-start justify-between gap-4 pb-3">
               <div className="space-y-1">

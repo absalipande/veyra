@@ -58,7 +58,7 @@ const initialState: CreateState = {
 };
 
 const accountFieldClassName =
-  "h-13 rounded-[1.35rem] border-border/80 bg-background px-5 text-[0.95rem] shadow-none focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/30";
+  "h-13 rounded-[1.35rem] border-border/80 bg-background px-5 text-[0.95rem] shadow-none dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/30";
 
 const accountFieldLabelClassName = "text-[1.02rem] font-semibold text-foreground";
 
@@ -205,10 +205,10 @@ function AccountSection({
   title,
 }: AccountSectionProps) {
   return (
-    <Card className="border-white/75 bg-white/82 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)]">
+    <Card className="border-white/75 bg-white/82 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
       <CardHeader className="gap-4 pb-4">
         <div className="space-y-1.5">
-          <CardTitle className="text-[1.2rem] tracking-tight text-[#10292B]">{title}</CardTitle>
+          <CardTitle className="text-[1.2rem] tracking-tight text-[#10292B] dark:text-foreground">{title}</CardTitle>
           <CardDescription className="max-w-[34rem] text-[0.92rem] leading-7">
             {description}
           </CardDescription>
@@ -221,11 +221,11 @@ function AccountSection({
               value={filterValue}
               onChange={(event) => onFilterChange(event.target.value)}
               placeholder="Filter accounts"
-              className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10"
+              className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10 dark:bg-[#162022]"
             />
           </div>
           <Select value={sortValue} onValueChange={(value) => onSortChange(value as AccountSortOption)}>
-            <SelectTrigger className="h-12 w-full rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem]">
+            <SelectTrigger className="h-12 w-full rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem] dark:bg-[#162022]">
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="size-4 text-muted-foreground" />
                 <SelectValue placeholder="Sort" />
@@ -244,14 +244,14 @@ function AccountSection({
 
       <CardContent>
         {accounts.length === 0 ? (
-          <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-[#fbfaf6] px-6 py-12 text-center">
-            <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B]">{emptyTitle}</p>
+          <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-[#fbfaf6] px-6 py-12 text-center dark:bg-[#162022]">
+            <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">{emptyTitle}</p>
             <p className="mx-auto mt-3 max-w-md text-[0.98rem] leading-8 text-muted-foreground">
               {emptyBody}
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8]">
+          <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8] dark:bg-[#141d1f]">
             <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_112px] items-center gap-4 border-b border-border/70 px-6 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
               <p>Account</p>
               <p className="text-right">Balance</p>
@@ -266,7 +266,7 @@ function AccountSection({
                 >
                   <div className="min-w-0 md:min-w-0">
                     <div className="min-w-0">
-                      <p className="truncate text-[0.92rem] font-semibold tracking-tight text-[#10292B]">
+                      <p className="truncate text-[0.92rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                         {account.name}
                       </p>
                       <p className="mt-1 text-[0.78rem] text-muted-foreground">
@@ -284,7 +284,7 @@ function AccountSection({
                       <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground md:hidden">
                         {formatAccountBalanceLabel(account)}
                       </p>
-                      <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-[#10292B] md:mt-0">
+                      <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:mt-0">
                         {formatCurrencyMiliunits(account.balance, account.currency)}
                       </p>
                       {formatAccountBalanceDetail(account) ? (
@@ -705,7 +705,7 @@ export function AccountsWorkspace() {
           Array.from({ length: 4 }).map((_, index) => (
             <div
               key={index}
-              className="h-36 animate-pulse rounded-[1.8rem] border border-white/75 bg-white/75"
+              className="h-36 animate-pulse rounded-[1.8rem] border border-white/75 bg-white/75 dark:border-white/8 dark:bg-[#182123]"
             />
           ))}
 
@@ -715,7 +715,7 @@ export function AccountsWorkspace() {
           return (
             <Card
               key={card.label}
-              className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)]"
+              className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
             >
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
@@ -723,12 +723,12 @@ export function AccountsWorkspace() {
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                       {card.label}
                     </p>
-                    <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B]">
+                    <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                       {card.value}
                     </p>
                     <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.detail}</p>
                   </div>
-                  <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c]">
+                  <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
                     <Icon className="size-4.5" />
                   </div>
                 </div>
@@ -739,10 +739,10 @@ export function AccountsWorkspace() {
       </section>
 
       <section>
-        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)]">
+        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1.5">
-              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B]">
+              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground">
                 Account management
               </CardTitle>
               <CardDescription className="max-w-3xl text-[0.96rem] leading-7">
@@ -761,9 +761,9 @@ export function AccountsWorkspace() {
                 </Button>
               </DialogTrigger>
 
-              <DialogContent className="overflow-hidden rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 sm:max-w-[52rem]">
+              <DialogContent className="overflow-hidden rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-[52rem]">
                 <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16 sm:px-8 sm:pb-6 sm:pt-8">
-                  <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c]">
+                  <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                     Account setup
                   </div>
                   <DialogTitle className="pt-3 text-[2rem] tracking-tight">
@@ -775,7 +775,7 @@ export function AccountsWorkspace() {
                 </DialogHeader>
 
                 <div className="space-y-6 px-7 py-6 sm:px-8 sm:py-7">
-                  <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                  <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
                     <label className={accountFieldLabelClassName}>Account name</label>
                     <Input
                       value={form.name}
@@ -788,7 +788,7 @@ export function AccountsWorkspace() {
                   </div>
 
                   <div className="grid gap-5 sm:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)] sm:items-start">
-                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
                       <label className={accountFieldLabelClassName}>Account type</label>
                       <div className="grid grid-cols-2 gap-3">
                         {accountTypeOptions.map((option) => (
@@ -808,7 +808,7 @@ export function AccountsWorkspace() {
                       </div>
                     </div>
 
-                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
                       <label className={accountFieldLabelClassName}>Currency</label>
                       <Select
                         value={form.currency}
@@ -834,7 +834,7 @@ export function AccountsWorkspace() {
                   </div>
 
                   {form.type !== "credit" ? (
-                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
                       <label className={accountFieldLabelClassName}>
                         {form.type === "loan" ? "Current loan balance" : "Opening balance"}
                       </label>
@@ -853,7 +853,7 @@ export function AccountsWorkspace() {
 
                   {form.type === "credit" ? (
                     <div className="grid gap-5 sm:grid-cols-2">
-                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
                         <label className={accountFieldLabelClassName}>Credit limit</label>
                         <Input
                           type="number"
@@ -865,7 +865,7 @@ export function AccountsWorkspace() {
                         />
                       </div>
 
-                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
                         <label className={accountFieldLabelClassName}>Input mode</label>
                         <div className="grid grid-cols-2 gap-3">
                           {[
@@ -913,7 +913,7 @@ export function AccountsWorkspace() {
                         />
                       </div>
 
-                      <div className="space-y-3 rounded-[1.4rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-4">
+                      <div className="space-y-3 rounded-[1.4rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-4 dark:bg-[#162022]">
                         <label className={accountFieldLabelClassName}>
                           {form.creditInputMode === "available"
                             ? "Computed current balance"
@@ -928,7 +928,7 @@ export function AccountsWorkspace() {
                     </div>
                   ) : null}
 
-                  <div className="rounded-[1.25rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3">
+                  <div className="rounded-[1.25rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 dark:bg-[#162022]">
                     <p className="text-[0.9rem] leading-6 text-muted-foreground">
                       {form.type === "credit"
                         ? "For credit cards, credit limit stays fixed while current balance tracks what you owe. If you only know the available credit from your banking app, Veyra can derive the balance for you."
@@ -972,12 +972,12 @@ export function AccountsWorkspace() {
           }
         }}
       >
-        <DialogContent className="overflow-hidden rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 sm:max-w-lg">
+        <DialogContent className="overflow-hidden rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-lg">
           <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16">
             <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
               Confirm delete
             </div>
-            <DialogTitle className="pt-3 text-[1.7rem] tracking-tight text-[#10292B]">
+            <DialogTitle className="pt-3 text-[1.7rem] tracking-tight text-[#10292B] dark:text-foreground">
               Remove this account?
             </DialogTitle>
             <p className="max-w-md text-[0.95rem] leading-7 text-muted-foreground">
@@ -1014,7 +1014,7 @@ export function AccountsWorkspace() {
           {Array.from({ length: 2 }).map((_, index) => (
             <div
               key={index}
-              className="h-[24rem] animate-pulse rounded-[1.9rem] border border-white/75 bg-white/75"
+              className="h-[24rem] animate-pulse rounded-[1.9rem] border border-white/75 bg-white/75 dark:border-white/8 dark:bg-[#182123]"
             />
           ))}
         </section>

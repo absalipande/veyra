@@ -88,7 +88,7 @@ function NavigationList({ onNavigate }: NavigationListProps) {
             onClick={onNavigate}
             className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition ${
               isActive
-                ? "bg-[#17393c] text-white shadow-[0_18px_40px_-28px_rgba(23,57,60,0.9)]"
+                ? "bg-[#17393c] text-white shadow-[0_18px_40px_-28px_rgba(23,57,60,0.9)] dark:bg-[#20474a]"
                 : "text-foreground hover:bg-muted/70"
             }`}
           >
@@ -117,12 +117,19 @@ export function MobileAppNavigation() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="outline" size="icon" className="rounded-2xl">
+        <Button
+          variant="outline"
+          size="icon"
+          className="rounded-2xl bg-white/90 dark:bg-[#182123]"
+        >
           <Menu className="size-5" />
           <span className="sr-only">Open navigation</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[86vw] max-w-sm border-r border-border/70 bg-background/95 p-0">
+      <SheetContent
+        side="left"
+        className="w-[86vw] max-w-sm border-r border-border/70 bg-background/95 p-0 dark:bg-[#11191b]/95"
+      >
         <div className="flex h-full flex-col">
           <div className="border-b border-border/70 px-6 py-6">
             <div className="flex items-center gap-3">

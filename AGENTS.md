@@ -237,6 +237,39 @@ Veyra uses a calm premium visual system.
 - Use typography, spacing, and composition to create quality.
 - Prefer softer contrast and warm light surfaces over stark white + neon accents.
 
+### Dark Mode Rules
+
+Dark mode should feel:
+- private
+- premium
+- muted
+- teal-charcoal rather than flat black
+
+Dark mode should not feel:
+- like a pure inversion of light mode
+- like bright white cards dropped onto a dark shell
+- chalky, dusty, or over-outlined
+
+Dark mode implementation rules:
+- Use theme-aware tokens instead of hardcoded white/light surfaces.
+- Shared surfaces should follow a real depth scale:
+  - app background
+  - shell surface
+  - card surface
+  - raised card surface
+  - input/control surface
+- Use contrast through depth and hierarchy, not by making every card bright.
+- Muted text still needs to be readable; avoid washed-out gray copy.
+- Borders in dark mode should be subtle and low-contrast.
+- Inputs, selects, dialogs, tables, and cards must all use the same dark surface language.
+- Hero sections may stay atmospheric, but content cards below them must still feel related.
+
+When implementing or reviewing dark mode:
+1. patch shared tokens in `src/app/globals.css`
+2. patch shared primitives and controls
+3. patch page-level feature surfaces
+4. do a contrast/readability pass
+
 ### Brand Direction
 
 - Use Veyra branding only.

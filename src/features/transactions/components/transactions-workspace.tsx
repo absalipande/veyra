@@ -257,7 +257,7 @@ function EventTypeButton({
       className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
         isActive
           ? "border-[#17393c] bg-[#17393c] text-white"
-          : "border-border/70 bg-[#fbfaf6] text-foreground hover:bg-muted/60"
+          : "border-border/70 bg-[#fbfaf6] text-foreground hover:bg-muted/60 dark:bg-[#162022]"
       }`}
     >
       <Icon className="size-4" />
@@ -515,7 +515,7 @@ export function TransactionsWorkspace() {
           return (
             <Card
               key={card.label}
-              className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)]"
+              className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
             >
               <CardContent className="p-4.5">
                 <div className="flex items-start justify-between gap-4">
@@ -523,14 +523,14 @@ export function TransactionsWorkspace() {
                     <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                       {card.label}
                     </p>
-                    <p className="mt-2.5 text-[1.75rem] font-semibold tracking-tight text-[#10292B]">
+                    <p className="mt-2.5 text-[1.75rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                       {card.value}
                     </p>
                     <p className="mt-2 text-[0.9rem] leading-6 text-muted-foreground">
                       {card.detail}
                     </p>
                   </div>
-                  <div className="flex size-9 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c]">
+                  <div className="flex size-9 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
                     <Icon className="size-4.5" />
                   </div>
                 </div>
@@ -541,10 +541,10 @@ export function TransactionsWorkspace() {
       </section>
 
       <section>
-        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)]">
+        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader className="gap-5">
             <div className="space-y-1.5">
-              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B]">
+              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground">
                 Record a money event
               </CardTitle>
               <CardDescription className="max-w-3xl text-[0.96rem] leading-7">
@@ -558,7 +558,7 @@ export function TransactionsWorkspace() {
                   key={option.value}
                   type="button"
                   variant="outline"
-                  className="rounded-full bg-[#fbfaf6]"
+                  className="rounded-full bg-[#fbfaf6] dark:bg-[#162022]"
                   onClick={() => openComposer(option.value)}
                 >
                   <option.icon className="size-4" />
@@ -571,10 +571,10 @@ export function TransactionsWorkspace() {
       </section>
 
       <section>
-        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)]">
+        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader className="gap-4">
             <div className="space-y-1.5">
-              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B]">
+              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground">
                 Ledger
               </CardTitle>
               <CardDescription className="max-w-3xl text-[0.96rem] leading-7">
@@ -589,14 +589,14 @@ export function TransactionsWorkspace() {
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search by description, account, notes, or event type"
-                  className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10"
+                  className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10 dark:bg-[#162022]"
                 />
               </div>
               <Select
                 value={typeFilter}
                 onValueChange={(value) => setTypeFilter(value as "all" | TransactionEventType)}
               >
-                <SelectTrigger className="h-12 rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem]">
+                <SelectTrigger className="h-12 rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem] dark:bg-[#162022]">
                   <SelectValue placeholder="Filter by type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -617,13 +617,13 @@ export function TransactionsWorkspace() {
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div
                     key={index}
-                    className="h-24 animate-pulse rounded-[1.6rem] border border-border/70 bg-[#fbfaf6]"
+                    className="h-24 animate-pulse rounded-[1.6rem] border border-border/70 bg-[#fbfaf6] dark:bg-[#162022]"
                   />
                 ))}
               </div>
             ) : visibleEvents.length === 0 ? (
-              <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-[#fbfaf6] px-6 py-12 text-center">
-                <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B]">
+              <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-[#fbfaf6] px-6 py-12 text-center dark:bg-[#162022]">
+                <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                   No events yet
                 </p>
                 <p className="mx-auto mt-3 max-w-md text-[0.98rem] leading-8 text-muted-foreground">
@@ -632,7 +632,7 @@ export function TransactionsWorkspace() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8]">
+              <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8] dark:bg-[#141d1f]">
                 <div className="divide-y divide-border/70">
                   {visibleEvents.map((event) => (
                     <div
@@ -641,7 +641,7 @@ export function TransactionsWorkspace() {
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B]">
+                          <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                             {event.description}
                           </p>
                           <span
@@ -663,7 +663,7 @@ export function TransactionsWorkspace() {
                         <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground md:hidden">
                           Amount
                         </p>
-                        <p className="mt-1 text-[0.95rem] font-semibold tracking-tight text-[#10292B] md:mt-0">
+                        <p className="mt-1 text-[0.95rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:mt-0">
                           {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
                         </p>
                       </div>
@@ -699,9 +699,9 @@ export function TransactionsWorkspace() {
           }
         }}
       >
-        <DialogContent className="overflow-hidden rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 sm:max-w-[56rem]">
+        <DialogContent className="overflow-hidden rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-[56rem]">
           <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16 sm:px-8 sm:pb-6 sm:pt-8">
-            <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c]">
+            <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
               Event composer
             </div>
             <DialogTitle className="pt-3 text-[2rem] tracking-tight">
@@ -998,12 +998,12 @@ export function TransactionsWorkspace() {
           }
         }}
       >
-        <DialogContent className="overflow-hidden rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 sm:max-w-lg">
+        <DialogContent className="overflow-hidden rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-lg">
           <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16">
             <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
               Confirm delete
             </div>
-            <DialogTitle className="pt-3 text-[1.7rem] tracking-tight text-[#10292B]">
+            <DialogTitle className="pt-3 text-[1.7rem] tracking-tight text-[#10292B] dark:text-foreground">
               Remove this event?
             </DialogTitle>
             <DialogDescription className="max-w-md text-[0.95rem] leading-7">

@@ -40,7 +40,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-white/75 bg-white/78 shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)]">
+        <Card className="border-white/75 bg-white/78 shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_90px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader>
             <CardTitle className="text-2xl tracking-tight">What this shell already solves</CardTitle>
             <CardDescription className="leading-6">
@@ -56,7 +56,7 @@ export default function DashboardPage() {
             ].map((item) => (
               <div
                 key={item}
-                className="rounded-2xl border border-border/70 bg-background/78 px-4 py-4 text-sm leading-6 text-foreground"
+                className="rounded-2xl border border-border/70 bg-background/78 px-4 py-4 text-sm leading-6 text-foreground dark:bg-[#212b2d]"
               >
                 {item}
               </div>
@@ -70,7 +70,7 @@ export default function DashboardPage() {
       <DashboardFoundationStatus />
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(300px,0.9fr)]">
-        <Card className="border-white/75 bg-white/78 shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)]">
+        <Card className="border-white/75 bg-white/78 shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_90px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader>
             <CardTitle className="text-2xl tracking-tight">First feature slice</CardTitle>
             <CardDescription className="leading-6">
@@ -95,7 +95,7 @@ export default function DashboardPage() {
             ].map((step) => (
               <div
                 key={step.title}
-                className="rounded-[1.7rem] border border-border/70 bg-background/78 p-5"
+                className="rounded-[1.7rem] border border-border/70 bg-background/78 p-5 dark:bg-[#212b2d]"
               >
                 <p className="text-lg font-semibold tracking-tight">{step.title}</p>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">{step.body}</p>
@@ -104,7 +104,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="overflow-hidden border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(245,248,246,0.92))] shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)]">
+        <Card className="overflow-hidden border-white/75 bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(245,248,246,0.92))] shadow-[0_24px_90px_-55px_rgba(10,31,34,0.34)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.96),rgba(20,29,31,0.98))] dark:shadow-[0_24px_90px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader>
             <CardTitle className="text-2xl tracking-tight">Soon in Veyra</CardTitle>
             <CardDescription>
@@ -121,7 +121,7 @@ export default function DashboardPage() {
             ].map((item) => (
               <div
                 key={item}
-                className="flex items-center justify-between rounded-2xl border border-border/70 bg-white/72 px-4 py-3 text-sm"
+                className="flex items-center justify-between rounded-2xl border border-border/70 bg-white/72 px-4 py-3 text-sm dark:bg-[#212b2d]"
               >
                 <span>{item}</span>
                 <ReceiptText className="size-4 text-muted-foreground" />

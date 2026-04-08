@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { Search, Sparkles } from "lucide-react";
 
 import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
-import { Button } from "@/components/ui/button";
 import { DesktopAppNavigation, MobileAppNavigation } from "@/components/app/app-navigation";
+import { ThemeToggle } from "@/components/app/theme-toggle";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -12,10 +11,10 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,rgba(248,246,239,0.96),rgba(243,247,244,0.94))]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,rgba(248,246,239,0.96),rgba(243,247,244,0.94))] dark:bg-[linear-gradient(180deg,rgba(16,23,24,0.98),rgba(18,30,31,0.97))]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px]">
-        <aside className="sticky top-0 hidden h-screen w-[292px] shrink-0 self-start border-r border-border/70 bg-white/72 px-5 py-6 backdrop-blur xl:flex xl:flex-col">
-          <div className="rounded-[2rem] border border-white/80 bg-white/75 p-4 shadow-[0_20px_60px_-45px_rgba(10,31,34,0.42)]">
+        <aside className="sticky top-0 hidden h-screen w-[292px] shrink-0 self-start border-r border-border/70 bg-white/72 px-5 py-6 backdrop-blur dark:bg-[#101718]/90 xl:flex xl:flex-col">
+          <div className="rounded-[2rem] border border-white/80 bg-white/75 p-4 shadow-[0_20px_60px_-45px_rgba(10,31,34,0.42)] dark:border-white/7 dark:bg-[#151d1f] dark:shadow-[0_20px_60px_-45px_rgba(0,0,0,0.58)]">
             <VeyraWordmark />
             <p className="mt-3 text-sm leading-6 text-muted-foreground">
               A calmer workspace for accounts, budgets, and day-to-day money decisions.
@@ -38,7 +37,7 @@ export function AppShell({ children }: AppShellProps) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-20 border-b border-border/70 bg-background/72 backdrop-blur-xl">
+          <header className="sticky top-0 z-20 border-b border-border/70 bg-background/72 backdrop-blur-xl dark:bg-[#11191b]/82">
             <div className="flex items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
               <div className="xl:hidden">
                 <MobileAppNavigation />
@@ -51,16 +50,14 @@ export function AppShell({ children }: AppShellProps) {
                 />
               </div>
 
-              <div className="hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border/70 bg-white/80 px-4 py-3 text-sm text-muted-foreground shadow-[0_18px_40px_-35px_rgba(10,31,34,0.25)] lg:flex">
+              <div className="hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border/70 bg-white/80 px-4 py-3 text-sm text-muted-foreground shadow-[0_18px_40px_-35px_rgba(10,31,34,0.25)] dark:bg-[#182123] dark:shadow-[0_18px_40px_-35px_rgba(0,0,0,0.4)] lg:flex">
                 <Search className="size-4" />
                 <span>Search will live here once accounts and transactions are wired.</span>
               </div>
 
               <div className="ml-auto flex items-center gap-3">
-                <Button asChild variant="outline" className="hidden rounded-full lg:inline-flex">
-                  <Link href="/sign-in">Auth pages</Link>
-                </Button>
-                <div className="rounded-full border border-border/70 bg-white/90 p-1.5 shadow-[0_18px_40px_-35px_rgba(10,31,34,0.28)]">
+                <ThemeToggle />
+                <div className="rounded-full border border-border/70 bg-white/90 p-1.5 shadow-[0_18px_40px_-35px_rgba(10,31,34,0.28)] dark:bg-[#182123] dark:shadow-[0_18px_40px_-35px_rgba(0,0,0,0.45)]">
                   <UserButton />
                 </div>
               </div>
