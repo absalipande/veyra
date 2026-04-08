@@ -8,11 +8,11 @@ import {
   Menu,
   PiggyBank,
   Settings2,
-  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
@@ -37,9 +37,9 @@ const items = [
   },
   {
     label: "Budgets",
-    href: "",
+    href: "/budgets",
     icon: PiggyBank,
-    available: false,
+    available: true,
   },
   {
     label: "Settings",
@@ -132,15 +132,11 @@ export function MobileAppNavigation() {
       >
         <div className="flex h-full flex-col">
           <div className="border-b border-border/70 px-6 py-6">
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                <Sparkles className="size-5" />
-              </div>
-              <div>
-                <p className="text-lg font-semibold tracking-tight">veyra</p>
-                <p className="text-sm text-muted-foreground">Protected workspace</p>
-              </div>
-            </div>
+            <VeyraWordmark
+              iconClassName="size-10 dark:brightness-0 dark:invert"
+              textClassName="text-[1.55rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
+            />
+            <p className="mt-2 text-sm text-muted-foreground">Protected workspace</p>
           </div>
           <div className="flex-1 px-4 py-5">
             <NavigationList onNavigate={() => setOpen(false)} />

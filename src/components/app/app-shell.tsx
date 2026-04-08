@@ -46,8 +46,8 @@ export function AppShell({ children }: AppShellProps) {
 
               <div className="xl:hidden">
                 <VeyraWordmark
-                  iconClassName="size-9"
-                  textClassName="text-[1.6rem] font-semibold tracking-tight text-[#10292B]"
+                  iconClassName="size-9 dark:brightness-0 dark:invert"
+                  textClassName="text-[1.6rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
                 />
               </div>
 

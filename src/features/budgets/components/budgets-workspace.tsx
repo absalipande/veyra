@@ -1,0 +1,1004 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
+import {
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle2,
+  PiggyBank,
+  Plus,
+  Search,
+  ShieldAlert,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { formatCurrencyMiliunits } from "@/lib/currencies";
+import type { AppRouter } from "@/server/api/root";
+import { trpc } from "@/trpc/react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type BudgetSummaryItem = RouterOutputs["budgets"]["summary"]["budgets"][number];
+type BudgetRecord = RouterOutputs["budgets"]["list"][number];
+type BudgetPeriod = BudgetRecord["period"];
+type BudgetStatus = BudgetSummaryItem["status"];
+
+type BudgetDraft = {
+  amount: string;
+  isActive: boolean;
+  name: string;
+  parentBudgetId: string;
+  period: BudgetPeriod;
+  salaryDatePrimary: string;
+  salaryDateSecondary: string;
+  startDate: string;
+};
+
+type DeleteTarget = {
+  id: string;
+  name: string;
+} | null;
+
+const emptyBudgets: BudgetRecord[] = [];
+const emptyBudgetSummaries: BudgetSummaryItem[] = [];
+const budgetCurrency = "PHP";
+
+function formatBudgetMoney(value: number) {
+  return formatCurrencyMiliunits(value, budgetCurrency);
+}
+
+const periodOptions: Array<{ value: BudgetPeriod; label: string; description: string }> = [
+  {
+    value: "monthly",
+    label: "Monthly",
+    description: "Best for rent, subscriptions, and broad household allocations.",
+  },
+  {
+    value: "bi-weekly",
+    label: "Bi-weekly",
+    description: "Tracks salary-cycle budgets using two payday anchors each month.",
+  },
+  {
+    value: "weekly",
+    label: "Weekly",
+    description: "Useful for groceries, transport, and short operating budgets.",
+  },
+  {
+    value: "daily",
+    label: "Daily",
+    description: "A strict daily cap for highly controlled categories.",
+  },
+];
+
+const initialDraft: BudgetDraft = {
+  amount: "",
+  isActive: true,
+  name: "",
+  parentBudgetId: "none",
+  period: "monthly",
+  salaryDatePrimary: "",
+  salaryDateSecondary: "",
+  startDate: new Date().toISOString().slice(0, 10),
+};
+
+function parseMoneyToMiliunits(value: string) {
+  const normalized = value.trim().replace(/,/g, "");
+  if (!normalized) return null;
+
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+
+  return Math.round(amount * 1000);
+}
+
+function formatMoneyInput(miliunits: number) {
+  return String(miliunits / 1000);
+}
+
+function getStatusTone(status: BudgetStatus) {
+  switch (status) {
+    case "safe":
+      return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300";
+    case "warning":
+      return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-300";
+    case "danger":
+      return "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-900/70 dark:bg-orange-950/40 dark:text-orange-300";
+    case "exceeded":
+      return "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/40 dark:text-rose-300";
+    default:
+      return "border-border bg-muted text-foreground";
+  }
+}
+
+function getStatusLabel(status: BudgetStatus) {
+  switch (status) {
+    case "safe":
+      return "On track";
+    case "warning":
+      return "Watch";
+    case "danger":
+      return "Tight";
+    case "exceeded":
+      return "Exceeded";
+    default:
+      return status;
+  }
+}
+
+function getStatusIcon(status: BudgetStatus) {
+  switch (status) {
+    case "safe":
+      return CheckCircle2;
+    case "warning":
+      return CalendarClock;
+    case "danger":
+      return AlertTriangle;
+    case "exceeded":
+      return ShieldAlert;
+    default:
+      return PiggyBank;
+  }
+}
+
+function getPeriodLabel(period: BudgetPeriod) {
+  return periodOptions.find((option) => option.value === period)?.label ?? period;
+}
+
+function formatDate(value: Date | string) {
+  return new Intl.DateTimeFormat("en-PH", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(typeof value === "string" ? new Date(value) : value);
+}
+
+function getProgressWidth(percentageUsed: number) {
+  return `${Math.min(100, Math.max(0, percentageUsed))}%`;
+}
+
+function findBudgetSummary(summaries: BudgetSummaryItem[], id: string | null | undefined) {
+  if (!id) return null;
+  return summaries.find((budget) => budget.id === id) ?? null;
+}
+
+export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string }) {
+  const [query, setQuery] = useState(initialQuery);
+  const [open, setOpen] = useState(false);
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [draft, setDraft] = useState<BudgetDraft>(initialDraft);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
+
+  const utils = trpc.useUtils();
+  const budgetsQuery = trpc.budgets.list.useQuery();
+  const summaryQuery = trpc.budgets.summary.useQuery();
+
+  const budgets = budgetsQuery.data ?? emptyBudgets;
+  const summary = summaryQuery.data;
+  const summaryBudgets = summary?.budgets ?? emptyBudgetSummaries;
+  const budgetSummary = summary?.summary;
+
+  const parentBudgetOptions = useMemo(
+    () =>
+      budgets
+        .filter((budget) => budget.id !== editingBudgetId)
+        .map((budget) => ({
+          id: budget.id,
+          name: budget.name,
+        })),
+    [budgets, editingBudgetId],
+  );
+
+  const filteredBudgets = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return summaryBudgets;
+
+    return summaryBudgets.filter((budget) => {
+      const parent = findBudgetSummary(summaryBudgets, budget.parentBudgetId);
+
+      return [budget.name, getPeriodLabel(budget.period), parent?.name ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalized);
+    });
+  }, [query, summaryBudgets]);
+
+  const activeRootBudgets = useMemo(
+    () => filteredBudgets.filter((budget) => !budget.parentBudgetId && budget.isActive),
+    [filteredBudgets],
+  );
+
+  const createBudget = trpc.budgets.create.useMutation({
+    onSuccess: async () => {
+      await Promise.all([utils.budgets.list.invalidate(), utils.budgets.summary.invalidate()]);
+      toast.success("Budget created.");
+      setOpen(false);
+      setDraft(initialDraft);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to create budget.");
+    },
+  });
+
+  const updateBudget = trpc.budgets.update.useMutation({
+    onSuccess: async () => {
+      await Promise.all([utils.budgets.list.invalidate(), utils.budgets.summary.invalidate()]);
+      toast.success("Budget updated.");
+      setOpen(false);
+      setEditingBudgetId(null);
+      setDraft(initialDraft);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update budget.");
+    },
+  });
+
+  const removeBudget = trpc.budgets.remove.useMutation({
+    onSuccess: async () => {
+      await Promise.all([utils.budgets.list.invalidate(), utils.budgets.summary.invalidate()]);
+      toast.success("Budget deleted.");
+      setDeleteTarget(null);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete budget.");
+    },
+  });
+
+  function resetDialog() {
+    setOpen(false);
+    setEditingBudgetId(null);
+    setDraft(initialDraft);
+    setFormError(null);
+  }
+
+  function startCreate() {
+    setEditingBudgetId(null);
+    setDraft(initialDraft);
+    setFormError(null);
+    setOpen(true);
+  }
+
+  function startEdit(budget: BudgetRecord) {
+    setEditingBudgetId(budget.id);
+    setDraft({
+      amount: formatMoneyInput(budget.amount),
+      isActive: budget.isActive,
+      name: budget.name,
+      parentBudgetId: budget.parentBudgetId ?? "none",
+      period: budget.period,
+      salaryDatePrimary: budget.salaryDates?.[0] ?? "",
+      salaryDateSecondary: budget.salaryDates?.[1] ?? "",
+      startDate: new Date(budget.startDate).toISOString().slice(0, 10),
+    });
+    setFormError(null);
+    setOpen(true);
+  }
+
+  function submitBudget() {
+    const trimmedName = draft.name.trim();
+    const amount = parseMoneyToMiliunits(draft.amount);
+    if (trimmedName.length < 2) {
+      const message = "Enter a budget name with at least 2 characters.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (!amount) {
+      const message = "Enter a valid budget amount.";
+      setFormError(message);
+      toast.error(message);
+      return;
+    }
+
+    if (draft.period === "bi-weekly") {
+      const first = draft.salaryDatePrimary.trim();
+      const second = draft.salaryDateSecondary.trim();
+
+      if (!/^\d{1,2}$/.test(first) || !/^\d{1,2}$/.test(second)) {
+        const message = "Bi-weekly budgets need two valid salary dates.";
+        setFormError(message);
+        toast.error(message);
+        return;
+      }
+    }
+
+    setFormError(null);
+
+    const selectedParent =
+      draft.parentBudgetId === "none"
+        ? null
+        : (budgets.find((budget) => budget.id === draft.parentBudgetId) ?? null);
+
+    if (selectedParent) {
+      toast.message(`This will be created under "${selectedParent.name}".`);
+    }
+
+    const payload = {
+      amount,
+      isActive: draft.isActive,
+      name: trimmedName,
+      parentBudgetId: draft.parentBudgetId === "none" ? undefined : draft.parentBudgetId,
+      period: draft.period,
+      salaryDates:
+        draft.period === "bi-weekly"
+          ? [draft.salaryDatePrimary.trim(), draft.salaryDateSecondary.trim()]
+          : undefined,
+      startDate: draft.startDate,
+    } as const;
+
+    if (editingBudgetId) {
+      updateBudget.mutate({
+        id: editingBudgetId,
+        ...payload,
+      });
+      return;
+    }
+
+    createBudget.mutate(payload);
+  }
+
+  const isSubmitting = createBudget.isPending || updateBudget.isPending;
+  const totalTracked = budgetSummary?.totalBudgets ?? 0;
+  const totalRemaining = budgetSummary?.totalRemaining ?? 0;
+  const totalSpent = budgetSummary?.totalSpentAmount ?? 0;
+  const totalBudgetAmount = budgetSummary?.totalBudgetAmount ?? 0;
+  const attentionCount =
+    (budgetSummary?.warningBudgets ?? 0) +
+    (budgetSummary?.dangerBudgets ?? 0) +
+    (budgetSummary?.exceededBudgets ?? 0);
+
+  return (
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-[linear-gradient(160deg,rgba(20,53,55,0.98),rgba(25,64,67,0.96))] px-7 py-6 text-white shadow-[0_36px_120px_-72px_rgba(10,31,34,0.82)]">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex w-fit rounded-full border border-white/15 bg-white/10 px-4 py-1 text-xs uppercase tracking-[0.28em] text-white/82">
+              Budgets
+            </div>
+            <h1 className="max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">
+              Budgets that follow the way your money actually moves.
+            </h1>
+            <p className="max-w-3xl text-base leading-7 text-white/74">
+              Track each cycle clearly, keep parent and child budgets readable, and spot pressure
+              before the window closes.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2 lg:justify-end">
+            <div className="inline-flex items-center rounded-full border border-white/15 bg-white/8 px-4 py-2 text-sm text-white/72">
+              Built around real budget windows and roll-ups.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
+          <CardHeader className="px-5 pb-2 pt-5">
+            <CardDescription className="text-xs uppercase tracking-[0.32em]">
+              Active budgets
+            </CardDescription>
+            <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
+              {totalTracked}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
+            Budget windows currently live in your workspace.
+          </CardContent>
+        </Card>
+        <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
+          <CardHeader className="px-5 pb-2 pt-5">
+            <CardDescription className="text-xs uppercase tracking-[0.32em]">
+              Remaining to use
+            </CardDescription>
+            <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
+              {formatBudgetMoney(totalRemaining)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
+            Remaining across parent budget windows this cycle.
+          </CardContent>
+        </Card>
+        <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
+          <CardHeader className="px-5 pb-2 pt-5">
+            <CardDescription className="text-xs uppercase tracking-[0.32em]">
+              Spent this cycle
+            </CardDescription>
+            <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
+              {formatBudgetMoney(totalSpent)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
+            Tracked from expense events already tied to budgets.
+          </CardContent>
+        </Card>
+        <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
+          <CardHeader className="px-5 pb-2 pt-5">
+            <CardDescription className="text-xs uppercase tracking-[0.32em]">
+              Needs attention
+            </CardDescription>
+            <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
+              {attentionCount}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
+            Budgets currently in warning, danger, or exceeded territory.
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.85fr)]">
+        <Card className="rounded-[2rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
+          <CardHeader className="space-y-4 border-b border-border/60 px-5 py-5 sm:px-7 sm:py-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2">
+                <CardTitle className="text-[1.45rem] tracking-tight">Active budgets</CardTitle>
+                <CardDescription className="max-w-2xl text-[0.95rem] leading-7">
+                  Keep the list focused on active budget windows first. Child budgets roll upward;
+                  the workspace helps you spot pressure before the cycle closes.
+                </CardDescription>
+              </div>
+              <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center lg:w-auto lg:min-w-[420px] lg:justify-end">
+                <div className="relative min-w-0 flex-1 sm:min-w-[280px]">
+                  <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Filter budgets"
+                    className="h-12 rounded-full border-border/70 bg-background/80 pl-11"
+                  />
+                </div>
+                <div className="flex shrink-0 justify-start sm:justify-end">
+                  <Button type="button" onClick={startCreate} className="rounded-full px-5">
+                    <Plus className="size-4" />
+                    Create budget
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4 px-4 py-5 sm:px-7 sm:py-6">
+            {budgetsQuery.isLoading || summaryQuery.isLoading ? (
+              <div className="rounded-[1.5rem] border border-dashed border-border/70 bg-background/70 px-6 py-10 text-sm text-muted-foreground">
+                Loading budget windows...
+              </div>
+            ) : activeRootBudgets.length === 0 ? (
+              <div className="rounded-[1.5rem] border border-dashed border-border/70 bg-background/70 px-6 py-10">
+                <p className="text-xl font-medium tracking-tight">No active budgets yet</p>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
+                  Start with one monthly or bi-weekly budget. Once transactions can be assigned
+                  directly in the ledger flow, this workspace will begin reading real spend against
+                  each window.
+                </p>
+                <Button type="button" onClick={startCreate} className="mt-5 rounded-full px-5">
+                  <Plus className="size-4" />
+                  Create your first budget
+                </Button>
+              </div>
+            ) : (
+              activeRootBudgets.map((budget) => {
+                const Icon = getStatusIcon(budget.status);
+                const tone = getStatusTone(budget.status);
+                const childBudgets = filteredBudgets.filter(
+                  (entry) => entry.parentBudgetId === budget.id,
+                );
+
+                return (
+                  <div
+                    key={budget.id}
+                    className="rounded-[1.6rem] border border-border/70 bg-background/80 px-4 py-4 shadow-[0_22px_45px_-38px_rgba(15,23,42,0.14)] dark:bg-[#12191b] sm:px-5 sm:py-4.5"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2 gap-y-2 sm:gap-3">
+                        <h3 className="text-[1.22rem] font-semibold tracking-tight sm:text-[1.35rem]">
+                          {budget.name}
+                        </h3>
+                        <span
+                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${tone}`}
+                        >
+                          <Icon className="size-3.5" />
+                          {getStatusLabel(budget.status)}
+                        </span>
+                        <span className="rounded-full border border-border/70 px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                          {getPeriodLabel(budget.period)}
+                        </span>
+                      </div>
+                      <p className="text-[0.88rem] leading-7 text-muted-foreground sm:text-[0.92rem]">
+                        Window {formatDate(budget.periodStart)} to {formatDate(budget.periodEnd)}
+                        {childBudgets.length > 0
+                          ? ` · ${childBudgets.length} child budget${childBudgets.length === 1 ? "" : "s"} included`
+                          : ""}
+                      </p>
+                    </div>
+
+                    <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                          Budgeted
+                        </p>
+                        <p className="mt-1.5 text-[1.05rem] font-semibold tracking-tight sm:text-[1.1rem]">
+                          {formatBudgetMoney(budget.amount)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                          Spent
+                        </p>
+                        <p className="mt-1.5 text-[1.05rem] font-semibold tracking-tight sm:text-[1.1rem]">
+                          {formatBudgetMoney(budget.totalSpent)}
+                        </p>
+                      </div>
+                      <div className="col-span-2 sm:col-span-1 md:col-span-1">
+                        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                          Remaining
+                        </p>
+                        <p className="mt-1.5 text-[1.05rem] font-semibold tracking-tight sm:text-[1.1rem]">
+                          {formatBudgetMoney(budget.remaining)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 space-y-2">
+                      <div className="flex flex-col gap-1 text-[0.82rem] text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:text-[0.85rem]">
+                        <span>{budget.percentageUsed.toFixed(2)}% used</span>
+                        <span className="sm:text-right">
+                          {formatBudgetMoney(budget.totalSpent)} of{" "}
+                          {formatBudgetMoney(budget.amount)}
+                        </span>
+                      </div>
+                      <div className="h-3 overflow-hidden rounded-full bg-muted/70">
+                        <div
+                          className={`h-full rounded-full ${
+                            budget.status === "safe"
+                              ? "bg-emerald-500"
+                              : budget.status === "warning"
+                                ? "bg-amber-500"
+                                : budget.status === "danger"
+                                  ? "bg-orange-500"
+                                  : "bg-rose-500"
+                          }`}
+                          style={{ width: getProgressWidth(budget.percentageUsed) }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex items-center justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full"
+                        onClick={() => {
+                          const record = budgets.find((entry) => entry.id === budget.id);
+                          if (record) startEdit(record);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        className="rounded-full text-rose-600 hover:text-rose-700"
+                        onClick={() => setDeleteTarget({ id: budget.id, name: budget.name })}
+                      >
+                        <Trash2 className="size-4" />
+                        <span className="sr-only">Delete budget</span>
+                      </Button>
+                    </div>
+
+                    {childBudgets.length > 0 ? (
+                      <div className="mt-5 rounded-[1.2rem] border border-border/60 bg-card/70 px-3.5 py-3.5 sm:px-4 sm:py-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
+                            Child budgets
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {childBudgets.length} linked
+                          </p>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          {childBudgets.map((child) => {
+                            const ChildIcon = getStatusIcon(child.status);
+                            const childTone = getStatusTone(child.status);
+
+                            return (
+                              <div
+                                key={child.id}
+                                className="rounded-[1rem] border border-border/70 bg-background/85 px-3 py-3"
+                              >
+                                <div className="flex flex-col gap-3">
+                                  <div className="min-w-0 space-y-1">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="truncate text-[0.92rem] font-medium tracking-tight sm:text-[0.95rem]">
+                                        {child.name}
+                                      </p>
+                                      <span
+                                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.7rem] font-medium ${childTone}`}
+                                      >
+                                        <ChildIcon className="size-3" />
+                                        {getStatusLabel(child.status)}
+                                      </span>
+                                      <span className="rounded-full border border-border/70 px-2.5 py-1 text-[0.68rem] uppercase tracking-[0.16em] text-muted-foreground">
+                                        {getPeriodLabel(child.period)}
+                                      </span>
+                                    </div>
+                                    <p className="text-[0.78rem] leading-6 text-muted-foreground sm:text-[0.8rem]">
+                                      Window {formatDate(child.periodStart)} to{" "}
+                                      {formatDate(child.periodEnd)}
+                                    </p>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-left sm:grid-cols-3 sm:text-right">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="text-[0.65rem] uppercase tracking-[0.16em] text-muted-foreground">
+                                        Budgeted
+                                      </p>
+                                      <p className="mt-1 text-[0.9rem] font-semibold tracking-tight">
+                                        {formatBudgetMoney(child.amount)}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[0.65rem] uppercase tracking-[0.16em] text-muted-foreground">
+                                        Spent
+                                      </p>
+                                      <p className="mt-1 text-[0.9rem] font-semibold tracking-tight">
+                                        {formatBudgetMoney(child.totalSpent)}
+                                      </p>
+                                    </div>
+                                    <div className="col-span-2 sm:col-span-1">
+                                      <p className="text-[0.65rem] uppercase tracking-[0.16em] text-muted-foreground">
+                                        Remaining
+                                      </p>
+                                      <p className="mt-1 text-[0.9rem] font-semibold tracking-tight">
+                                        {formatBudgetMoney(child.remaining)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center justify-end gap-2 pt-1">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="outline"
+                                      className="rounded-full"
+                                      onClick={() => {
+                                        const record = budgets.find((entry) => entry.id === child.id);
+                                        if (record) startEdit(record);
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="icon-sm"
+                                      variant="ghost"
+                                      className="rounded-full text-rose-600 hover:text-rose-700"
+                                      onClick={() => setDeleteTarget({ id: child.id, name: child.name })}
+                                    >
+                                      <Trash2 className="size-4" />
+                                      <span className="sr-only">Delete child budget</span>
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6">
+          <Card className="rounded-[2rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
+            <CardHeader className="px-6 pb-4 pt-6">
+              <CardTitle className="text-[1.45rem] tracking-tight">
+                What this workspace helps you see
+              </CardTitle>
+              <CardDescription className="text-[0.95rem] leading-7">
+                Use budgets to understand cadence, remaining room, and where a cycle is starting to
+                tighten.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 px-6 pb-6">
+              {[
+                "Pick the right cadence first so the budget window matches how money actually arrives and gets spent.",
+                "Use parent budgets for broader control and child budgets when one cycle needs finer operating detail.",
+                "Watch the status and remaining amount to catch pressure before a budget slips over the line.",
+              ].map((line) => (
+                <div
+                  key={line}
+                  className="rounded-[1.4rem] border border-border/70 bg-background/80 px-5 py-4 text-sm leading-7 text-muted-foreground"
+                >
+                  {line}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[2rem] border-white/75 bg-[linear-gradient(135deg,#17393c_0%,#204a4d_100%)] text-white shadow-[0_24px_55px_-42px_rgba(23,57,60,0.75)]">
+            <CardHeader className="px-6 pb-3 pt-6">
+              <CardDescription className="text-xs uppercase tracking-[0.28em] text-white/70">
+                Budget posture
+              </CardDescription>
+              <CardTitle className="text-[1.95rem] font-semibold tracking-tight text-white">
+                Keep the cycle readable without turning the page into a control tower.
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 px-6 pb-6 text-sm leading-7 text-white/78">
+              <p className="max-w-[34rem]">
+                The key numbers should tell you whether the current budget window is healthy, tight,
+                or already exceeded at a glance.
+              </p>
+              <div className="rounded-[1.35rem] border border-white/15 bg-white/8 px-4 py-4 text-sm leading-7">
+                Total budgeted {formatBudgetMoney(totalBudgetAmount)} · Remaining{" "}
+                {formatBudgetMoney(totalRemaining)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? resetDialog() : setOpen(true))}>
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-1.25rem)] max-w-[1360px] overflow-y-auto rounded-[2rem] border-border/70 bg-background/96 p-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur sm:w-[calc(100vw-3rem)]">
+          <div className="border-b border-border/60 px-6 py-5 sm:px-8 sm:py-6">
+            <div className="inline-flex rounded-full border border-border/70 bg-background/80 px-4 py-1 text-xs uppercase tracking-[0.28em] text-muted-foreground">
+              Budget setup
+            </div>
+            <DialogHeader className="mt-4 space-y-2.5">
+              <DialogTitle className="text-[2rem] font-semibold tracking-tight sm:text-[2.4rem]">
+                {editingBudgetId ? "Edit budget" : "Create a budget"}
+              </DialogTitle>
+              <DialogDescription className="max-w-[46rem] text-[0.95rem] leading-7">
+                Define the amount, cadence, and optional roll-up parent first. Budget assignment
+                inside transactions can come next once the structure is in place.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+
+          <div className="space-y-6 px-6 py-5 sm:px-8 sm:py-6">
+            {formError ? (
+              <div className="rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                {formError}
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Budget name</label>
+              <Input
+                value={draft.name}
+                onChange={(event) => {
+                  setFormError(null);
+                  setDraft((current) => ({ ...current, name: event.target.value }));
+                }}
+                placeholder="e.g. Household operating budget"
+                className="h-12 rounded-2xl border-border/70 bg-background/90"
+              />
+            </div>
+
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Budget amount</label>
+                <Input
+                  value={draft.amount}
+                  onChange={(event) => {
+                    setFormError(null);
+                    setDraft((current) => ({ ...current, amount: event.target.value }));
+                  }}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                  className="h-12 rounded-2xl border-border/70 bg-background/90"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Budget window starts</label>
+                <Input
+                  type="date"
+                  value={draft.startDate}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, startDate: event.target.value }))
+                  }
+                  className="h-12 rounded-2xl border-border/70 bg-background/90"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-foreground">Period</label>
+              <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
+                {periodOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => {
+                      setFormError(null);
+                      setDraft((current) => ({ ...current, period: option.value }));
+                    }}
+                    className={`min-h-[120px] rounded-[1.35rem] border px-4 py-4 text-left transition ${
+                      draft.period === option.value
+                        ? "border-[#17393c] bg-[#17393c] text-white shadow-[0_18px_40px_-30px_rgba(23,57,60,0.7)]"
+                        : "border-border/70 bg-background/80 text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <div className="text-[1rem] font-medium">{option.label}</div>
+                    <div
+                      className={`mt-2 text-[0.9rem] leading-6 ${draft.period === option.value ? "text-white/78" : "text-muted-foreground"}`}
+                    >
+                      {option.description}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {draft.period === "bi-weekly" ? (
+              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Salary date 1</label>
+                  <Input
+                    value={draft.salaryDatePrimary}
+                    onChange={(event) => {
+                      setFormError(null);
+                      setDraft((current) => ({
+                        ...current,
+                        salaryDatePrimary: event.target.value,
+                      }));
+                    }}
+                    placeholder="e.g. 15"
+                    className="h-12 rounded-2xl border-border/70 bg-background/90"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Salary date 2</label>
+                  <Input
+                    value={draft.salaryDateSecondary}
+                    onChange={(event) => {
+                      setFormError(null);
+                      setDraft((current) => ({
+                        ...current,
+                        salaryDateSecondary: event.target.value,
+                      }));
+                    }}
+                    placeholder="e.g. 30"
+                    className="h-12 rounded-2xl border-border/70 bg-background/90"
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Parent budget</label>
+                <Select
+                  value={draft.parentBudgetId}
+                  onValueChange={(value) => {
+                    setFormError(null);
+                    setDraft((current) => ({ ...current, parentBudgetId: value }));
+                  }}
+                >
+                  <SelectTrigger className="h-12 w-full rounded-2xl border-border/70 bg-background/90">
+                    <SelectValue placeholder="No parent budget" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No parent budget</SelectItem>
+                    {parentBudgetOptions.map((budget) => (
+                      <SelectItem key={budget.id} value={budget.id}>
+                        {budget.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[0.85rem] leading-6 text-muted-foreground">
+                  Selecting a parent creates a child budget inside that parent budget.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Status</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDraft((current) => ({ ...current, isActive: !current.isActive }))
+                  }
+                  className={`flex h-12 w-full items-center justify-center rounded-2xl border px-4 text-sm font-medium transition ${
+                    draft.isActive
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                      : "border-border/70 bg-background/80 text-muted-foreground"
+                  }`}
+                >
+                  {draft.isActive ? "Active" : "Inactive"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="rounded-b-[2rem] border-t border-border/60 bg-background/85 px-6 py-5 sm:px-8">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full px-5"
+              onClick={resetDialog}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="rounded-full px-5"
+              onClick={submitBudget}
+              disabled={isSubmitting}
+            >
+              {editingBudgetId ? "Save changes" : "Create budget"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(nextOpen) => (!nextOpen ? setDeleteTarget(null) : null)}
+      >
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md rounded-[1.4rem] border-border/70 bg-background/96 p-0 sm:max-w-lg sm:rounded-[1.75rem]">
+          <div className="px-5 py-5 sm:px-7 sm:py-7">
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-[1.65rem] font-semibold tracking-tight sm:text-3xl">
+                Delete budget?
+              </DialogTitle>
+              <DialogDescription className="text-[0.9rem] leading-7 sm:text-base">
+                Remove {deleteTarget?.name ? `"${deleteTarget.name}"` : "this budget"} from your
+                workspace? This does not remove existing transactions, but it does remove the budget
+                structure and roll-up.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <DialogFooter className="border-t border-border/60 bg-transparent px-7 py-7 sm:px-7 sm:py-6">
+            <div className="flex w-full justify-end gap-3">
+              <Button
+                type="button"
+                className="h-10 rounded-full bg-rose-600 px-5 text-[0.95rem] text-white hover:bg-rose-700 sm:min-w-32"
+                onClick={() => deleteTarget && removeBudget.mutate({ id: deleteTarget.id })}
+                disabled={removeBudget.isPending}
+              >
+                Delete
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-full px-5 text-[0.95rem] sm:min-w-32"
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

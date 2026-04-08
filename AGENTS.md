@@ -359,19 +359,50 @@ Current budget rules:
   - `danger`
   - `exceeded`
 
+Current budget UI:
+- route:
+  - `src/app/(app)/budgets/page.tsx`
+- workspace:
+  - `src/features/budgets/components/budgets-workspace.tsx`
+- the Budgets page should feel like a practical planning workspace, not a promo dashboard
+- prefer:
+  - compact summary cards
+  - active budget list
+  - clear empty state
+  - restrained support copy
+- avoid:
+  - oversized hero sections
+  - explanatory panels that take more space than the actual budget list
+  - cramped modal layouts
+
 Budget implementation guidance:
 - keep the period engine as the single source of truth for active budget windows
 - do not duplicate period logic inside routers or UI components
 - do not manually store spent totals on the budget record
 - derive spent / remaining / percentage from transaction events in the active window
-- keep insights, rollover behavior, and recurring planning out of Phase 1
+- keep insights, rollover behavior, and recurring planning out of the current phase
+- budget create/edit dialogs should use a comfortable desktop width and balanced two-column layout
+- period choices should read as selectable planning modes, not tall narrow cards
+- destructive dialogs should use compact inline actions, not full-width stacked buttons on desktop
 
-Phase 1 budget scope:
-- table + router + service foundation
-- active window calculation
-- spending roll-up
-- parent/child support
-- no budget workspace UI yet
+Current implemented scope:
+- Phase 1:
+  - table + router + service foundation
+  - active window calculation
+  - spending roll-up
+  - parent/child support
+- Phase 2:
+  - budget workspace UI
+  - create / edit / delete flows
+  - summary cards
+  - searchable active budget list
+  - empty state and support panel
+
+Next budget step:
+- modify transaction create/edit flows to support `budgetId` directly in the form
+- expense events should be assignable to a budget at capture time
+- once a transaction is budget-linked, budget spend should update through the existing derived budget logic
+- do not create a separate manual "spent" editing flow for budgets
 
 Architectural rule:
 - the user creates one event

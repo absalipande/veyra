@@ -254,7 +254,7 @@ function EventTypeButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition ${
+      className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-[0.92rem] transition sm:px-4 sm:text-sm ${
         isActive
           ? "border-[#17393c] bg-[#17393c] text-white"
           : "border-border/70 bg-[#fbfaf6] text-foreground hover:bg-muted/60 dark:bg-[#162022]"
@@ -477,7 +477,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   return (
     <div className="space-y-6 lg:space-y-7">
       <section className="overflow-hidden rounded-[2.1rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_30px_110px_-70px_rgba(10,31,34,0.84)]">
-        <div className="grid gap-6 px-6 py-7 sm:px-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+        <div className="grid gap-6 px-5 py-6 sm:px-8 sm:py-7 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
           <div className="max-w-3xl">
             <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[0.7rem] font-medium uppercase tracking-[0.28em] text-white/80">
               Transactions workspace
@@ -546,7 +546,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
       <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
-          <CardHeader className="gap-5">
+          <CardHeader className="gap-5 px-5 py-5 sm:px-6 sm:py-6">
             <div className="space-y-1.5">
               <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground">
                 Record a money event
@@ -562,7 +562,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   key={option.value}
                   type="button"
                   variant="outline"
-                  className="rounded-full bg-[#fbfaf6] dark:bg-[#162022]"
+                  className="rounded-full bg-[#fbfaf6] px-3.5 text-[0.92rem] dark:bg-[#162022] sm:px-4 sm:text-sm"
                   onClick={() => openComposer(option.value)}
                 >
                   <option.icon className="size-4" />
@@ -576,7 +576,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
       <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
-          <CardHeader className="gap-4">
+          <CardHeader className="gap-4 px-5 py-5 sm:px-6 sm:py-6">
             <div className="space-y-1.5">
               <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground">
                 Ledger
@@ -592,8 +592,8 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search by description, account, notes, or event type"
-                  className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10 dark:bg-[#162022]"
+                  placeholder="Search events, accounts, or notes"
+                  className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10 pr-4 text-[0.92rem] dark:bg-[#162022]"
                 />
               </div>
               <Select
@@ -615,7 +615,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
             </div>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="px-5 pb-5 pt-0 sm:px-6 sm:pb-6">
             {eventsQuery.isLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 4 }).map((_, index) => (
@@ -641,9 +641,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   {visibleEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="grid gap-4 px-5 py-4 md:grid-cols-[minmax(0,1.4fr)_140px_120px] md:items-center md:px-6"
+                      className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1.4fr)_140px_120px] md:items-center md:gap-4 md:px-6"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 md:min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                             {event.description}
@@ -661,10 +661,33 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           {formatEventDate(event.occurredAt)}
                           {event.notes ? ` · ${event.notes}` : ""}
                         </p>
+                        <div className="mt-3 flex items-end justify-between gap-4 md:hidden">
+                          <div className="min-w-0">
+                            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                              Amount
+                            </p>
+                            <p className="mt-1 text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                              {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
+                            </p>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              className="rounded-full text-destructive hover:text-destructive"
+                              onClick={() =>
+                                setDeleteTarget({ id: event.id, description: event.description })
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                              <span className="sr-only">Delete event</span>
+                            </Button>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="md:text-right">
-                        <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground md:hidden">
+                      <div className="hidden md:block md:text-right">
+                        <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                           Amount
                         </p>
                         <p className="mt-1 text-[0.95rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:mt-0">
@@ -672,7 +695,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         </p>
                       </div>
 
-                      <div className="flex justify-start gap-2 md:justify-end">
+                      <div className="hidden md:flex md:justify-end md:gap-2 md:pt-0">
                         <Button
                           variant="outline"
                           size="icon-sm"
