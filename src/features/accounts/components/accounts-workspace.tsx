@@ -362,7 +362,11 @@ function AccountSection({
   );
 }
 
-export function AccountsWorkspace() {
+type AccountsWorkspaceProps = {
+  initialQuery?: string;
+};
+
+export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps) {
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery();
   const summaryQuery = trpc.accounts.summary.useQuery();
@@ -370,8 +374,8 @@ export function AccountsWorkspace() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [form, setForm] = useState<CreateState>(initialState);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [liquidFilter, setLiquidFilter] = useState("");
-  const [liabilityFilter, setLiabilityFilter] = useState("");
+  const [liquidFilter, setLiquidFilter] = useState(initialQuery);
+  const [liabilityFilter, setLiabilityFilter] = useState(initialQuery);
   const [liquidSort, setLiquidSort] = useState<AccountSortOption>("newest");
   const [liabilitySort, setLiabilitySort] = useState<AccountSortOption>("newest");
   const [sortsRestored, setSortsRestored] = useState(false);

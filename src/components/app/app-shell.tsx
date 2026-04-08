@@ -1,8 +1,9 @@
 import { UserButton } from "@clerk/nextjs";
-import { Search, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
 import { DesktopAppNavigation, MobileAppNavigation } from "@/components/app/app-navigation";
+import { GlobalSearch } from "@/components/app/global-search";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 
 type AppShellProps = {
@@ -50,10 +51,7 @@ export function AppShell({ children }: AppShellProps) {
                 />
               </div>
 
-              <div className="hidden min-w-0 flex-1 items-center gap-3 rounded-2xl border border-border/70 bg-white/80 px-4 py-3 text-sm text-muted-foreground shadow-[0_18px_40px_-35px_rgba(10,31,34,0.25)] dark:bg-[#182123] dark:shadow-[0_18px_40px_-35px_rgba(0,0,0,0.4)] lg:flex">
-                <Search className="size-4" />
-                <span>Search will live here once accounts and transactions are wired.</span>
-              </div>
+              <GlobalSearch />
 
               <div className="ml-auto flex items-center gap-3">
                 <ThemeToggle />

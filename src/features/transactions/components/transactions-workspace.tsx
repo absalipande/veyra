@@ -266,14 +266,18 @@ function EventTypeButton({
   );
 }
 
-export function TransactionsWorkspace() {
+type TransactionsWorkspaceProps = {
+  initialQuery?: string;
+};
+
+export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspaceProps) {
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery();
   const eventsQuery = trpc.transactions.list.useQuery();
   const summaryQuery = trpc.transactions.summary.useQuery();
 
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialQuery);
   const [typeFilter, setTypeFilter] = useState<"all" | TransactionEventType>("all");
   const [draft, setDraft] = useState<EventDraft>(initialDraft);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
