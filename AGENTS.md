@@ -397,12 +397,20 @@ Current implemented scope:
   - summary cards
   - searchable active budget list
   - empty state and support panel
+- Phase 3:
+  - expense form integration
+  - `budgetId` can be selected directly during expense capture
+  - budget-linked expense events feed budget spend automatically through derived logic
+
+Current transaction-budget integration:
+- only `expense` events expose a budget selector in the transaction composer
+- the budget field is optional
+- income, transfer, credit payment, and loan disbursement flows should not expose budget selection
+- do not create a separate manual "spent" editing flow for budgets
 
 Next budget step:
-- modify transaction create/edit flows to support `budgetId` directly in the form
-- expense events should be assignable to a budget at capture time
-- once a transaction is budget-linked, budget spend should update through the existing derived budget logic
-- do not create a separate manual "spent" editing flow for budgets
+- extend budget assignment into transaction editing when edit support is expanded
+- surface more budget context inside the transactions experience only when it improves decision-making
 
 Architectural rule:
 - the user creates one event

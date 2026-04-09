@@ -41,6 +41,7 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type TransactionEventItem = RouterOutputs["transactions"]["list"][number];
 type TransactionEventType = RouterOutputs["transactions"]["list"][number]["type"];
 type AccountItem = RouterOutputs["accounts"]["list"][number];
+type BudgetItem = RouterOutputs["budgets"]["list"][number];
 
 type EventDraft = {
   amount: string;
@@ -48,6 +49,7 @@ type EventDraft = {
   date: string;
   description: string;
   destinationAccountId: string;
+  budgetId: string;
   feeAmount: string;
   loanAccountId: string;
   notes: string;
@@ -102,6 +104,7 @@ const initialDraft: EventDraft = {
   date: new Date().toISOString().slice(0, 10),
   description: "",
   destinationAccountId: "",
+  budgetId: "none",
   feeAmount: "",
   loanAccountId: "",
   notes: "",
@@ -273,6 +276,7 @@ type TransactionsWorkspaceProps = {
 export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspaceProps) {
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery();
+  const budgetsQuery = trpc.budgets.list.useQuery();
   const eventsQuery = trpc.transactions.list.useQuery();
   const summaryQuery = trpc.transactions.summary.useQuery();
 
@@ -346,6 +350,14 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     [accountsQuery.data]
   );
 
+  const activeBudgetOptions = useMemo(
+    () =>
+      (budgetsQuery.data ?? [])
+        .filter((budget) => budget.isActive)
+        .sort((a: BudgetItem, b: BudgetItem) => a.name.localeCompare(b.name)),
+    [budgetsQuery.data]
+  );
+
   const visibleEvents = useMemo(() => {
     const items = eventsQuery.data ?? [];
 
@@ -406,6 +418,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
         amount,
         date: draft.date,
         description: draft.description,
+        budgetId: draft.type === "expense" && draft.budgetId !== "none" ? draft.budgetId : undefined,
         notes: draft.notes,
       });
       return;
@@ -726,7 +739,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
           }
         }}
       >
-        <DialogContent className="overflow-hidden rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-[56rem]">
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-1.25rem)] overflow-y-auto rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:w-auto sm:max-w-[56rem]">
           <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16 sm:px-8 sm:pb-6 sm:pt-8">
             <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
               Event composer
@@ -791,29 +804,56 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
             </div>
 
             {(draft.type === "income" || draft.type === "expense") && (
-              <div className="space-y-3">
-                <label className="text-[0.95rem] font-semibold text-foreground">Account</label>
-                <Select
-                  value={draft.accountId}
-                  onValueChange={(value) => setDraft((current) => ({ ...current, accountId: value }))}
-                >
-                  <SelectTrigger className="h-13 rounded-[1.35rem] border-border/80 bg-background px-5">
-                    <SelectValue
-                      placeholder={
-                        draft.type === "expense"
-                          ? "Select a bank, wallet, or credit account"
-                          : "Select a bank or wallet account"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(draft.type === "expense" ? spendableAccounts : liquidAccounts).map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name} · {getAccountTypeLabel(account.type)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className={`grid gap-5 ${draft.type === "expense" ? "sm:grid-cols-2" : ""}`}>
+                <div className="space-y-3">
+                  <label className="text-[0.95rem] font-semibold text-foreground">Account</label>
+                  <Select
+                    value={draft.accountId}
+                    onValueChange={(value) => setDraft((current) => ({ ...current, accountId: value }))}
+                  >
+                    <SelectTrigger className="h-13 rounded-[1.35rem] border-border/80 bg-background px-5">
+                      <SelectValue
+                        placeholder={
+                          draft.type === "expense"
+                            ? "Select a bank, wallet, or credit account"
+                            : "Select a bank or wallet account"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(draft.type === "expense" ? spendableAccounts : liquidAccounts).map((account) => (
+                        <SelectItem key={account.id} value={account.id}>
+                          {account.name} · {getAccountTypeLabel(account.type)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {draft.type === "expense" ? (
+                  <div className="space-y-3">
+                    <label className="text-[0.95rem] font-semibold text-foreground">Budget</label>
+                    <Select
+                      value={draft.budgetId}
+                      onValueChange={(value) => setDraft((current) => ({ ...current, budgetId: value }))}
+                    >
+                      <SelectTrigger className="h-13 rounded-[1.35rem] border-border/80 bg-background px-5">
+                        <SelectValue placeholder="No budget" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No budget</SelectItem>
+                        {activeBudgetOptions.map((budget) => (
+                          <SelectItem key={budget.id} value={budget.id}>
+                            {budget.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[0.78rem] text-muted-foreground">
+                      Optional. Use this if the expense should count against a tracked budget window.
+                    </p>
+                  </div>
+                ) : null}
               </div>
             )}
 
