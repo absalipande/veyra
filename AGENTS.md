@@ -151,7 +151,7 @@ Do not create unprefixed tables for Veyra features in the shared database.
 Auth uses Clerk.
 
 Rules:
-- protected app routes must be protected in `src/middleware.ts`
+- protected app routes must be protected in `src/proxy.ts`
 - protected layouts should also perform server-side auth checks where appropriate
 - tRPC context must receive auth state at the route boundary
 
@@ -246,6 +246,7 @@ src/features/accounts/
 src/features/transactions/
   components/
     transactions-workspace.tsx
+    global-quick-capture.tsx
   server/
     schema.ts
     service.ts
@@ -313,6 +314,7 @@ Current transaction architecture:
   - `src/features/transactions/server/service.ts`
 - feature UI:
   - `src/features/transactions/components/transactions-workspace.tsx`
+  - `src/features/transactions/components/global-quick-capture.tsx`
 
 Transaction rules:
 - `income`
@@ -495,6 +497,11 @@ Dashboard-specific note:
   - important accounts
   - quick routes into real modules
 - the dashboard should be repopulated incrementally as features become real
+- when a new module becomes useful, prefer one restrained signal on the dashboard over a full duplicate workspace
+- budgets may appear as:
+  - one summary-strip metric
+  - one compact budget posture block
+- do not reproduce parent/child budget cards or the full budgets workspace on the dashboard
 
 Current dashboard decision:
 - keep the dashboard minimal for now
@@ -693,6 +700,16 @@ Do not force all of these through a single visually identical flow if that harms
 
 The first version can share structure, but the user intent should stay obvious.
 
+Quick capture guidance:
+- quick capture is a global entrypoint, but it is owned by the transactions feature
+- mount the trigger from the shared shell/header, not as separate per-page clones
+- keep the implementation in `src/features/transactions/components/global-quick-capture.tsx`
+- treat it as one-line structured capture, not a chat thread
+- parse simple natural language into a transaction draft first, then ask only for missing fields
+- support `expense`, `income`, and `transfer` first before expanding further
+- use the existing transaction create flow; do not create a second save path or a separate transaction model
+- do not present this as a fake AI assistant or support bot
+
 ### Transactions Folder Structure
 
 Preferred structure:
@@ -712,6 +729,7 @@ Potential future additions:
 ```txt
 src/features/transactions/
   components/
+    global-quick-capture.tsx
     forms/
     lists/
     calendar/

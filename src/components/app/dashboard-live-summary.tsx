@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightLeft, CreditCard, Globe2, Landmark, ReceiptText } from "lucide-react";
+import { ArrowRightLeft, CreditCard, Landmark, PiggyBank, ReceiptText } from "lucide-react";
 
 import { trpc } from "@/trpc/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,18 +31,19 @@ const summaryConfig = [
     icon: ArrowRightLeft,
   },
   {
-    key: "activeCurrencies",
-    label: "Currencies in use",
-    helper: "Balances remain native to each account instead of being flattened too early",
-    icon: Globe2,
+    key: "budgetsNeedingAttention",
+    label: "Budgets needing review",
+    helper: "Active parent budgets currently in warning, danger, or exceeded territory",
+    icon: PiggyBank,
   },
 ] as const;
 
 export function DashboardLiveSummary() {
   const accountsSummaryQuery = trpc.accounts.summary.useQuery();
   const transactionsSummaryQuery = trpc.transactions.summary.useQuery();
+  const budgetsSummaryQuery = trpc.budgets.summary.useQuery();
 
-  if (accountsSummaryQuery.isLoading || transactionsSummaryQuery.isLoading) {
+  if (accountsSummaryQuery.isLoading || transactionsSummaryQuery.isLoading || budgetsSummaryQuery.isLoading) {
     return (
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {Array.from({ length: 5 }).map((_, index) => (
@@ -58,8 +59,10 @@ export function DashboardLiveSummary() {
   if (
     accountsSummaryQuery.error ||
     transactionsSummaryQuery.error ||
+    budgetsSummaryQuery.error ||
     !accountsSummaryQuery.data ||
-    !transactionsSummaryQuery.data
+    !transactionsSummaryQuery.data ||
+    !budgetsSummaryQuery.data
   ) {
     return (
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -81,7 +84,10 @@ export function DashboardLiveSummary() {
     totalEvents: transactionsSummaryQuery.data.totalEvents,
     internalMovement:
       transactionsSummaryQuery.data.transferEvents + transactionsSummaryQuery.data.creditPaymentEvents,
-    activeCurrencies: accountsSummaryQuery.data.activeCurrencies,
+    budgetsNeedingAttention:
+      budgetsSummaryQuery.data.summary.warningBudgets +
+      budgetsSummaryQuery.data.summary.dangerBudgets +
+      budgetsSummaryQuery.data.summary.exceededBudgets,
   };
 
   return (

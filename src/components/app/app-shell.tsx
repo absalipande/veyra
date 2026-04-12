@@ -5,6 +5,7 @@ import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
 import { DesktopAppNavigation, MobileAppNavigation } from "@/components/app/app-navigation";
 import { GlobalSearch } from "@/components/app/global-search";
 import { ThemeToggle } from "@/components/app/theme-toggle";
+import { GlobalQuickCapture } from "@/features/transactions/components/global-quick-capture";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -52,6 +53,8 @@ export function AppShell({ children }: AppShellProps) {
               </div>
 
               <GlobalSearch />
+
+              <GlobalQuickCapture />
 
               <div className="ml-auto flex items-center gap-3">
                 <ThemeToggle />

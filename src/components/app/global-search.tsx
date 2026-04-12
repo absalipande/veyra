@@ -176,19 +176,19 @@ export function GlobalSearch() {
       >
         <DialogContent
           showCloseButton={false}
-          className="overflow-hidden rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 text-foreground shadow-[0_34px_120px_-70px_rgba(10,31,34,0.45)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-3xl"
+          className="max-h-[90vh] w-[calc(100vw-1.25rem)] overflow-y-auto rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 text-foreground shadow-[0_34px_120px_-70px_rgba(10,31,34,0.45)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:w-auto sm:max-w-3xl"
         >
-          <div className="border-b border-border/70 px-6 pb-5 pt-6 sm:px-7">
+          <div className="border-b border-border/70 px-5 pb-5 pt-5 sm:px-7 sm:pt-6">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2">
                 <div className="inline-flex rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                   Global search
                 </div>
                 <div>
-                  <h2 className="text-[1.6rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  <h2 className="text-[1.45rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.6rem]">
                     Find accounts and transactions fast
                   </h2>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                  <p className="mt-1 text-[0.92rem] leading-6 text-muted-foreground sm:text-sm">
                     Search by account name, transaction description, notes, or event type.
                   </p>
                 </div>
@@ -209,19 +209,19 @@ export function GlobalSearch() {
               </Button>
             </div>
 
-            <div className="relative mt-5">
+            <div className="relative mt-4 sm:mt-5">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 autoFocus
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search Veyra"
-                className="h-13 rounded-[1.35rem] border-border/80 bg-background pl-11 text-[0.98rem] dark:bg-[#162022]"
+                className="h-12 rounded-[1.35rem] border-border/80 bg-background pl-11 text-[0.95rem] dark:bg-[#162022] sm:h-13 sm:text-[0.98rem]"
               />
             </div>
           </div>
 
-          <div className="grid gap-6 px-6 py-6 sm:grid-cols-2 sm:px-7">
+          <div className="grid gap-5 px-5 py-5 sm:grid-cols-2 sm:px-7 sm:py-6">
             <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Landmark className="size-4 text-primary" />
@@ -233,13 +233,13 @@ export function GlobalSearch() {
                   key={account.id}
                   type="button"
                   onClick={() => openAccountsResult(account.name)}
-                  className="flex w-full items-start justify-between rounded-[1.25rem] border border-border/70 bg-white/70 px-4 py-3 text-left transition hover:bg-white dark:bg-[#162022] dark:hover:bg-[#1b2527]"
+                  className="flex w-full items-start justify-between rounded-[1.2rem] border border-border/70 bg-white/70 px-4 py-2.5 text-left transition hover:bg-white dark:bg-[#162022] dark:hover:bg-[#1b2527]"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#10292B] dark:text-foreground">
+                    <p className="truncate text-[0.95rem] font-semibold text-[#10292B] dark:text-foreground">
                       {account.name}
                     </p>
-                    <p className="mt-1 text-[0.82rem] text-muted-foreground">
+                    <p className="mt-0.5 text-[0.8rem] text-muted-foreground">
                       {getAccountTypeLabel(account.type)} · {account.currency}
                     </p>
                   </div>
@@ -265,13 +265,13 @@ export function GlobalSearch() {
                   key={event.id}
                   type="button"
                   onClick={() => openTransactionResult(event.description)}
-                  className="flex w-full items-start justify-between rounded-[1.25rem] border border-border/70 bg-white/70 px-4 py-3 text-left transition hover:bg-white dark:bg-[#162022] dark:hover:bg-[#1b2527]"
+                  className="flex w-full items-start justify-between rounded-[1.2rem] border border-border/70 bg-white/70 px-4 py-2.5 text-left transition hover:bg-white dark:bg-[#162022] dark:hover:bg-[#1b2527]"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-[#10292B] dark:text-foreground">
+                    <p className="truncate text-[0.95rem] font-semibold text-[#10292B] dark:text-foreground">
                       {event.description}
                     </p>
-                    <p className="mt-1 text-[0.82rem] text-muted-foreground">
+                    <p className="mt-0.5 text-[0.8rem] text-muted-foreground">
                       {getTransactionTypeLabel(event.type)} · {getTransactionSummary(event)}
                     </p>
                   </div>
@@ -288,19 +288,19 @@ export function GlobalSearch() {
           </div>
 
           {!hasQuery && !isLoading ? (
-            <div className="border-t border-border/70 px-6 py-4 text-sm text-muted-foreground sm:px-7">
+            <div className="border-t border-border/70 px-5 py-4 text-sm text-muted-foreground sm:px-7">
               Start typing to search live accounts and ledger events. Press <span className="font-medium text-foreground">Cmd/Ctrl + K</span> anytime to reopen this.
             </div>
           ) : null}
 
           {isLoading ? (
-            <div className="border-t border-border/70 px-6 py-4 text-sm text-muted-foreground sm:px-7">
+            <div className="border-t border-border/70 px-5 py-4 text-sm text-muted-foreground sm:px-7">
               Searching your workspace...
             </div>
           ) : null}
 
           {hasQuery && !isLoading && !hasResults ? (
-            <div className="border-t border-border/70 px-6 py-4 text-sm text-muted-foreground sm:px-7">
+            <div className="border-t border-border/70 px-5 py-4 text-sm text-muted-foreground sm:px-7">
               Nothing matched “{deferredQuery.trim()}”.
             </div>
           ) : null}
