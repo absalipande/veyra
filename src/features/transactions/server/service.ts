@@ -357,8 +357,11 @@ async function rollbackBalanceEntries(
 
 async function validateEventReferences(
   ctx: Pick<TRPCContext, "db" | "userId">,
-  input: Pick<CreateTransactionEventInput, "type"> &
-    Partial<Pick<CreateTransactionEventInput, "budgetId" | "categoryId">>
+  input: {
+    type: CreateTransactionEventInput["type"];
+    budgetId?: string;
+    categoryId?: string;
+  }
 ) {
   if (input.type === "expense" && input.budgetId) {
     await requireBudgetForUser(ctx, input.budgetId);

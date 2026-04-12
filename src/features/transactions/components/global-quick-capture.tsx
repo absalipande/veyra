@@ -17,7 +17,7 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
 type CategoryItem = RouterOutputs["categories"]["list"][number];
 type QuickCaptureIntent = "expense" | "income" | "transfer" | null;
-type SupportedEventType = RouterOutputs["transactions"]["list"][number]["type"];
+type SupportedEventType = RouterOutputs["transactions"]["list"]["items"][number]["type"];
 
 type ParsedQuickCapture = {
   amountMiliunits: number | null;

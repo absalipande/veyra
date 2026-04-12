@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeferredValue, useMemo, useState } from "react";
-import type { inferRouterOutputs } from "@trpc/server";
+import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import {
   ArrowRightLeft,
   CreditCard,
@@ -38,9 +38,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type RouterInputs = inferRouterInputs<AppRouter>;
 type RouterOutputs = inferRouterOutputs<AppRouter>;
-type TransactionEventItem = RouterOutputs["transactions"]["list"][number];
-type TransactionEventType = RouterOutputs["transactions"]["list"][number]["type"];
+type CreateTransactionEventInput = RouterInputs["transactions"]["create"];
+type UpdateTransactionEventInput = RouterInputs["transactions"]["update"];
+type TransactionEventItem = RouterOutputs["transactions"]["list"]["items"][number];
+type TransactionEventType = RouterOutputs["transactions"]["list"]["items"][number]["type"];
 type AccountItem = RouterOutputs["accounts"]["list"][number];
 type BudgetItem = RouterOutputs["budgets"]["list"][number];
 type CategoryItem = RouterOutputs["categories"]["list"][number];
@@ -465,7 +468,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     if (draft.type === "income" || draft.type === "expense") {
       if (!draft.accountId) return;
 
-      const payload = {
+      const payload: CreateTransactionEventInput = {
         type: draft.type,
         accountId: draft.accountId,
         amount,
@@ -477,10 +480,11 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       };
 
       if (isEditing) {
-        updateEvent.mutate({
+        const updatePayload: UpdateTransactionEventInput = {
           id: editingEventId!,
           ...payload,
-        });
+        };
+        updateEvent.mutate(updatePayload);
       } else {
         createEvent.mutate(payload);
       }
@@ -490,7 +494,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     if (draft.type === "transfer") {
       if (!draft.sourceAccountId || !draft.destinationAccountId) return;
 
-      const payload = {
+      const payload: CreateTransactionEventInput = {
         type: "transfer",
         sourceAccountId: draft.sourceAccountId,
         destinationAccountId: draft.destinationAccountId,
@@ -502,10 +506,11 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       };
 
       if (isEditing) {
-        updateEvent.mutate({
+        const updatePayload: UpdateTransactionEventInput = {
           id: editingEventId!,
           ...payload,
-        });
+        };
+        updateEvent.mutate(updatePayload);
       } else {
         createEvent.mutate(payload);
       }
@@ -515,7 +520,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     if (draft.type === "credit_payment") {
       if (!draft.sourceAccountId || !draft.creditAccountId) return;
 
-      const payload = {
+      const payload: CreateTransactionEventInput = {
         type: "credit_payment",
         sourceAccountId: draft.sourceAccountId,
         creditAccountId: draft.creditAccountId,
@@ -527,10 +532,11 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       };
 
       if (isEditing) {
-        updateEvent.mutate({
+        const updatePayload: UpdateTransactionEventInput = {
           id: editingEventId!,
           ...payload,
-        });
+        };
+        updateEvent.mutate(updatePayload);
       } else {
         createEvent.mutate(payload);
       }
@@ -539,7 +545,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
     if (!draft.loanAccountId || !draft.destinationAccountId) return;
 
-    const payload = {
+    const payload: CreateTransactionEventInput = {
       type: "loan_disbursement",
       loanAccountId: draft.loanAccountId,
       destinationAccountId: draft.destinationAccountId,
@@ -550,10 +556,11 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     };
 
     if (isEditing) {
-      updateEvent.mutate({
+      const updatePayload: UpdateTransactionEventInput = {
         id: editingEventId!,
         ...payload,
-      });
+      };
+      updateEvent.mutate(updatePayload);
     } else {
       createEvent.mutate(payload);
     }

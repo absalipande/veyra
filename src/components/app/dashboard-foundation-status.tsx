@@ -56,6 +56,19 @@ export function DashboardFoundationStatus() {
   const status = statusQuery.data;
   const viewer = viewerQuery.data;
 
+  if (!status || !viewer) {
+    return (
+      <Card className="border-destructive/20 bg-white/75 dark:bg-[#182123]">
+        <CardHeader>
+          <CardTitle className="text-xl">Foundation data unavailable</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm leading-6 text-muted-foreground">
+          The dashboard is connected, but the initial system payload did not arrive as expected.
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {statusCards.map((card) => {

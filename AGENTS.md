@@ -174,6 +174,12 @@ If a component is only used by one feature, prefer moving it into that feature f
 
 Compatibility re-exports are acceptable during migration, but the final source of truth should be the feature folder.
 
+Legacy compatibility rule:
+- `mynt/` is legacy reference code, not active Veyra source
+- do not point new Veyra code at `mynt/` as a source of truth
+- if a temporary bridge is needed during migration, add a small compatibility re-export under `src/features/...` rather than expanding TS path aliases toward `mynt`
+- keep `mynt` excluded from TypeScript project checking when it is not part of the active app surface
+
 ## Folder Structure
 
 Current preferred structure:
@@ -785,6 +791,14 @@ Additional rules:
 
 Routers should stay thin and only call transactions services.
 
+### Transaction Typing Rules
+
+- treat `transactions.list` as a paginated object response, not a bare array
+- when deriving item types from router outputs, use `RouterOutputs["transactions"]["list"]["items"][number]`
+- when deriving event-type literals from router outputs, read them from the event item type, not from the list container
+- for create and update flows, prefer `inferRouterInputs<AppRouter>` payload aliases so discriminated union event types stay narrow through mutation calls
+- in services, avoid `Pick<>` over discriminated-union keys that are not shared by every variant; use a small explicit object shape instead when a helper only needs a subset such as `type`, `budgetId`, or `categoryId`
+
 ### UI Responsibilities
 
 The UI should present clean intent-based actions:
@@ -1042,6 +1056,8 @@ When migrating code from legacy locations:
 - keep temporary re-export shims small and obvious
 - do not duplicate business logic in old and new locations
 - remove old source-of-truth paths once feature migration stabilizes
+- if legacy files still compile for reference, do not let them drive new TypeScript errors in the active Veyra app surface
+- if a legacy import path still needs to resolve temporarily, prefer a shim in `src/features/...` over widening `@/*` to include legacy directories
 
 ## Coding Guidelines
 
@@ -1050,6 +1066,8 @@ When migrating code from legacy locations:
 - Keep services small and composable.
 - Keep UI state local unless multiple screens genuinely need shared client state.
 - Prefer `rg` for search and `apply_patch` for manual file edits.
+- When working with tRPC list procedures, confirm the exact router return shape before indexing into `inferRouterOutputs`.
+- When building discriminated-union mutation payloads, keep literal `type` values narrow with typed payload aliases instead of relying on object-literal widening.
 
 ## When Adding a New Feature
 
