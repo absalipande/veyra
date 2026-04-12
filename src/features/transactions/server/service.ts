@@ -1,16 +1,20 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { accounts, budgets, ledgerEntries, transactionEvents } from "@/db/schema";
+import { accounts, budgets, categories, ledgerEntries, transactionEvents } from "@/db/schema";
 import {
   createTransactionEventSchema,
   deleteTransactionEventSchema,
+  listTransactionEventsSchema,
+  updateTransactionEventSchema,
 } from "@/features/transactions/server/schema";
 import type { TRPCContext } from "@/server/api/trpc";
 
 type CreateTransactionEventInput = z.infer<typeof createTransactionEventSchema>;
 type DeleteTransactionEventInput = z.infer<typeof deleteTransactionEventSchema>;
+type ListTransactionEventsInput = z.infer<typeof listTransactionEventsSchema>;
+type UpdateTransactionEventInput = z.infer<typeof updateTransactionEventSchema>;
 
 type AccountRecord = typeof accounts.$inferSelect;
 type EventType = CreateTransactionEventInput["type"];
@@ -123,6 +127,31 @@ async function requireBudgetForUser(
   }
 
   return budget;
+}
+
+async function requireCategoryForUser(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  categoryId: string,
+  kind: "expense" | "income"
+) {
+  const userId = assertUserId(ctx.userId);
+  const category = await ctx.db.query.categories.findFirst({
+    where: and(
+      eq(categories.id, categoryId),
+      eq(categories.clerkUserId, userId),
+      eq(categories.kind, kind),
+      eq(categories.isArchived, false)
+    ),
+  });
+
+  if (!category) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Category not found.",
+    });
+  }
+
+  return category;
 }
 
 function buildEntriesForEvent(
@@ -326,13 +355,86 @@ async function rollbackBalanceEntries(
   }
 }
 
-export async function listTransactionEvents(ctx: Pick<TRPCContext, "db" | "userId">) {
-  const userId = assertUserId(ctx.userId);
+async function validateEventReferences(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  input: Pick<CreateTransactionEventInput, "type"> &
+    Partial<Pick<CreateTransactionEventInput, "budgetId" | "categoryId">>
+) {
+  if (input.type === "expense" && input.budgetId) {
+    await requireBudgetForUser(ctx, input.budgetId);
+  }
 
-  const events = await ctx.db.query.transactionEvents.findMany({
-    where: eq(transactionEvents.clerkUserId, userId),
-    orderBy: [desc(transactionEvents.occurredAt), desc(transactionEvents.createdAt)],
-  });
+  if ((input.type === "expense" || input.type === "income") && input.categoryId) {
+    await requireCategoryForUser(ctx, input.categoryId, input.type);
+  }
+}
+
+function getAccountIdsForEventInput(input: CreateTransactionEventInput | UpdateTransactionEventInput) {
+  return input.type === "income" || input.type === "expense"
+    ? [input.accountId]
+    : input.type === "transfer"
+      ? [input.sourceAccountId, input.destinationAccountId]
+      : input.type === "credit_payment"
+        ? [input.sourceAccountId, input.creditAccountId]
+        : [input.loanAccountId, input.destinationAccountId];
+}
+
+export async function listTransactionEvents(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  input: ListTransactionEventsInput
+) {
+  const userId = assertUserId(ctx.userId);
+  const normalizedSearch = input.search.trim();
+  const searchTerm = `%${normalizedSearch}%`;
+  const filters = [
+    eq(transactionEvents.clerkUserId, userId),
+    input.type === "all" ? undefined : eq(transactionEvents.type, input.type),
+    normalizedSearch
+      ? or(
+          ilike(transactionEvents.description, searchTerm),
+          ilike(transactionEvents.notes, searchTerm),
+          ilike(transactionEvents.type, searchTerm),
+          sql<boolean>`exists (
+            select 1
+            from ${categories}
+            where ${categories.id} = ${transactionEvents.categoryId}
+              and ${categories.clerkUserId} = ${userId}
+              and ${categories.name} ilike ${searchTerm}
+          )`,
+          sql<boolean>`exists (
+            select 1
+            from ${ledgerEntries}
+            inner join ${accounts} on ${accounts.id} = ${ledgerEntries.accountId}
+            where ${ledgerEntries.eventId} = ${transactionEvents.id}
+              and ${accounts.clerkUserId} = ${userId}
+              and ${accounts.name} ilike ${searchTerm}
+          )`
+        )
+      : undefined,
+  ].filter((value): value is NonNullable<typeof value> => Boolean(value));
+  const whereClause = and(...filters);
+  const page = input.page;
+  const pageSize = input.pageSize;
+
+  const [countRow] = await ctx.db
+    .select({
+      totalCount: sql<number>`count(*)`,
+    })
+    .from(transactionEvents)
+    .where(whereClause);
+
+  const totalCount = Number(countRow?.totalCount ?? 0);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const safeOffset = (safePage - 1) * pageSize;
+
+  const events = await ctx.db
+    .select()
+    .from(transactionEvents)
+    .where(whereClause)
+    .orderBy(desc(transactionEvents.occurredAt), desc(transactionEvents.createdAt))
+    .limit(pageSize)
+    .offset(safeOffset);
 
   const eventIds = events.map((event) => event.id);
   const entries =
@@ -358,6 +460,21 @@ export async function listTransactionEvents(ctx: Pick<TRPCContext, "db" | "userI
           .where(and(eq(accounts.clerkUserId, userId), inArray(accounts.id, accountIds)));
 
   const accountMap = new Map(accountRows.map((account) => [account.id, account]));
+  const categoryIds = Array.from(
+    new Set(events.map((event) => event.categoryId).filter((value): value is string => Boolean(value)))
+  );
+  const categoryRows =
+    categoryIds.length === 0
+      ? []
+      : await ctx.db
+          .select({
+            id: categories.id,
+            name: categories.name,
+            kind: categories.kind,
+          })
+          .from(categories)
+          .where(and(eq(categories.clerkUserId, userId), inArray(categories.id, categoryIds)));
+  const categoryMap = new Map(categoryRows.map((category) => [category.id, category]));
   const entriesByEvent = new Map<string, typeof entries>();
 
   for (const entry of entries) {
@@ -366,14 +483,21 @@ export async function listTransactionEvents(ctx: Pick<TRPCContext, "db" | "userI
     entriesByEvent.set(entry.eventId, existing);
   }
 
-  return events.map((event) => ({
-    ...event,
-    entries:
-      entriesByEvent.get(event.id)?.map((entry) => ({
-        ...entry,
-        account: accountMap.get(entry.accountId) ?? null,
-      })) ?? [],
-  }));
+  return {
+    items: events.map((event) => ({
+      ...event,
+      category: event.categoryId ? categoryMap.get(event.categoryId) ?? null : null,
+      entries:
+        entriesByEvent.get(event.id)?.map((entry) => ({
+          ...entry,
+          account: accountMap.get(entry.accountId) ?? null,
+        })) ?? [],
+    })),
+    page: safePage,
+    pageSize,
+    totalCount,
+    totalPages,
+  };
 }
 
 export async function getTransactionEventsSummary(ctx: Pick<TRPCContext, "db" | "userId">) {
@@ -409,20 +533,9 @@ export async function createTransactionEvent(
 ) {
   const userId = assertUserId(ctx.userId);
 
-  if (input.type === "expense" && input.budgetId) {
-    await requireBudgetForUser(ctx, input.budgetId);
-  }
+  await validateEventReferences(ctx, input);
 
-  const accountIds =
-    input.type === "income" || input.type === "expense"
-      ? [input.accountId]
-      : input.type === "transfer"
-        ? [input.sourceAccountId, input.destinationAccountId]
-      : input.type === "credit_payment"
-        ? [input.sourceAccountId, input.creditAccountId]
-      : [input.loanAccountId, input.destinationAccountId];
-
-  const accountMap = await getUserAccounts(ctx, accountIds);
+  const accountMap = await getUserAccounts(ctx, getAccountIdsForEventInput(input));
   const { currency, entries } = buildEntriesForEvent(input, accountMap);
 
   const eventId = crypto.randomUUID();
@@ -439,6 +552,8 @@ export async function createTransactionEvent(
       feeAmount:
         input.type === "transfer" || input.type === "credit_payment" ? input.feeAmount : 0,
       budgetId: input.type === "expense" ? input.budgetId ?? null : null,
+      categoryId:
+        input.type === "income" || input.type === "expense" ? input.categoryId ?? null : null,
       description: input.description,
       notes: input.notes || null,
       occurredAt: input.date,
@@ -476,6 +591,135 @@ export async function createTransactionEvent(
 
   return {
     eventId,
+    type: input.type,
+  };
+}
+
+export async function updateTransactionEvent(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  input: UpdateTransactionEventInput
+) {
+  const userId = assertUserId(ctx.userId);
+
+  const existingEvent = await ctx.db.query.transactionEvents.findFirst({
+    where: and(eq(transactionEvents.id, input.id), eq(transactionEvents.clerkUserId, userId)),
+  });
+
+  if (!existingEvent) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Transaction event not found.",
+    });
+  }
+
+  const existingEntries = await ctx.db.query.ledgerEntries.findMany({
+    where: and(eq(ledgerEntries.eventId, input.id), eq(ledgerEntries.clerkUserId, userId)),
+  });
+
+  await validateEventReferences(ctx, input);
+
+  const accountMap = await getUserAccounts(ctx, getAccountIdsForEventInput(input));
+  const { currency, entries } = buildEntriesForEvent(input, accountMap);
+
+  let balancesRolledBack = false;
+  let newLedgerInserted = false;
+  let newBalancesApplied: BalanceEntry[] = [];
+
+  try {
+    await rollbackBalanceEntries(ctx.db, existingEntries, userId);
+    balancesRolledBack = true;
+
+    await ctx.db
+      .update(transactionEvents)
+      .set({
+        type: input.type as EventType,
+        currency,
+        amount: input.amount,
+        feeAmount:
+          input.type === "transfer" || input.type === "credit_payment" ? input.feeAmount : 0,
+        budgetId: input.type === "expense" ? input.budgetId ?? null : null,
+        categoryId:
+          input.type === "income" || input.type === "expense" ? input.categoryId ?? null : null,
+        description: input.description,
+        notes: input.notes || null,
+        occurredAt: input.date,
+        updatedAt: new Date(),
+      })
+      .where(eq(transactionEvents.id, input.id));
+
+    await ctx.db.delete(ledgerEntries).where(eq(ledgerEntries.eventId, input.id));
+
+    await ctx.db.insert(ledgerEntries).values(
+      entries.map((entry) => ({
+        id: crypto.randomUUID(),
+        clerkUserId: userId,
+        eventId: input.id,
+        accountId: entry.accountId,
+        role: entry.role,
+        amountDelta: entry.amountDelta,
+        currency: entry.currency,
+      }))
+    );
+    newLedgerInserted = true;
+
+    newBalancesApplied = await applyBalanceEntries(ctx.db, entries, userId);
+  } catch (error) {
+    if (newBalancesApplied.length > 0) {
+      await rollbackBalanceEntries(ctx.db, newBalancesApplied, userId).catch(() => undefined);
+    }
+
+    if (newLedgerInserted) {
+      await ctx.db.delete(ledgerEntries).where(eq(ledgerEntries.eventId, input.id)).catch(() => undefined);
+    }
+
+    await ctx.db
+      .update(transactionEvents)
+      .set({
+        type: existingEvent.type,
+        currency: existingEvent.currency,
+        amount: existingEvent.amount,
+        feeAmount: existingEvent.feeAmount,
+        budgetId: existingEvent.budgetId,
+        categoryId: existingEvent.categoryId,
+        description: existingEvent.description,
+        notes: existingEvent.notes,
+        occurredAt: existingEvent.occurredAt,
+        updatedAt: existingEvent.updatedAt,
+      })
+      .where(eq(transactionEvents.id, input.id))
+      .catch(() => undefined);
+
+    if (existingEntries.length > 0) {
+      await ctx.db
+        .insert(ledgerEntries)
+        .values(
+          existingEntries.map((entry) => ({
+            id: entry.id,
+            clerkUserId: entry.clerkUserId,
+            eventId: entry.eventId,
+            accountId: entry.accountId,
+            role: entry.role,
+            amountDelta: entry.amountDelta,
+            currency: entry.currency,
+            createdAt: entry.createdAt,
+          }))
+        )
+        .catch(() => undefined);
+    }
+
+    if (balancesRolledBack) {
+      await applyBalanceEntries(ctx.db, existingEntries, userId).catch(() => undefined);
+    }
+
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to update transaction event.",
+      cause: error,
+    });
+  }
+
+  return {
+    eventId: input.id,
     type: input.type,
   };
 }

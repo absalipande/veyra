@@ -316,6 +316,15 @@ Current transaction architecture:
   - `src/features/transactions/components/transactions-workspace.tsx`
   - `src/features/transactions/components/global-quick-capture.tsx`
 
+Current implemented transaction scope:
+- list events with server-side pagination
+- create event
+- edit event
+- delete event
+- category support for `income` and `expense`
+- budget support for `expense`
+- global quick capture for simple `expense`, `income`, and `transfer`
+
 Transaction rules:
 - `income`
   - applies to a bank or wallet account
@@ -411,7 +420,7 @@ Current transaction-budget integration:
 - do not create a separate manual "spent" editing flow for budgets
 
 Next budget step:
-- extend budget assignment into transaction editing when edit support is expanded
+- extend budget assignment into deeper transaction editing surfaces only if it improves clarity
 - surface more budget context inside the transactions experience only when it improves decision-making
 
 Architectural rule:
@@ -421,6 +430,92 @@ Architectural rule:
 
 This is intentionally better-structured than legacy Mynt behavior, where too much of the finance
 logic was implicitly carried by UI assumptions.
+
+### Loans
+
+Loans should be treated as first-class borrowing records, not as user-created liability accounts first.
+
+Current loan foundation:
+- Veyra already supports `Loan` as an account type
+- Veyra already supports `loan_disbursement` as a transaction event
+- the current transaction service treats loan disbursement as:
+  - loan liability increases
+  - receiving liquid account increases
+
+V1 loans product direction:
+- loans should get their own `Loans` page
+- the user should create a loan record first, not manually create a loan account first
+- if the accounting model still needs an underlying loan account, create it automatically behind the scenes
+- loans may still appear in Accounts as `Loan` type records, but Accounts should not be the primary management surface
+
+V1 loan types:
+- `institution`
+  - for banks, digital banks, and online-lending products
+- `personal`
+  - for friends, family, colleagues, or other informal lenders
+
+V1 loan schema should include:
+- `id`
+- `userId`
+- `kind`
+  - `institution`
+  - `personal`
+- `name`
+  - user-facing loan name such as `Atome Cash Loan`
+- `lenderName`
+  - provider or person name
+- `currency`
+- `principalAmount`
+- `outstandingAmount`
+- `disbursedAt`
+- `status`
+  - `active`
+  - `closed`
+- `destinationAccountId`
+  - the bank or wallet account that received the proceeds
+- `underlyingLoanAccountId`
+  - internal liability account reference when used
+- `cadence`
+  - optional for V1
+  - `weekly`
+  - `bi-weekly`
+  - `monthly`
+- `nextDueDate`
+  - optional
+- `notes`
+  - optional
+- `metadata`
+  - optional raw detail for institution-specific fields that should not reshape the whole schema yet
+
+V1 loan flows:
+- `Create loan`
+  - create the loan record
+  - optionally create the underlying loan liability account automatically
+  - optionally create the opening `loan_disbursement` event at the same time
+- `Record payment`
+  - should reduce a loan from a liquid account
+  - should be modeled as its own event type later, not as a generic transfer in the UI
+
+V1 payment rules:
+- payment source accounts should be liquid accounts only:
+  - `Bank`
+  - `Wallet`
+- do not allow credit accounts as repayment sources in V1
+- support recording payments from both:
+  - the Loans page
+  - the Transactions page
+
+V1 Loans page guidance:
+- keep it a practical workspace, not a promo surface
+- prefer:
+  - active loans summary
+  - total outstanding
+  - due soon / next due
+  - lender and product clarity
+  - `Add loan` and `Record payment` actions
+- avoid:
+  - forcing users into raw account setup
+  - showing only internal ledger structure without loan context
 
 ## Design System Direction
 
@@ -621,6 +716,9 @@ Examples:
 - Loan disbursement
   - loan liability increases
   - receiving cash/bank account increases
+- Loan payment
+  - liquid account decreases
+  - loan liability decreases
 - Credit interest
   - do not model as a standalone event for now; users typically pay the statement amount that already includes it
 
@@ -709,6 +807,12 @@ Quick capture guidance:
 - support `expense`, `income`, and `transfer` first before expanding further
 - use the existing transaction create flow; do not create a second save path or a separate transaction model
 - do not present this as a fake AI assistant or support bot
+- when categories are introduced, quick capture may suggest or prefill a category, but it should not silently assign one with high confidence unless the match is explicit
+- category handling in quick capture should stay assistive:
+  - parse likely category phrases
+  - surface them as editable draft fields
+  - ask only when the category is missing and useful
+- quick capture currently supports category prefills for obvious `income` and `expense` matches and still keeps the category editable before save
 
 ### Transactions Folder Structure
 
@@ -753,6 +857,7 @@ Transactions v1 should include:
 - delete event
 - support the initial event types
 - filter by account/date/type
+- pagination
 - mobile-safe list UX
 
 Transactions v1 should not include:
@@ -811,6 +916,78 @@ Deliverables:
 - import
 - calendar
 - bulk actions
+
+## Categories
+
+Categories are now a dedicated feature and should stay lightweight before heavier reporting or automation is added.
+
+Why categories matter:
+- they make transactions more meaningful
+- they make budgets more useful later
+- they unlock future spending insights without bloating the dashboard now
+- they improve quick capture without requiring an LLM
+
+Recommended category architecture:
+- route:
+  - `src/server/api/routers/categories.ts`
+- feature schemas and logic:
+  - `src/features/categories/server/schema.ts`
+  - `src/features/categories/server/service.ts`
+- feature UI:
+  - `src/features/categories/components/categories-workspace.tsx`
+  - `src/app/(app)/categories/page.tsx`
+
+Category rules:
+- categories are user-scoped
+- start with a flat model first
+- use one category reference per transaction event where relevant
+- prioritize `expense` first
+- `income` categories may be supported, but do not overcomplicate the first slice
+- transfer, credit payment, and loan disbursement should not require categories in V1
+
+Recommended V1 category schema:
+- `id`
+- `userId`
+- `name`
+- `kind`
+  - `expense`
+  - `income`
+- `isArchived`
+- `color`
+  - optional
+- `icon`
+  - optional
+- `sortOrder`
+  - optional
+
+Category V1 scope:
+- create / edit / archive categories
+- category picker in transaction flows where appropriate
+- category display in the transactions list and detail surfaces
+- category filtering in the transactions workspace
+
+Current implemented category scope:
+- dedicated Categories page
+- create / edit / delete category flows
+- transaction composer dropdown for `income` and `expense`
+- quick-capture category dropdown for `income` and `expense`
+- category-aware transaction search and transaction row metadata
+
+Category V1 should not include:
+- nested category trees
+- rules engine automation
+- merchant intelligence
+- budget rollups by category yet
+
+Quick capture + categories guidance:
+- quick capture should remain deterministic first
+- allow it to parse obvious category phrases such as:
+  - `lunch`
+  - `groceries`
+  - `salary`
+- if there is a clear category match, prefill the draft
+- if there are multiple plausible matches, surface the category as unresolved rather than guessing silently
+- categories should remain editable before save
 
 ### Production Readiness Rule
 

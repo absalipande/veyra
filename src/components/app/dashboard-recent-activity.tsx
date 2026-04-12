@@ -21,7 +21,12 @@ function formatActivityDate(value: Date | string) {
 
 export function DashboardRecentActivity() {
   const accountsQuery = trpc.accounts.list.useQuery();
-  const transactionsQuery = trpc.transactions.list.useQuery();
+  const transactionsQuery = trpc.transactions.list.useQuery({
+    page: 1,
+    pageSize: 8,
+    search: "",
+    type: "all",
+  });
   const budgetsSummaryQuery = trpc.budgets.summary.useQuery();
 
   const liquidAccounts = useMemo(
@@ -43,7 +48,7 @@ export function DashboardRecentActivity() {
   );
 
   const workspaceSignals = useMemo(() => {
-    const transactions = transactionsQuery.data ?? [];
+    const transactions = transactionsQuery.data?.items ?? [];
     const latestEvent = transactions[0] ?? null;
     const largestLiquid = liquidAccounts[0] ?? null;
     const largestLiability = liabilityAccounts[0] ?? null;

@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
-type TransactionItem = RouterOutputs["transactions"]["list"][number];
+type TransactionItem = RouterOutputs["transactions"]["list"]["items"][number];
 
 function getAccountTypeLabel(type: AccountItem["type"]) {
   switch (type) {
@@ -71,7 +71,12 @@ export function GlobalSearch() {
   const accountsQuery = trpc.accounts.list.useQuery(undefined, {
     enabled: open,
   });
-  const transactionsQuery = trpc.transactions.list.useQuery(undefined, {
+  const transactionsQuery = trpc.transactions.list.useQuery({
+    page: 1,
+    pageSize: 30,
+    search: deferredQuery,
+    type: "all",
+  }, {
     enabled: open,
   });
 
@@ -106,7 +111,7 @@ export function GlobalSearch() {
   }, [accountsQuery.data, deferredQuery]);
 
   const transactions = useMemo(() => {
-    const items = transactionsQuery.data ?? [];
+    const items = transactionsQuery.data?.items ?? [];
     return items
       .filter((event) =>
         matchesSearch(

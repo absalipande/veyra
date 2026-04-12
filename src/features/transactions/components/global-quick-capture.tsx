@@ -15,11 +15,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
+type CategoryItem = RouterOutputs["categories"]["list"][number];
 type QuickCaptureIntent = "expense" | "income" | "transfer" | null;
 type SupportedEventType = RouterOutputs["transactions"]["list"][number]["type"];
 
 type ParsedQuickCapture = {
   amountMiliunits: number | null;
+  categoryId: string | null;
   dateLabel: string;
   dateValue: string;
   description: string | null;
@@ -66,6 +68,29 @@ function findAccountMatch(phrase: string | null, accounts: AccountItem[]) {
   );
 }
 
+function findCategoryMatch(
+  phrase: string | null,
+  categories: CategoryItem[],
+  kind: "expense" | "income"
+) {
+  if (!phrase) return null;
+
+  const normalizedPhrase = normalizeValue(phrase);
+  if (!normalizedPhrase) return null;
+
+  return (
+    categories.find((category) => {
+      if (category.kind !== kind) return false;
+      const normalizedName = normalizeValue(category.name);
+      return (
+        normalizedName === normalizedPhrase ||
+        normalizedPhrase.includes(normalizedName) ||
+        normalizedName.includes(normalizedPhrase)
+      );
+    }) ?? null
+  );
+}
+
 function detectIntent(input: string): QuickCaptureIntent {
   const normalized = normalizeValue(input);
 
@@ -86,7 +111,11 @@ function extractAmount(input: string) {
   return Math.round(numeric * 1000);
 }
 
-function parseQuickCapture(input: string, accounts: AccountItem[]): ParsedQuickCapture {
+function parseQuickCapture(
+  input: string,
+  accounts: AccountItem[],
+  categories: CategoryItem[]
+): ParsedQuickCapture {
   const normalized = input.trim();
   const lower = normalized.toLowerCase();
   const intent = detectIntent(normalized);
@@ -98,6 +127,7 @@ function parseQuickCapture(input: string, accounts: AccountItem[]): ParsedQuickC
   let description: string | null = null;
   let sourceAccountId: string | null = null;
   let destinationAccountId: string | null = null;
+  let categoryId: string | null = null;
 
   if (intent === "transfer") {
     const transferMatch = normalized.match(/from\s+(.+?)\s+to\s+(.+?)(?:\s+(?:today|yesterday))?$/i);
@@ -128,6 +158,10 @@ function parseQuickCapture(input: string, accounts: AccountItem[]): ParsedQuickC
 
     const matchedAccount = findAccountMatch(accountPhrase, accounts);
     sourceAccountId = matchedAccount?.id ?? null;
+
+    if (intent === "expense" || intent === "income") {
+      categoryId = findCategoryMatch(description, categories, intent)?.id ?? null;
+    }
   }
 
   const missing: ParsedQuickCapture["missing"] = [];
@@ -145,6 +179,7 @@ function parseQuickCapture(input: string, accounts: AccountItem[]): ParsedQuickC
 
   return {
     amountMiliunits,
+    categoryId,
     dateLabel,
     dateValue,
     description,
@@ -175,6 +210,7 @@ function getIntentMeta(intent: QuickCaptureIntent | SupportedEventType) {
 export function GlobalQuickCapture() {
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery(undefined, { enabled: false });
+  const categoriesQuery = trpc.categories.list.useQuery(undefined, { enabled: false });
   const createEvent = trpc.transactions.create.useMutation({
     onSuccess: async (_, variables) => {
       await Promise.all([
@@ -187,6 +223,7 @@ export function GlobalQuickCapture() {
       setOpen(false);
       setInput("");
       setSelectedAccountId("");
+      setSelectedCategoryId("");
       setSelectedSourceAccountId("");
       setSelectedDestinationAccountId("");
     },
@@ -198,9 +235,11 @@ export function GlobalQuickCapture() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedSourceAccountId, setSelectedSourceAccountId] = useState("");
   const [selectedDestinationAccountId, setSelectedDestinationAccountId] = useState("");
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
+  const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -217,7 +256,8 @@ export function GlobalQuickCapture() {
   useEffect(() => {
     if (!open) return;
     void accountsQuery.refetch();
-  }, [open, accountsQuery]);
+    void categoriesQuery.refetch();
+  }, [open, accountsQuery, categoriesQuery]);
 
   const liquidAccounts = useMemo(
     () => accounts.filter((account) => account.type === "cash" || account.type === "wallet"),
@@ -227,8 +267,16 @@ export function GlobalQuickCapture() {
     () => accounts.filter((account) => account.type === "cash" || account.type === "wallet" || account.type === "credit"),
     [accounts],
   );
-
-  const parsed = useMemo(() => parseQuickCapture(input, accounts), [input, accounts]);
+  const parsed = useMemo(() => parseQuickCapture(input, accounts, categories), [input, accounts, categories]);
+  const relevantCategoryOptions = useMemo(
+    () =>
+      parsed.intent === "expense" || parsed.intent === "income"
+        ? categories
+            .filter((category) => category.kind === parsed.intent)
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [],
+    [categories, parsed.intent]
+  );
   const intentMeta = getIntentMeta(parsed.intent);
   const IntentIcon = intentMeta.icon;
   const relevantAccountOptions =
@@ -236,9 +284,10 @@ export function GlobalQuickCapture() {
 
   useEffect(() => {
     setSelectedAccountId(parsed.sourceAccountId ?? "");
+    setSelectedCategoryId(parsed.categoryId ?? "");
     setSelectedSourceAccountId(parsed.sourceAccountId ?? "");
     setSelectedDestinationAccountId(parsed.destinationAccountId ?? "");
-  }, [parsed.sourceAccountId, parsed.destinationAccountId, parsed.intent]);
+  }, [parsed.sourceAccountId, parsed.destinationAccountId, parsed.categoryId, parsed.intent]);
 
   const canSubmit =
     parsed.intent === "expense" || parsed.intent === "income"
@@ -257,6 +306,7 @@ export function GlobalQuickCapture() {
         type: parsed.intent,
         accountId: selectedAccountId,
         amount: parsed.amountMiliunits,
+        categoryId: selectedCategoryId || undefined,
         date,
         description: parsed.description ?? intentMeta.label,
         notes: "",
@@ -385,37 +435,73 @@ export function GlobalQuickCapture() {
                 </div>
 
                 {(parsed.intent === "expense" || parsed.intent === "income") && (
-                  <div className="space-y-3 rounded-[1.45rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
-                    <div className="flex items-center gap-2 text-[0.92rem] font-medium text-foreground">
-                      <Landmark className="size-4 text-primary" />
-                      Which account did you use?
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {relevantAccountOptions.slice(0, 4).map((account) => (
-                        <Button
-                          key={account.id}
-                          type="button"
-                          size="sm"
-                          variant={selectedAccountId === account.id ? "default" : "outline"}
-                          className="rounded-full"
-                          onClick={() => setSelectedAccountId(account.id)}
-                        >
-                          {account.name}
-                        </Button>
-                      ))}
-                    </div>
-                    <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
-                      <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
-                        <SelectValue placeholder="Choose account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {relevantAccountOptions.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-3 rounded-[1.45rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                      <div className="flex items-center gap-2 text-[0.92rem] font-medium text-foreground">
+                        <Landmark className="size-4 text-primary" />
+                        Which account did you use?
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {relevantAccountOptions.slice(0, 4).map((account) => (
+                          <Button
+                            key={account.id}
+                            type="button"
+                            size="sm"
+                            variant={selectedAccountId === account.id ? "default" : "outline"}
+                            className="rounded-full"
+                            onClick={() => setSelectedAccountId(account.id)}
+                          >
                             {account.name}
-                          </SelectItem>
+                          </Button>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                      <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                        <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
+                          <SelectValue placeholder="Choose account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {relevantAccountOptions.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-3 rounded-[1.45rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                      <div className="flex items-center gap-2 text-[0.92rem] font-medium text-foreground">
+                        <Wallet className="size-4 text-primary" />
+                        Category
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {relevantCategoryOptions.slice(0, 4).map((category) => (
+                          <Button
+                            key={category.id}
+                            type="button"
+                            size="sm"
+                            variant={selectedCategoryId === category.id ? "default" : "outline"}
+                            className="rounded-full"
+                            onClick={() => setSelectedCategoryId(category.id)}
+                          >
+                            {category.name}
+                          </Button>
+                        ))}
+                      </div>
+                      <Select value={selectedCategoryId || "none"} onValueChange={(value) => setSelectedCategoryId(value === "none" ? "" : value)}>
+                        <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
+                          <SelectValue placeholder="No category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No category</SelectItem>
+                          {relevantCategoryOptions.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 )}
 

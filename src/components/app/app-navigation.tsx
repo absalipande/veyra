@@ -8,6 +8,7 @@ import {
   Menu,
   PiggyBank,
   Settings2,
+  Tags,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,6 +40,12 @@ const items = [
     label: "Budgets",
     href: "/budgets",
     icon: PiggyBank,
+    available: true,
+  },
+  {
+    label: "Categories",
+    href: "/categories",
+    icon: Tags,
     available: true,
   },
   {

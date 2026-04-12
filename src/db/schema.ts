@@ -62,6 +62,29 @@ export const budgets = pgTable(
   })
 );
 
+export const categories = pgTable(
+  "veyra_categories",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind", {
+      enum: ["expense", "income"],
+    }).notNull(),
+    isArchived: boolean("is_archived").default(false).notNull(),
+    color: text("color"),
+    icon: text("icon"),
+    sortOrder: integer("sort_order").default(0).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_categories_clerk_user_idx").on(table.clerkUserId),
+    kindIdx: index("veyra_categories_kind_idx").on(table.kind),
+    archivedIdx: index("veyra_categories_archived_idx").on(table.isArchived),
+  })
+);
+
 export const transactionEvents = pgTable(
   "veyra_transaction_events",
   {
@@ -80,6 +103,7 @@ export const transactionEvents = pgTable(
     amount: integer("amount").notNull(),
     feeAmount: integer("fee_amount").default(0).notNull(),
     budgetId: text("budget_id").references(() => budgets.id, { onDelete: "set null" }),
+    categoryId: text("category_id").references(() => categories.id, { onDelete: "set null" }),
     description: text("description").notNull(),
     notes: text("notes"),
     occurredAt: timestamp("occurred_at", { mode: "date" }).notNull(),
@@ -91,6 +115,7 @@ export const transactionEvents = pgTable(
     occurredAtIdx: index("veyra_transaction_events_occurred_at_idx").on(table.occurredAt),
     typeIdx: index("veyra_transaction_events_type_idx").on(table.type),
     budgetIdx: index("veyra_transaction_events_budget_idx").on(table.budgetId),
+    categoryIdx: index("veyra_transaction_events_category_idx").on(table.categoryId),
   })
 );
 

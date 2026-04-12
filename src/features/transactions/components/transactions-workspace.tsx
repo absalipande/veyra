@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   ArrowRightLeft,
   CreditCard,
   HandCoins,
   Landmark,
+  Pencil,
   Search,
   Trash2,
   TrendingDown,
@@ -42,6 +43,7 @@ type TransactionEventItem = RouterOutputs["transactions"]["list"][number];
 type TransactionEventType = RouterOutputs["transactions"]["list"][number]["type"];
 type AccountItem = RouterOutputs["accounts"]["list"][number];
 type BudgetItem = RouterOutputs["budgets"]["list"][number];
+type CategoryItem = RouterOutputs["categories"]["list"][number];
 
 type EventDraft = {
   amount: string;
@@ -50,6 +52,7 @@ type EventDraft = {
   description: string;
   destinationAccountId: string;
   budgetId: string;
+  categoryId: string;
   feeAmount: string;
   loanAccountId: string;
   notes: string;
@@ -59,6 +62,41 @@ type EventDraft = {
 };
 
 type DeleteTarget = { id: string; description: string } | null;
+
+function formatEditorAmount(value: number) {
+  return (value / 1000).toFixed(2);
+}
+
+function toDateInputValue(value: Date | string) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  return date.toISOString().slice(0, 10);
+}
+
+function buildDraftFromEvent(event: TransactionEventItem): EventDraft {
+  const primaryEntry = event.entries.find((entry) => entry.role === "primary");
+  const sourceEntry = event.entries.find((entry) => entry.role === "source");
+  const destinationEntry = event.entries.find((entry) => entry.role === "destination");
+  const paymentEntry = event.entries.find((entry) => entry.role === "payment_account");
+  const liabilityEntry = event.entries.find((entry) => entry.role === "liability_account");
+  const loanEntry = event.entries.find((entry) => entry.role === "loan_account");
+  const disbursementEntry = event.entries.find((entry) => entry.role === "disbursement_account");
+
+  return {
+    amount: formatEditorAmount(getPrimaryAmount(event)),
+    creditAccountId: liabilityEntry?.accountId ?? "",
+    date: toDateInputValue(event.occurredAt),
+    description: event.description,
+    destinationAccountId: destinationEntry?.accountId ?? disbursementEntry?.accountId ?? "",
+    budgetId: event.budgetId ?? "none",
+    categoryId: event.categoryId ?? "none",
+    feeAmount: formatEditorAmount(event.feeAmount),
+    loanAccountId: loanEntry?.accountId ?? "",
+    notes: event.notes ?? "",
+    sourceAccountId: sourceEntry?.accountId ?? paymentEntry?.accountId ?? "",
+    type: event.type,
+    accountId: primaryEntry?.accountId ?? "",
+  };
+}
 
 const eventTypeOptions = [
   {
@@ -105,6 +143,7 @@ const initialDraft: EventDraft = {
   description: "",
   destinationAccountId: "",
   budgetId: "none",
+  categoryId: "none",
   feeAmount: "",
   loanAccountId: "",
   notes: "",
@@ -226,22 +265,6 @@ function getEventAccountsSummary(event: TransactionEventItem) {
   }
 }
 
-function matchesSearch(event: TransactionEventItem, search: string) {
-  const normalized = search.trim().toLowerCase();
-  if (!normalized) return true;
-
-  const haystack = [
-    event.description,
-    event.notes ?? "",
-    getEventTypeLabel(event.type),
-    getEventAccountsSummary(event),
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  return haystack.includes(normalized);
-}
-
 function EventTypeButton({
   isActive,
   label,
@@ -277,14 +300,23 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery();
   const budgetsQuery = trpc.budgets.list.useQuery();
-  const eventsQuery = trpc.transactions.list.useQuery();
+  const categoriesQuery = trpc.categories.list.useQuery();
   const summaryQuery = trpc.transactions.summary.useQuery();
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(initialQuery);
   const [typeFilter, setTypeFilter] = useState<"all" | TransactionEventType>("all");
+  const [page, setPage] = useState(1);
   const [draft, setDraft] = useState<EventDraft>(initialDraft);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const deferredSearch = useDeferredValue(search);
+  const eventsQuery = trpc.transactions.list.useQuery({
+    page,
+    pageSize: 20,
+    search: deferredSearch,
+    type: typeFilter,
+  });
 
   const refreshTransactions = async () => {
     await Promise.all([
@@ -292,6 +324,8 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       utils.transactions.summary.invalidate(),
       utils.accounts.list.invalidate(),
       utils.accounts.summary.invalidate(),
+      utils.budgets.list.invalidate(),
+      utils.budgets.summary.invalidate(),
     ]);
   };
 
@@ -306,6 +340,23 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     },
     onError: (error) => {
       toast.error("Could not record event", {
+        description: error.message,
+      });
+    },
+  });
+
+  const updateEvent = trpc.transactions.update.useMutation({
+    onSuccess: async () => {
+      await refreshTransactions();
+      setDraft(initialDraft);
+      setEditingEventId(null);
+      setOpen(false);
+      toast.success("Event updated", {
+        description: "The ledger and affected account balances were updated.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Could not update event", {
         description: error.message,
       });
     },
@@ -358,14 +409,15 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     [budgetsQuery.data]
   );
 
-  const visibleEvents = useMemo(() => {
-    const items = eventsQuery.data ?? [];
+  const categoryOptions = useMemo(
+    () =>
+      (categoriesQuery.data ?? [])
+        .filter((category) => category.kind === draft.type)
+        .sort((a: CategoryItem, b: CategoryItem) => a.name.localeCompare(b.name)),
+    [categoriesQuery.data, draft.type]
+  );
 
-    return items.filter((event) => {
-      const typeMatches = typeFilter === "all" || event.type === typeFilter;
-      return typeMatches && matchesSearch(event, search);
-    });
-  }, [eventsQuery.data, search, typeFilter]);
+  const visibleEvents = useMemo(() => eventsQuery.data?.items ?? [], [eventsQuery.data]);
 
   const summaryCards = summaryQuery.data
     ? [
@@ -408,26 +460,37 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     const amount = Math.round(Number(draft.amount) * 1000);
     const feeAmount = Math.round(Number(draft.feeAmount) * 1000);
     if (!draft.description.trim() || Number.isNaN(amount) || amount <= 0) return;
+    const isEditing = editingEventId !== null;
 
     if (draft.type === "income" || draft.type === "expense") {
       if (!draft.accountId) return;
 
-      createEvent.mutate({
+      const payload = {
         type: draft.type,
         accountId: draft.accountId,
         amount,
+        categoryId: draft.categoryId !== "none" ? draft.categoryId : undefined,
         date: draft.date,
         description: draft.description,
         budgetId: draft.type === "expense" && draft.budgetId !== "none" ? draft.budgetId : undefined,
         notes: draft.notes,
-      });
+      };
+
+      if (isEditing) {
+        updateEvent.mutate({
+          id: editingEventId!,
+          ...payload,
+        });
+      } else {
+        createEvent.mutate(payload);
+      }
       return;
     }
 
     if (draft.type === "transfer") {
       if (!draft.sourceAccountId || !draft.destinationAccountId) return;
 
-      createEvent.mutate({
+      const payload = {
         type: "transfer",
         sourceAccountId: draft.sourceAccountId,
         destinationAccountId: draft.destinationAccountId,
@@ -436,14 +499,23 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
         date: draft.date,
         description: draft.description,
         notes: draft.notes,
-      });
+      };
+
+      if (isEditing) {
+        updateEvent.mutate({
+          id: editingEventId!,
+          ...payload,
+        });
+      } else {
+        createEvent.mutate(payload);
+      }
       return;
     }
 
     if (draft.type === "credit_payment") {
       if (!draft.sourceAccountId || !draft.creditAccountId) return;
 
-      createEvent.mutate({
+      const payload = {
         type: "credit_payment",
         sourceAccountId: draft.sourceAccountId,
         creditAccountId: draft.creditAccountId,
@@ -452,13 +524,22 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
         date: draft.date,
         description: draft.description,
         notes: draft.notes,
-      });
+      };
+
+      if (isEditing) {
+        updateEvent.mutate({
+          id: editingEventId!,
+          ...payload,
+        });
+      } else {
+        createEvent.mutate(payload);
+      }
       return;
     }
 
     if (!draft.loanAccountId || !draft.destinationAccountId) return;
 
-    createEvent.mutate({
+    const payload = {
       type: "loan_disbursement",
       loanAccountId: draft.loanAccountId,
       destinationAccountId: draft.destinationAccountId,
@@ -466,10 +547,20 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       date: draft.date,
       description: draft.description,
       notes: draft.notes,
-    });
+    };
+
+    if (isEditing) {
+      updateEvent.mutate({
+        id: editingEventId!,
+        ...payload,
+      });
+    } else {
+      createEvent.mutate(payload);
+    }
   };
 
   const openComposer = (type: TransactionEventType) => {
+    setEditingEventId(null);
     setDraft({
       ...initialDraft,
       type,
@@ -484,6 +575,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 ? "Credit card payment"
                 : "Loan disbursement",
     });
+    setOpen(true);
+  };
+
+  const openEditComposer = (event: TransactionEventItem) => {
+    setEditingEventId(event.id);
+    setDraft(buildDraftFromEvent(event));
     setOpen(true);
   };
 
@@ -575,8 +672,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   key={option.value}
                   type="button"
                   variant="outline"
-                  className="rounded-full bg-[#fbfaf6] px-3.5 text-[0.92rem] dark:bg-[#162022] sm:px-4 sm:text-sm"
-                  onClick={() => openComposer(option.value)}
+                  disabled={option.value === "loan_disbursement"}
+                  className="rounded-full bg-[#fbfaf6] px-3.5 text-[0.92rem] dark:bg-[#162022] disabled:border-border/50 disabled:bg-muted/50 disabled:text-muted-foreground disabled:opacity-100 dark:disabled:bg-[#141d1f] sm:px-4 sm:text-sm"
+                  onClick={() => {
+                    if (option.value === "loan_disbursement") return;
+                    openComposer(option.value);
+                  }}
                 >
                   <option.icon className="size-4" />
                   {option.label}
@@ -604,14 +705,20 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
-                  onChange={(event) => setSearch(event.target.value)}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setPage(1);
+                  }}
                   placeholder="Search events, accounts, or notes"
                   className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10 pr-4 text-[0.92rem] dark:bg-[#162022]"
                 />
               </div>
               <Select
                 value={typeFilter}
-                onValueChange={(value) => setTypeFilter(value as "all" | TransactionEventType)}
+                onValueChange={(value) => {
+                  setTypeFilter(value as "all" | TransactionEventType);
+                  setPage(1);
+                }}
               >
                 <SelectTrigger className="h-12 rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem] dark:bg-[#162022]">
                   <SelectValue placeholder="Filter by type" />
@@ -638,6 +745,15 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   />
                 ))}
               </div>
+            ) : eventsQuery.error ? (
+              <div className="rounded-[1.8rem] border border-destructive/20 bg-[#fbfaf6] px-6 py-10 text-center dark:bg-[#162022]">
+                <p className="text-[1.2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  Couldn’t load the ledger
+                </p>
+                <p className="mx-auto mt-3 max-w-md text-[0.95rem] leading-7 text-muted-foreground">
+                  {eventsQuery.error.message || "The transaction list is not available right now."}
+                </p>
+              </div>
             ) : visibleEvents.length === 0 ? (
               <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-[#fbfaf6] px-6 py-12 text-center dark:bg-[#162022]">
                 <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
@@ -649,9 +765,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 </p>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8] dark:bg-[#141d1f]">
-                <div className="divide-y divide-border/70">
-                  {visibleEvents.map((event) => (
+                <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8] dark:bg-[#141d1f]">
+                  <div className="divide-y divide-border/70">
+                    {visibleEvents.map((event) => (
                     <div
                       key={event.id}
                       className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1.4fr)_140px_120px] md:items-center md:gap-4 md:px-6"
@@ -672,6 +788,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         </p>
                         <p className="mt-1 text-[0.78rem] text-muted-foreground">
                           {formatEventDate(event.occurredAt)}
+                          {event.category ? ` · ${event.category.name}` : ""}
                           {event.notes ? ` · ${event.notes}` : ""}
                         </p>
                         <div className="mt-3 flex items-end justify-between gap-4 md:hidden">
@@ -683,7 +800,16 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                               {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
                             </p>
                           </div>
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              className="rounded-full"
+                              onClick={() => openEditComposer(event)}
+                            >
+                              <Pencil className="size-4" />
+                              <span className="sr-only">Edit event</span>
+                            </Button>
                             <Button
                               variant="outline"
                               size="icon-sm"
@@ -712,6 +838,15 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         <Button
                           variant="outline"
                           size="icon-sm"
+                          className="rounded-full"
+                          onClick={() => openEditComposer(event)}
+                        >
+                          <Pencil className="size-4" />
+                          <span className="sr-only">Edit event</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon-sm"
                           className="rounded-full text-destructive hover:text-destructive"
                           onClick={() =>
                             setDeleteTarget({ id: event.id, description: event.description })
@@ -726,6 +861,36 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 </div>
               </div>
             )}
+
+            {eventsQuery.data && eventsQuery.data.totalPages > 1 ? (
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-[0.86rem] text-muted-foreground">
+                  Page {eventsQuery.data.page} of {eventsQuery.data.totalPages} · {eventsQuery.data.totalCount} events
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                    disabled={eventsQuery.data.page <= 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() =>
+                      setPage((current) => Math.min(eventsQuery.data?.totalPages ?? current, current + 1))
+                    }
+                    disabled={eventsQuery.data.page >= eventsQuery.data.totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       </section>
@@ -734,8 +899,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
         open={open}
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen);
-          if (!nextOpen && !createEvent.isPending) {
+          if (!nextOpen && !createEvent.isPending && !updateEvent.isPending) {
             setDraft(initialDraft);
+            setEditingEventId(null);
           }
         }}
       >
@@ -745,10 +911,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               Event composer
             </div>
             <DialogTitle className="pt-3 text-[2rem] tracking-tight">
-              Record a {currentTypeMeta.label.toLowerCase()}
+              {editingEventId ? "Edit" : "Record"} a {currentTypeMeta.label.toLowerCase()}
             </DialogTitle>
             <DialogDescription className="max-w-xl text-[0.96rem] leading-7">
-              {currentTypeMeta.description}
+              {editingEventId
+                ? "Update the event details and Veyra will reapply the account effects underneath."
+                : currentTypeMeta.description}
             </DialogDescription>
           </DialogHeader>
 
@@ -760,7 +928,14 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   label={option.label}
                   icon={option.icon}
                   isActive={draft.type === option.value}
-                  onClick={() => setDraft((current) => ({ ...current, type: option.value }))}
+                  onClick={() =>
+                    setDraft((current) => ({
+                      ...current,
+                      type: option.value,
+                      budgetId: "none",
+                      categoryId: "none",
+                    }))
+                  }
                 />
               ))}
             </div>
@@ -804,8 +979,14 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
             </div>
 
             {(draft.type === "income" || draft.type === "expense") && (
-              <div className={`grid gap-5 ${draft.type === "expense" ? "sm:grid-cols-2" : ""}`}>
-                <div className="space-y-3">
+              <div
+                className={`grid gap-5 ${
+                  draft.type === "expense"
+                    ? "lg:grid-cols-[minmax(0,1.35fr)_220px_220px]"
+                    : "sm:grid-cols-[minmax(0,1.35fr)_220px]"
+                }`}
+              >
+                <div className="min-w-0 space-y-3">
                   <label className="text-[0.95rem] font-semibold text-foreground">Account</label>
                   <Select
                     value={draft.accountId}
@@ -830,8 +1011,31 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   </Select>
                 </div>
 
+                <div className="min-w-0 space-y-3">
+                  <label className="text-[0.95rem] font-semibold text-foreground">Category</label>
+                  <Select
+                    value={draft.categoryId}
+                    onValueChange={(value) => setDraft((current) => ({ ...current, categoryId: value }))}
+                  >
+                    <SelectTrigger className="h-13 rounded-[1.35rem] border-border/80 bg-background px-5">
+                      <SelectValue placeholder="No category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No category</SelectItem>
+                      {categoryOptions.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[0.78rem] text-muted-foreground">
+                    Optional. Keep this short list practical so review and filtering stay clear.
+                  </p>
+                </div>
+
                 {draft.type === "expense" ? (
-                  <div className="space-y-3">
+                  <div className="min-w-0 space-y-3">
                     <label className="text-[0.95rem] font-semibold text-foreground">Budget</label>
                     <Select
                       value={draft.budgetId}
@@ -1040,7 +1244,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 variant="outline"
                 className="rounded-full"
                 onClick={() => setOpen(false)}
-                disabled={createEvent.isPending}
+                disabled={createEvent.isPending || updateEvent.isPending}
               >
                 Cancel
               </Button>
@@ -1048,9 +1252,13 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 type="button"
                 className="rounded-full bg-[#17393c] hover:bg-[#1d4a4d]"
                 onClick={submitEvent}
-                disabled={createEvent.isPending}
+                disabled={createEvent.isPending || updateEvent.isPending}
               >
-                {createEvent.isPending ? "Recording..." : `Record ${currentTypeMeta.label.toLowerCase()}`}
+                {createEvent.isPending || updateEvent.isPending
+                  ? editingEventId
+                    ? "Saving..."
+                    : "Recording..."
+                  : `${editingEventId ? "Save" : "Record"} ${currentTypeMeta.label.toLowerCase()}`}
               </Button>
             </DialogFooter>
           </div>
