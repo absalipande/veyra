@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
+import { formatDateWithPreferences, resolveDatePreferences } from "@/features/settings/lib/date-format";
 import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -191,15 +192,6 @@ function getAccountTypeLabel(type: AccountItem["type"]) {
   }
 }
 
-function formatEventDate(value: Date | string) {
-  const date = typeof value === "string" ? new Date(value) : value;
-  return new Intl.DateTimeFormat("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
-
 function getPrimaryAmount(event: TransactionEventItem) {
   switch (event.type) {
     case "income":
@@ -305,6 +297,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const budgetsQuery = trpc.budgets.list.useQuery();
   const categoriesQuery = trpc.categories.list.useQuery();
   const summaryQuery = trpc.transactions.summary.useQuery();
+  const settingsQuery = trpc.settings.get.useQuery();
 
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(initialQuery);
@@ -427,6 +420,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   );
 
   const visibleEvents = useMemo(() => eventsQuery.data?.items ?? [], [eventsQuery.data]);
+  const datePreferences = resolveDatePreferences(settingsQuery.data);
+  const formatEventDate = (value: Date | string) =>
+    formatDateWithPreferences(value, datePreferences, "date");
 
   const summaryCards = summaryQuery.data
     ? [

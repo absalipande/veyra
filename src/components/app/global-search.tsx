@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
 type TransactionItem = RouterOutputs["transactions"]["list"]["items"][number];
+type MobileSearchSection = "all" | "accounts" | "transactions";
 
 function getAccountTypeLabel(type: AccountItem["type"]) {
   switch (type) {
@@ -66,6 +67,7 @@ export function GlobalSearch() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [mobileSection, setMobileSection] = useState<MobileSearchSection>("all");
   const deferredQuery = useDeferredValue(query);
 
   const accountsQuery = trpc.accounts.list.useQuery(undefined, {
@@ -175,25 +177,26 @@ export function GlobalSearch() {
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
             setQuery("");
+            setMobileSection("all");
           }
           setOpen(nextOpen);
         }}
       >
         <DialogContent
           showCloseButton={false}
-          className="max-h-[90vh] w-[calc(100vw-1.25rem)] overflow-y-auto rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 text-foreground shadow-[0_34px_120px_-70px_rgba(10,31,34,0.45)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:w-auto sm:max-w-3xl"
+          className="top-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] max-h-[calc(100dvh-env(safe-area-inset-bottom)-1rem)] w-[min(92vw,48rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 text-foreground shadow-[0_34px_120px_-70px_rgba(10,31,34,0.45)] -translate-y-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:top-[50svh] sm:bottom-auto sm:max-h-[90vh] sm:w-auto sm:max-w-3xl sm:-translate-y-1/2 sm:rounded-[2rem]"
         >
-          <div className="border-b border-border/70 px-5 pb-5 pt-5 sm:px-7 sm:pt-6">
+          <div className="border-b border-border/70 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-7 sm:pb-5 sm:pt-6">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-2">
-                <div className="inline-flex rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+                <div className="hidden rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary sm:inline-flex">
                   Global search
                 </div>
                 <div>
-                  <h2 className="text-[1.45rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.6rem]">
+                  <h2 className="text-[1.3rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.6rem]">
                     Find accounts and transactions fast
                   </h2>
-                  <p className="mt-1 text-[0.92rem] leading-6 text-muted-foreground sm:text-sm">
+                  <p className="mt-1 text-[0.9rem] leading-6 text-muted-foreground sm:text-sm">
                     Search by account name, transaction description, notes, or event type.
                   </p>
                 </div>
@@ -214,7 +217,7 @@ export function GlobalSearch() {
               </Button>
             </div>
 
-            <div className="relative mt-4 sm:mt-5">
+            <div className="relative mt-3 sm:mt-5">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 autoFocus
@@ -224,10 +227,32 @@ export function GlobalSearch() {
                 className="h-12 rounded-[1.35rem] border-border/80 bg-background pl-11 text-[0.95rem] dark:bg-[#162022] sm:h-13 sm:text-[0.98rem]"
               />
             </div>
+
+            <div className="mt-3 flex gap-2 sm:hidden">
+              {([
+                { value: "all", label: "All" },
+                { value: "accounts", label: "Accounts" },
+                { value: "transactions", label: "Transactions" },
+              ] as const).map((section) => (
+                <button
+                  key={section.value}
+                  type="button"
+                  onClick={() => setMobileSection(section.value)}
+                  className={`rounded-full border px-3 py-1.5 text-[0.78rem] font-medium transition ${
+                    mobileSection === section.value
+                      ? "border-[#17393c] bg-[#17393c] text-white dark:border-primary dark:bg-primary dark:text-primary-foreground"
+                      : "border-border/70 bg-background text-muted-foreground"
+                  }`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid gap-5 px-5 py-5 sm:grid-cols-2 sm:px-7 sm:py-6">
-            <section className="space-y-3">
+          <div className="grid gap-4 px-4 py-4 sm:grid-cols-2 sm:gap-5 sm:px-7 sm:py-6">
+            {(mobileSection === "all" || mobileSection === "accounts") && (
+              <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <Landmark className="size-4 text-primary" />
                 Accounts
@@ -257,9 +282,11 @@ export function GlobalSearch() {
                   No accounts matched that search.
                 </p>
               ) : null}
-            </section>
+              </section>
+            )}
 
-            <section className="space-y-3">
+            {(mobileSection === "all" || mobileSection === "transactions") && (
+              <section className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                 <ReceiptIcon />
                 Transactions
@@ -289,11 +316,12 @@ export function GlobalSearch() {
                   No transactions matched that search.
                 </p>
               ) : null}
-            </section>
+              </section>
+            )}
           </div>
 
           {!hasQuery && !isLoading ? (
-            <div className="border-t border-border/70 px-5 py-4 text-sm text-muted-foreground sm:px-7">
+            <div className="hidden border-t border-border/70 px-5 py-4 text-sm text-muted-foreground sm:block sm:px-7">
               Start typing to search live accounts and ledger events. Press <span className="font-medium text-foreground">Cmd/Ctrl + K</span> anytime to reopen this.
             </div>
           ) : null}

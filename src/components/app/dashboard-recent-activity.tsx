@@ -5,19 +5,10 @@ import { AlertTriangle, Clock3, CreditCard, Landmark, PiggyBank, Wallet } from "
 import Link from "next/link";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
+import { formatDateWithPreferences, resolveDatePreferences } from "@/features/settings/lib/date-format";
 import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-
-function formatActivityDate(value: Date | string) {
-  const date = typeof value === "string" ? new Date(value) : value;
-
-  return new Intl.DateTimeFormat("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
 
 export function DashboardRecentActivity() {
   const accountsQuery = trpc.accounts.list.useQuery();
@@ -28,6 +19,11 @@ export function DashboardRecentActivity() {
     type: "all",
   });
   const budgetsSummaryQuery = trpc.budgets.summary.useQuery();
+  const settingsQuery = trpc.settings.get.useQuery();
+  const datePreferences = useMemo(
+    () => resolveDatePreferences(settingsQuery.data),
+    [settingsQuery.data]
+  );
 
   const liquidAccounts = useMemo(
     () =>
@@ -57,7 +53,9 @@ export function DashboardRecentActivity() {
       {
         icon: Clock3,
         label: "Latest activity",
-        value: latestEvent ? formatActivityDate(latestEvent.occurredAt) : "No activity yet",
+        value: latestEvent
+          ? formatDateWithPreferences(latestEvent.occurredAt, datePreferences, "date")
+          : "No activity yet",
         detail: latestEvent ? latestEvent.description : "Record your first event in transactions",
       },
       {
@@ -77,7 +75,7 @@ export function DashboardRecentActivity() {
           : "Add a credit or loan account if needed",
       },
     ];
-  }, [transactionsQuery.data, liquidAccounts, liabilityAccounts]);
+  }, [transactionsQuery.data, liquidAccounts, liabilityAccounts, datePreferences]);
 
   const budgetPosture = useMemo(() => {
     const summary = budgetsSummaryQuery.data?.summary;

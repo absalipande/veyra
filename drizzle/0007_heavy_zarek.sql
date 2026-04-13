@@ -1,0 +1,2 @@
+ALTER TABLE "veyra_user_preferences" ADD COLUMN "week_starts_on" text DEFAULT 'monday' NOT NULL;--> statement-breakpoint
+ALTER TABLE "veyra_user_preferences" ADD COLUMN "date_format" text DEFAULT 'month-day-year' NOT NULL;

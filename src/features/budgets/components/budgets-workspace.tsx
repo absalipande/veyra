@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
+import { formatDateWithPreferences, resolveDatePreferences } from "@/features/settings/lib/date-format";
 import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -165,14 +166,6 @@ function getPeriodLabel(period: BudgetPeriod) {
   return periodOptions.find((option) => option.value === period)?.label ?? period;
 }
 
-function formatDate(value: Date | string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(typeof value === "string" ? new Date(value) : value);
-}
-
 function getProgressWidth(percentageUsed: number) {
   return `${Math.min(100, Math.max(0, percentageUsed))}%`;
 }
@@ -199,6 +192,9 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
   const utils = trpc.useUtils();
   const budgetsQuery = trpc.budgets.list.useQuery();
   const summaryQuery = trpc.budgets.summary.useQuery();
+  const settingsQuery = trpc.settings.get.useQuery();
+  const datePreferences = resolveDatePreferences(settingsQuery.data);
+  const formatDate = (value: Date | string) => formatDateWithPreferences(value, datePreferences, "date");
 
   const budgets = budgetsQuery.data ?? emptyBudgets;
   const summary = summaryQuery.data;

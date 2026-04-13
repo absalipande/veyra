@@ -655,6 +655,8 @@ Filters and controls:
 - on mobile, convert large filter bars into stacked controls
 - prefer segmented tabs over dropdowns when the option set is small and high-frequency
 - primary actions such as `Create`, `Add`, or `Record` should often become full-width on mobile
+- for mobile global search, prefer segmented sections such as `All`, `Accounts`, `Transactions`
+  over carousels; search results should remain vertically scannable and tappable
 
 Lists and cards:
 - mobile lists should prioritize one clear column and compact row actions
@@ -667,6 +669,13 @@ Modal and sheet behavior:
 - use a fixed header, scrollable body, and clear footer action when forms are long
 - never let a mobile modal trap the user below the fold without scroll
 - full-width primary footer actions are preferred on mobile
+- mobile dialogs should account for safe areas (`env(safe-area-inset-top|bottom)`) so content
+  does not collide with the dynamic island or home indicator
+- guard against horizontal overflow in custom dialogs; avoid footer layouts that introduce
+  negative horizontal margins
+- reduce mobile modal height by hiding non-critical support copy and desktop-only explanatory cards
+- when using shared dialog primitives with opinionated footer spacing, explicitly override
+  those styles in feature modals if they create clipping or overflow
 
 Pagination and density:
 - mobile lists may use smaller page sizes than desktop when that improves scanability and reduces scroll fatigue
@@ -682,6 +691,8 @@ Current mobile precedents in Veyra:
 - budgets summary cards use a mobile carousel
 - categories summary cards use a mobile carousel
 - categories mobile uses segmented type filters and a tighter single-column list
+- global search mobile uses segmented `All/Accounts/Transactions` sections (not a carousel)
+- quick capture mobile dialog uses safe-area-aware sizing and overflow controls with compact footer actions
 
 Auth mobile pattern:
 - mobile auth should be simpler than desktop

@@ -7,6 +7,17 @@ export const userPreferences = pgTable(
     clerkUserId: text("clerk_user_id").notNull().unique(),
     defaultCurrency: text("default_currency").default("PHP").notNull(),
     locale: text("locale").default("en-PH").notNull(),
+    weekStartsOn: text("week_starts_on", {
+      enum: ["monday", "sunday"],
+    })
+      .default("monday")
+      .notNull(),
+    dateFormat: text("date_format", {
+      enum: ["month-day-year", "day-month-year", "year-month-day"],
+    })
+      .default("month-day-year")
+      .notNull(),
+    timezone: text("timezone").default("Asia/Manila").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

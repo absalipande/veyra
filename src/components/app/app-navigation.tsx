@@ -50,9 +50,9 @@ const items = [
   },
   {
     label: "Settings",
-    href: "",
+    href: "/settings",
     icon: Settings2,
-    available: false,
+    available: true,
   },
 ];
 

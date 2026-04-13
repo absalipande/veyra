@@ -50,6 +50,20 @@
       "when": 1776005714210,
       "tag": "0006_pink_human_fly",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1776070976373,
+      "tag": "0007_heavy_zarek",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776071896269,
+      "tag": "0008_bumpy_wrecker",
+      "breakpoints": true
     }
   ]
 }

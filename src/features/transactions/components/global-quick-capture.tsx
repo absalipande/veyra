@@ -6,6 +6,11 @@ import { ArrowRightLeft, Landmark, Plus, Search, TrendingDown, TrendingUp, Walle
 import { toast } from "sonner";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
+import {
+  formatDateWithPreferences,
+  resolveDatePreferences,
+  type DatePreferences,
+} from "@/features/settings/lib/date-format";
 import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -45,13 +50,6 @@ function toDateValue(offsetDays = 0) {
   const date = new Date();
   date.setDate(date.getDate() + offsetDays);
   return date.toISOString().slice(0, 10);
-}
-
-function formatDateLabel(value: string) {
-  return new Intl.DateTimeFormat("en-PH", {
-    month: "short",
-    day: "numeric",
-  }).format(new Date(`${value}T12:00:00`));
 }
 
 function findAccountMatch(phrase: string | null, accounts: AccountItem[]) {
@@ -114,7 +112,8 @@ function extractAmount(input: string) {
 function parseQuickCapture(
   input: string,
   accounts: AccountItem[],
-  categories: CategoryItem[]
+  categories: CategoryItem[],
+  datePreferences: DatePreferences
 ): ParsedQuickCapture {
   const normalized = input.trim();
   const lower = normalized.toLowerCase();
@@ -122,7 +121,11 @@ function parseQuickCapture(
   const amountMiliunits = extractAmount(normalized);
   const isYesterday = /\byesterday\b/.test(lower);
   const dateValue = toDateValue(isYesterday ? -1 : 0);
-  const dateLabel = isYesterday ? "Yesterday" : /\btoday\b/.test(lower) ? "Today" : formatDateLabel(dateValue);
+  const dateLabel = isYesterday
+    ? "Yesterday"
+    : /\btoday\b/.test(lower)
+      ? "Today"
+      : formatDateWithPreferences(dateValue, datePreferences, "date-no-year");
 
   let description: string | null = null;
   let sourceAccountId: string | null = null;
@@ -240,6 +243,11 @@ export function GlobalQuickCapture() {
   const [selectedDestinationAccountId, setSelectedDestinationAccountId] = useState("");
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
+  const settingsQuery = trpc.settings.get.useQuery();
+  const datePreferences = useMemo(
+    () => resolveDatePreferences(settingsQuery.data),
+    [settingsQuery.data]
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -267,7 +275,10 @@ export function GlobalQuickCapture() {
     () => accounts.filter((account) => account.type === "cash" || account.type === "wallet" || account.type === "credit"),
     [accounts],
   );
-  const parsed = useMemo(() => parseQuickCapture(input, accounts, categories), [input, accounts, categories]);
+  const parsed = useMemo(
+    () => parseQuickCapture(input, accounts, categories, datePreferences),
+    [input, accounts, categories, datePreferences]
+  );
   const relevantCategoryOptions = useMemo(
     () =>
       parsed.intent === "expense" || parsed.intent === "income"
@@ -351,18 +362,18 @@ export function GlobalQuickCapture() {
       >
         <DialogContent
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="max-h-[92vh] w-[calc(100vw-1.25rem)] overflow-y-auto rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:w-auto sm:max-w-[42rem]"
+          className="top-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] max-h-[calc(100dvh-env(safe-area-inset-bottom)-1rem)] w-[min(92vw,42rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 -translate-y-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:top-[50svh] sm:bottom-auto sm:max-h-[92vh] sm:w-auto sm:max-w-[42rem] sm:-translate-y-1/2 sm:rounded-[2rem]"
         >
-          <DialogHeader className="border-b border-border/70 px-5 pb-5 pt-6 pr-16 sm:px-7 sm:pb-6 sm:pt-7">
+          <DialogHeader className="border-b border-border/70 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-6 sm:pt-7 sm:pr-16">
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                 Quick capture
               </div>
-              <div className="inline-flex rounded-full border border-border/70 px-2.5 py-1 text-[0.7rem] font-medium text-muted-foreground">
+              <div className="hidden rounded-full border border-border/70 px-2.5 py-1 text-[0.7rem] font-medium text-muted-foreground sm:inline-flex">
                 Cmd/Ctrl + Shift + K
               </div>
             </div>
-            <DialogTitle className="pt-3 text-[1.7rem] tracking-tight sm:text-[2rem]">
+            <DialogTitle className="pt-2 text-[1.45rem] tracking-tight sm:pt-3 sm:text-[2rem]">
               Record money in one line
             </DialogTitle>
             <DialogDescription className="max-w-xl text-[0.93rem] leading-7">
@@ -370,7 +381,7 @@ export function GlobalQuickCapture() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+          <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-7 sm:py-6">
             <div className="space-y-3 rounded-[1.5rem] border border-border/70 bg-background/78 px-4 py-4 dark:bg-[#162022]">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -382,7 +393,7 @@ export function GlobalQuickCapture() {
                   className="h-12 rounded-[1.35rem] border-border/80 bg-background pl-11 text-[0.95rem] dark:bg-[#141d1f]"
                 />
               </div>
-              <p className="text-[0.85rem] leading-6 text-muted-foreground">
+              <p className="hidden text-[0.85rem] leading-6 text-muted-foreground sm:block">
                 Works best for expenses, income, and transfers. If something is missing, Veyra will ask only for that field.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -553,7 +564,7 @@ export function GlobalQuickCapture() {
                 ) : null}
               </div>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="hidden gap-3 sm:grid sm:grid-cols-3">
                 <div className="rounded-[1.35rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
                   <p className="text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground">Expense</p>
                   <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">paid 360 for lunch today</p>
@@ -573,12 +584,12 @@ export function GlobalQuickCapture() {
             )}
           </div>
 
-          <DialogFooter className="border-t border-border/60 bg-transparent px-5 py-4 sm:px-7 sm:py-5">
+          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 bg-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-7 sm:py-5">
             <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 min-w-0 flex-1 rounded-full px-5 text-[0.96rem] sm:min-w-40 sm:flex-none"
+                className="h-11 w-full rounded-full px-6 sm:min-w-[10rem] sm:w-auto"
                 onClick={() => setOpen(false)}
                 disabled={createEvent.isPending}
               >
@@ -586,7 +597,7 @@ export function GlobalQuickCapture() {
               </Button>
               <Button
                 type="button"
-                className="h-11 min-w-0 flex-1 rounded-full bg-[#17393c] px-5 text-[0.96rem] hover:bg-[#1d4a4d] sm:min-w-48 sm:flex-none"
+                className="h-11 w-full rounded-full bg-[#17393c] px-6 text-[0.96rem] hover:bg-[#1d4a4d] sm:min-w-[13rem] sm:w-auto"
                 onClick={submit}
                 disabled={!canSubmit || createEvent.isPending}
               >

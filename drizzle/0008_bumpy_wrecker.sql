@@ -1,0 +1,1 @@
+ALTER TABLE "veyra_user_preferences" ADD COLUMN "timezone" text DEFAULT 'Asia/Manila' NOT NULL;

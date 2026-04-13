@@ -47,15 +47,17 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
 type DeleteTarget = { id: string; name: string } | null;
 
-const initialState: CreateState = {
-  creditInputMode: "balance",
-  availableCredit: "",
-  balance: "",
-  creditLimit: "",
-  currency: "PHP",
-  name: "",
-  type: "cash",
-};
+function getInitialState(defaultCurrency: CreateState["currency"] = "PHP"): CreateState {
+  return {
+    creditInputMode: "balance",
+    availableCredit: "",
+    balance: "",
+    creditLimit: "",
+    currency: defaultCurrency,
+    name: "",
+    type: "cash",
+  };
+}
 
 const accountFieldClassName =
   "h-13 rounded-[1.35rem] border-border/80 bg-background px-5 text-[0.95rem] shadow-none dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/30";
@@ -370,10 +372,11 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery();
   const summaryQuery = trpc.accounts.summary.useQuery();
+  const settingsQuery = trpc.settings.get.useQuery();
   const summaryScrollerRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
-  const [form, setForm] = useState<CreateState>(initialState);
+  const [form, setForm] = useState<CreateState>(getInitialState());
   const [editingId, setEditingId] = useState<string | null>(null);
   const [liquidFilter, setLiquidFilter] = useState(initialQuery);
   const [liabilityFilter, setLiabilityFilter] = useState(initialQuery);
@@ -449,7 +452,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const createAccount = trpc.accounts.create.useMutation({
     onSuccess: async () => {
       await refreshAccounts();
-      setForm(initialState);
+      setForm(getInitialState(getPreferredCurrency()));
       setEditingId(null);
       setOpen(false);
       toast.success("Account created", {
@@ -466,7 +469,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const updateAccount = trpc.accounts.update.useMutation({
     onSuccess: async () => {
       await refreshAccounts();
-      setForm(initialState);
+      setForm(getInitialState(getPreferredCurrency()));
       setEditingId(null);
       setOpen(false);
       toast.success("Account updated", {
@@ -537,20 +540,25 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     [accountGroups.liabilities, liabilityFilter, liabilitySort]
   );
 
+  const getPreferredCurrency = (): CreateState["currency"] => {
+    const currency = settingsQuery.data?.defaultCurrency;
+    return currency && isSupportedCurrency(currency) ? currency : "PHP";
+  };
+
   const isSubmitting = createAccount.isPending || updateAccount.isPending;
   const isDeleting = deleteAccount.isPending;
 
   const resetDialogState = (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (!nextOpen) {
-      setForm(initialState);
+      setForm(getInitialState(getPreferredCurrency()));
       setEditingId(null);
     }
   };
 
   const startCreate = () => {
     setEditingId(null);
-    setForm(initialState);
+    setForm(getInitialState(getPreferredCurrency()));
     setOpen(true);
   };
 

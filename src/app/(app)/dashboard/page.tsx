@@ -1,18 +1,24 @@
+"use client";
+
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { useMemo } from "react";
 
 import { DashboardLiveSummary } from "@/components/app/dashboard-live-summary";
 import { DashboardRecentActivity } from "@/components/app/dashboard-recent-activity";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDateWithPreferences, resolveDatePreferences } from "@/features/settings/lib/date-format";
+import { trpc } from "@/trpc/react";
 
 export default function DashboardPage() {
-  const todayLabel = new Intl.DateTimeFormat("en-PH", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  }).format(new Date());
+  const settingsQuery = trpc.settings.get.useQuery();
+  const datePreferences = useMemo(
+    () => resolveDatePreferences(settingsQuery.data),
+    [settingsQuery.data]
+  );
+  const todayLabel = formatDateWithPreferences(new Date(), datePreferences, "date");
 
   return (
     <>
