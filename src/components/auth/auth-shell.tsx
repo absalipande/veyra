@@ -30,12 +30,12 @@ export function AuthShell({
   children,
 }: AuthShellProps) {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,rgba(251,249,243,0.98),rgba(245,248,244,0.95))] lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-      <section className="relative flex min-h-screen items-start justify-center px-5 py-8 sm:px-8 sm:py-12 lg:items-center lg:px-14">
+    <main className="min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,rgba(251,249,243,0.98),rgba(245,248,244,0.95))] lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <section className="relative flex min-h-screen w-full items-start justify-center px-5 py-8 sm:px-8 sm:py-12 lg:items-center lg:px-14">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(143,200,179,0.14),transparent_68%)] lg:h-48 lg:bg-[radial-gradient(circle_at_top,rgba(143,200,179,0.24),transparent_68%)]" />
 
-        <div className="relative w-full max-w-[32rem] lg:hidden">
-          <div className="mx-auto flex w-full max-w-[27rem] flex-col items-center pt-6 text-center">
+        <div className="relative flex w-full justify-center lg:hidden">
+          <div className="mx-auto flex w-full max-w-[27rem] min-w-0 flex-col items-center pt-6 text-center">
             <div className="space-y-3">
               <h1 className="text-[2.45rem] font-semibold leading-[1.02] tracking-tight text-[#2E2A47] sm:text-[3rem]">
                 {title}
@@ -51,7 +51,8 @@ export function AuthShell({
           </div>
         </div>
 
-        <div className="relative hidden w-full max-w-[32rem] lg:block">
+        <div className="relative hidden w-full lg:flex lg:justify-center">
+          <div className="w-full max-w-[32rem] min-w-0">
           <div className="space-y-6">
             <VeyraWordmark
               iconClassName="size-11"
@@ -71,6 +72,7 @@ export function AuthShell({
           <div className="mt-8 rounded-[1.9rem] border border-white/80 bg-white/84 p-4 shadow-[0_28px_90px_-55px_rgba(10,31,34,0.38)] backdrop-blur">
             <div className="mx-auto w-full max-w-[27rem]">{children}</div>
           </div>
+        </div>
         </div>
       </section>
 

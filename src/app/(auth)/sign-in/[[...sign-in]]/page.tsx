@@ -65,40 +65,42 @@ export default async function SignInPage() {
               Use your email or Google to continue to your workspace.
             </p>
           </div>
-          <SignIn
-            path="/sign-in"
-            routing="path"
-            signUpUrl="/sign-up"
-            fallbackRedirectUrl="/dashboard"
-            appearance={{
-              elements: {
-                rootBox: "mx-auto !flex !w-full !max-w-none min-w-0",
-                cardBox: "!w-full !max-w-none min-w-0 !shadow-none",
-                card: "!w-full !max-w-none !border-0 !bg-transparent !p-0 !shadow-none",
-                main: "gap-5",
-                header: "hidden",
-                headerTitle: "hidden",
-                headerSubtitle: "hidden",
-                socialButtonsBlock: "gap-3",
-                socialButtonsBlockButton:
-                  "h-11 w-full rounded-[1.2rem] border border-[#d7e3dc] bg-[#fbfcfa] px-3 shadow-none hover:bg-white sm:h-12 sm:rounded-2xl",
-                socialButtonsBlockButtonText: "font-medium text-[#5b5f67]",
-                dividerLine: "bg-[#dfe8e2]",
-                dividerText: "text-[#7b7f87]",
-                form: "gap-5",
-                formFieldRow: "gap-3",
-                formFieldLabel: "font-medium text-[#232634]",
-                formFieldInput:
-                  "h-11 w-full rounded-[1.2rem] border border-[#d7e3dc] bg-white px-4 shadow-none focus:border-[#b6c2d5] sm:h-12 sm:rounded-2xl",
-                formButtonPrimary:
-                  "h-11 w-full rounded-[1.2rem] bg-[#383845] text-white shadow-[0_18px_40px_-24px_rgba(44,46,58,0.9)] hover:bg-[#30303c] sm:h-12 sm:rounded-2xl",
-                footer: "!w-full pt-5",
-                footerAction: "justify-center",
-                footerActionText: "text-[#6d7178]",
-                footerActionLink: "text-[#232634] hover:text-[#232634]",
-              },
-            }}
-          />
+          <div className="mx-auto w-full max-w-[22.5rem] min-w-0 px-2 sm:max-w-[26rem] sm:px-0">
+            <SignIn
+              path="/sign-in"
+              routing="path"
+              signUpUrl="/sign-up"
+              fallbackRedirectUrl="/dashboard"
+              appearance={{
+                elements: {
+                  rootBox: "!mx-0 !block !w-full !max-w-full min-w-0",
+                  cardBox: "!block !w-full !max-w-full min-w-0 !shadow-none",
+                  card: "!block !w-full !max-w-full !border-0 !bg-transparent !p-0 !shadow-none",
+                  main: "gap-5",
+                  header: "hidden",
+                  headerTitle: "hidden",
+                  headerSubtitle: "hidden",
+                  socialButtonsBlock: "gap-3",
+                  socialButtonsBlockButton:
+                    "h-11 w-full rounded-[1.2rem] border border-[#d7e3dc] bg-[#fbfcfa] px-3 shadow-none hover:bg-white sm:h-12 sm:rounded-2xl",
+                  socialButtonsBlockButtonText: "font-medium text-[#5b5f67]",
+                  dividerLine: "bg-[#dfe8e2]",
+                  dividerText: "text-[#7b7f87]",
+                  form: "gap-5",
+                  formFieldRow: "gap-3",
+                  formFieldLabel: "font-medium text-[#232634]",
+                  formFieldInput:
+                    "h-11 w-full rounded-[1.2rem] border border-[#d7e3dc] bg-white px-4 shadow-none focus:border-[#b6c2d5] sm:h-12 sm:rounded-2xl",
+                  formButtonPrimary:
+                    "h-11 w-full rounded-[1.2rem] bg-[#383845] text-white shadow-[0_18px_40px_-24px_rgba(44,46,58,0.9)] hover:bg-[#30303c] sm:h-12 sm:rounded-2xl",
+                  footer: "!w-full pt-5",
+                  footerAction: "justify-center",
+                  footerActionText: "text-[#6d7178]",
+                  footerActionLink: "text-[#232634] hover:text-[#232634]",
+                },
+              }}
+            />
+          </div>
         </div>
       </ClerkLoaded>
       <ClerkLoading>
