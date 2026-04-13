@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import { ArrowUpDown, CreditCard, Globe2, Landmark, Pencil, Plus, Search, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
@@ -370,6 +370,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery();
   const summaryQuery = trpc.accounts.summary.useQuery();
+  const summaryScrollerRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [form, setForm] = useState<CreateState>(initialState);
@@ -379,6 +380,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const [liquidSort, setLiquidSort] = useState<AccountSortOption>("newest");
   const [liabilitySort, setLiabilitySort] = useState<AccountSortOption>("newest");
   const [sortsRestored, setSortsRestored] = useState(false);
+  const [activeSummaryIndex, setActiveSummaryIndex] = useState(0);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -406,6 +408,39 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     if (!sortsRestored) return;
     window.localStorage.setItem(LIABILITY_SORT_STORAGE_KEY, liabilitySort);
   }, [liabilitySort, sortsRestored]);
+
+  useEffect(() => {
+    if (!summaryScrollerRef.current) return;
+
+    function handleScroll() {
+      const node = summaryScrollerRef.current;
+      if (!node) return;
+
+      const cards = Array.from(node.querySelectorAll<HTMLElement>("[data-summary-slide]"));
+      if (cards.length === 0) return;
+
+      const scrollerCenter = node.scrollLeft + node.clientWidth / 2;
+      let closestIndex = 0;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      cards.forEach((card, index) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const distance = Math.abs(cardCenter - scrollerCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      setActiveSummaryIndex(closestIndex);
+    }
+
+    handleScroll();
+    const node = summaryScrollerRef.current;
+    if (!node) return;
+    node.addEventListener("scroll", handleScroll, { passive: true });
+    return () => node.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const refreshAccounts = async () => {
     await Promise.all([utils.accounts.list.invalidate(), utils.accounts.summary.invalidate()]);
@@ -666,24 +701,53 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
       ]
     : [];
 
+  const mobileHeroStats = summaryQuery.data
+    ? [
+        {
+          label: "Liquid accounts",
+          value: formatCount(accountGroups.liquid.length, "account"),
+        },
+        {
+          label: "Currencies in use",
+          value: String(summaryQuery.data.activeCurrencies),
+        },
+      ]
+    : [];
+
+  function scrollSummaryCards(index: number) {
+    const node = summaryScrollerRef.current;
+    if (!node) return;
+
+    const nextIndex = Math.max(0, Math.min(index, summaryCards.length - 1));
+    const cards = Array.from(node.querySelectorAll<HTMLElement>("[data-summary-slide]"));
+    const nextCard = cards[nextIndex];
+    if (!nextCard) return;
+
+    nextCard.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+    setActiveSummaryIndex(nextIndex);
+  }
+
   return (
     <div className="space-y-6 lg:space-y-7">
       <section className="overflow-hidden rounded-[2.1rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_30px_110px_-70px_rgba(10,31,34,0.84)]">
-        <div className="grid gap-6 px-6 py-7 sm:px-8 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+        <div className="grid gap-5 px-5 py-5 sm:px-8 sm:py-7 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
           <div className="max-w-3xl">
             <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[0.7rem] font-medium uppercase tracking-[0.28em] text-white/80">
               Accounts workspace
             </div>
-            <h1 className="mt-4 text-[2.35rem] font-semibold tracking-tight text-white sm:text-[3rem]">
+            <h1 className="mt-3 text-[1.95rem] font-semibold tracking-tight text-white sm:mt-4 sm:text-[3rem]">
               Manage balances without losing the shape of each account.
             </h1>
-            <p className="mt-4 max-w-2xl text-[0.98rem] leading-8 text-white/72">
-              Veyra keeps account balances clear, structured, and easy to scan. The workspace is
-              ready for banks, wallets, credit lines, loans, and multi-currency accounts.
+            <p className="mt-3 max-w-2xl text-[0.94rem] leading-7 text-white/72 sm:mt-4 sm:text-[0.98rem] sm:leading-8">
+              Keep liquid accounts, liabilities, and currencies visible without turning the page into a ledger wall.
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="hidden space-y-3 xl:block">
             <div className="rounded-[1.65rem] border border-white/12 bg-white/10 px-5 py-4 backdrop-blur">
               <p className="text-[0.72rem] font-medium uppercase tracking-[0.28em] text-white/60">
                 Bank and wallet accounts
@@ -702,45 +766,147 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             </div>
           </div>
         </div>
+
+        <div className="px-5 pb-5 xl:hidden">
+          <div className="grid grid-cols-2 gap-2.5">
+            {mobileHeroStats.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-[1.2rem] border border-white/12 bg-white/10 px-3.5 py-3 backdrop-blur"
+              >
+                <p className="text-[0.62rem] font-medium uppercase tracking-[0.24em] text-white/58">
+                  {item.label}
+                </p>
+                <p className="mt-1.5 text-[1.2rem] font-semibold tracking-tight text-white">
+                  {item.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {summaryQuery.isLoading &&
-          Array.from({ length: 4 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-36 animate-pulse rounded-[1.8rem] border border-white/75 bg-white/75 dark:border-white/8 dark:bg-[#182123]"
-            />
-          ))}
+      <>
+        <section className="space-y-3 md:hidden">
+          {summaryQuery.isLoading ? (
+            <div className="h-36 animate-pulse rounded-[1.8rem] border border-white/75 bg-white/75 dark:border-white/8 dark:bg-[#182123]" />
+          ) : (
+            <>
+              <div
+                ref={(node) => {
+                  summaryScrollerRef.current = node;
+                }}
+                className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {summaryCards.map((card) => {
+                  const Icon = card.icon;
 
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
+                  return (
+                    <div
+                      key={card.label}
+                      data-summary-slide
+                      className="min-w-0 shrink-0 basis-full snap-center"
+                    >
+                      <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]">
+                        <CardContent className="p-5">
+                          <div className="flex items-start justify-between gap-4">
+                            <div>
+                              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                                {card.label}
+                              </p>
+                              <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                                {card.value}
+                              </p>
+                              <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.detail}</p>
+                            </div>
+                            <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
+                              <Icon className="size-4.5" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  );
+                })}
+              </div>
 
-          return (
-            <Card
-              key={card.label}
-              className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
-            >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                      {card.label}
-                    </p>
-                    <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                      {card.value}
-                    </p>
-                    <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.detail}</p>
-                  </div>
-                  <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
-                    <Icon className="size-4.5" />
-                  </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {summaryCards.map((card, index) => (
+                    <button
+                      key={card.label}
+                      type="button"
+                      aria-label={`Show ${card.label}`}
+                      onClick={() => scrollSummaryCards(index)}
+                      className={[
+                        "h-2.5 rounded-full transition-all",
+                        index === activeSummaryIndex ? "w-6 bg-primary" : "w-2.5 bg-border",
+                      ].join(" ")}
+                    />
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </section>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="Previous account summary"
+                    onClick={() => scrollSummaryCards(activeSummaryIndex - 1)}
+                    className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-foreground shadow-sm dark:bg-[#182123]"
+                  >
+                    <span className="text-lg leading-none">‹</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Next account summary"
+                    onClick={() => scrollSummaryCards(activeSummaryIndex + 1)}
+                    className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-foreground shadow-sm dark:bg-[#182123]"
+                  >
+                    <span className="text-lg leading-none">›</span>
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+
+        <section className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
+          {summaryQuery.isLoading &&
+            Array.from({ length: 4 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-36 animate-pulse rounded-[1.8rem] border border-white/75 bg-white/75 dark:border-white/8 dark:bg-[#182123]"
+              />
+            ))}
+
+          {summaryCards.map((card) => {
+            const Icon = card.icon;
+
+            return (
+              <Card
+                key={card.label}
+                className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
+              >
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                        {card.label}
+                      </p>
+                      <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                        {card.value}
+                      </p>
+                      <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.detail}</p>
+                    </div>
+                    <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
+                      <Icon className="size-4.5" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </section>
+      </>
 
       <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
@@ -765,20 +931,21 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                 </Button>
               </DialogTrigger>
 
-              <DialogContent className="overflow-hidden rounded-[2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-[52rem]">
-                <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16 sm:px-8 sm:pb-6 sm:pt-8">
+              <DialogContent className="max-h-[calc(100svh-1rem)] overflow-hidden rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:max-w-[52rem] sm:rounded-[2rem]">
+                <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-5 pr-14 sm:px-8 sm:pb-6 sm:pt-8 sm:pr-16">
                   <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                     Account setup
                   </div>
-                  <DialogTitle className="pt-3 text-[2rem] tracking-tight">
+                  <DialogTitle className="pt-3 text-[1.7rem] tracking-tight sm:text-[2rem]">
                     {editingId ? "Edit account" : "Add account"}
                   </DialogTitle>
-                  <p className="max-w-xl text-[0.96rem] leading-7 text-muted-foreground">
+                  <p className="max-w-xl text-[0.92rem] leading-6 text-muted-foreground sm:text-[0.96rem] sm:leading-7">
                     Capture the essentials first: account name, type, currency, and opening balance.
                   </p>
                 </DialogHeader>
 
-                <div className="space-y-6 px-7 py-6 sm:px-8 sm:py-7">
+                <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-8 sm:py-7">
+                  <div className="space-y-5 sm:space-y-6">
                   <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
                     <label className={accountFieldLabelClassName}>Account name</label>
                     <Input
@@ -945,12 +1112,15 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                       {createAccount.error?.message ?? updateAccount.error?.message}
                     </p>
                   )}
+                  </div>
+                </div>
 
-                  <div className="flex items-center justify-end border-t border-border/70 pt-4">
+                  <div className="shrink-0 border-t border-border/70 px-5 py-4 sm:px-8">
+                    <div className="flex items-center justify-end">
                     <Button
                       onClick={onSubmit}
                       disabled={!form.name.trim() || isSubmitting}
-                      className="h-12 min-w-44 rounded-full bg-[#17393c] px-6 text-[0.98rem] hover:bg-[#1d4a4d]"
+                      className="h-11 w-full rounded-full bg-[#17393c] px-6 text-[0.96rem] hover:bg-[#1d4a4d] sm:h-12 sm:min-w-44 sm:w-auto sm:text-[0.98rem]"
                     >
                       {isSubmitting
                         ? editingId
@@ -960,8 +1130,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           ? "Save changes"
                           : "Create account"}
                     </Button>
+                    </div>
                   </div>
-                </div>
               </DialogContent>
             </Dialog>
           </CardHeader>
@@ -976,22 +1146,22 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           }
         }}
       >
-        <DialogContent className="overflow-hidden rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-lg">
-          <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16">
+        <DialogContent className="max-h-[calc(100svh-1rem)] overflow-hidden rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:max-w-lg sm:rounded-[1.6rem]">
+          <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-5 pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
               Confirm delete
             </div>
-            <DialogTitle className="pt-3 text-[1.7rem] tracking-tight text-[#10292B] dark:text-foreground">
+            <DialogTitle className="pt-3 text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.7rem]">
               Remove this account?
             </DialogTitle>
-            <p className="max-w-md text-[0.95rem] leading-7 text-muted-foreground">
+            <p className="max-w-md text-[0.92rem] leading-6 text-muted-foreground sm:text-[0.95rem] sm:leading-7">
               {deleteTarget
                 ? `Delete "${deleteTarget.name}" from your Veyra workspace? This action cannot be undone.`
                 : "Delete this account from your Veyra workspace? This action cannot be undone."}
             </p>
           </DialogHeader>
 
-          <div className="flex flex-col gap-3 px-7 py-6 sm:flex-row sm:justify-end">
+          <div className="flex shrink-0 flex-col gap-3 px-5 py-5 sm:flex-row sm:justify-end sm:px-7 sm:py-6">
             <Button
               type="button"
               variant="outline"

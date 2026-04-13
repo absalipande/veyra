@@ -620,6 +620,75 @@ The desktop sidebar should stay sticky and feel like part of the shell, not scro
 
 Global nav/search/user actions should remain stable while content scrolls.
 
+### Mobile Workspace Patterns
+
+Mobile workspaces should feel lighter, faster to scan, and less promotional than desktop.
+
+General mobile rules:
+- keep hero sections compact
+- avoid giant dark slabs that push the real workspace below the fold
+- reduce support copy before reducing utility
+- prefer one strong action surface over multiple stacked decorative surfaces
+- do not preserve desktop two-column hierarchy when it becomes vertical clutter on mobile
+
+Hero guidance:
+- if a page hero is already compact and useful, keep it
+- if a hero becomes the tallest thing on the screen, trim it first
+- mobile hero headings should usually wrap into 2-4 balanced lines, not a narrow text tower
+- supporting copy should usually be one short paragraph
+- hero stat blocks on mobile should be:
+  - a compact 2-up row when there are only 2 important stats
+  - a carousel when there are 3 or more summary cards
+
+Carousel guidance:
+- use mobile carousels for summary cards and high-level metrics, not for core data entry
+- prefer native scroll-snap with dots and arrow controls before adding a library
+- show one card at a time on mobile unless there is a deliberate peek treatment
+- if there are only 2 small metrics, prefer a compact 2-up row over a carousel
+- carousel controls must work with:
+  - swipe
+  - dots
+  - previous / next buttons
+- desktop should usually keep the normal grid while mobile gets the carousel
+
+Filters and controls:
+- on mobile, convert large filter bars into stacked controls
+- prefer segmented tabs over dropdowns when the option set is small and high-frequency
+- primary actions such as `Create`, `Add`, or `Record` should often become full-width on mobile
+
+Lists and cards:
+- mobile lists should prioritize one clear column and compact row actions
+- avoid nested card-inside-card compositions unless the nesting adds meaning
+- reduce repeated descriptions when the section title already explains the purpose
+- treat categories, accounts, and similar admin-style screens as utility views, not mini dashboards
+
+Modal and sheet behavior:
+- mobile dialogs must always have a reachable close control
+- use a fixed header, scrollable body, and clear footer action when forms are long
+- never let a mobile modal trap the user below the fold without scroll
+- full-width primary footer actions are preferred on mobile
+
+Pagination and density:
+- mobile lists may use smaller page sizes than desktop when that improves scanability and reduces scroll fatigue
+- current pattern:
+  - transactions use 10 items per page on mobile
+  - transactions use 20 items per page on desktop
+
+Current mobile precedents in Veyra:
+- dashboard summary cards use a mobile carousel
+- accounts summary cards use a mobile carousel
+- accounts hero stats use a compact 2-up row on mobile
+- transactions summary cards use a mobile carousel
+- budgets summary cards use a mobile carousel
+- categories summary cards use a mobile carousel
+- categories mobile uses segmented type filters and a tighter single-column list
+
+Auth mobile pattern:
+- mobile auth should be simpler than desktop
+- avoid heavy split-screen or floating-card treatments on phones
+- prefer a light single-column layout with one primary card surface
+- keep copy short and avoid repeating the same headline inside and outside the auth card
+
 ### Tables and Rows
 
 For finance tables:

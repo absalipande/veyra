@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import {
   ArrowRightLeft,
@@ -310,13 +310,19 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const [search, setSearch] = useState(initialQuery);
   const [typeFilter, setTypeFilter] = useState<"all" | TransactionEventType>("all");
   const [page, setPage] = useState(1);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false
+  );
   const [draft, setDraft] = useState<EventDraft>(initialDraft);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const deferredSearch = useDeferredValue(search);
+  const pageSize = isMobile ? 10 : 20;
+  const summaryScrollerRef = useRef<HTMLDivElement | null>(null);
+  const [activeSummaryIndex, setActiveSummaryIndex] = useState(0);
   const eventsQuery = trpc.transactions.list.useQuery({
     page,
-    pageSize: 20,
+    pageSize,
     search: deferredSearch,
     type: typeFilter,
   });
@@ -458,6 +464,78 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     : [];
 
   const currentTypeMeta = eventTypeOptions.find((option) => option.value === draft.type)!;
+  const heroTransferAndPaymentCount =
+    (summaryQuery.data?.transferEvents ?? 0) + (summaryQuery.data?.creditPaymentEvents ?? 0);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const syncViewport = () => {
+      setIsMobile((current) => {
+        if (current !== mediaQuery.matches) {
+          setPage(1);
+        }
+
+        return mediaQuery.matches;
+      });
+    };
+
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!summaryScrollerRef.current) return;
+
+    const handleScroll = () => {
+      const scroller = summaryScrollerRef.current;
+      if (!scroller) return;
+
+      const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-summary-slide]"));
+      if (cards.length === 0) return;
+
+      const scrollerCenter = scroller.scrollLeft + scroller.clientWidth / 2;
+      let closestIndex = 0;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      cards.forEach((card, index) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const distance = Math.abs(cardCenter - scrollerCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      setActiveSummaryIndex(closestIndex);
+    };
+
+    handleScroll();
+    const scroller = summaryScrollerRef.current;
+    if (!scroller) return;
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", handleScroll);
+    };
+  }, [summaryCards.length]);
+
+  const scrollSummaryCards = (index: number) => {
+    const scroller = summaryScrollerRef.current;
+    if (!scroller) return;
+
+    const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-summary-slide]"));
+    const nextCard = cards[index];
+    if (!nextCard) return;
+
+    nextCard.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  };
 
   const submitEvent = () => {
     const amount = Math.round(Number(draft.amount) * 1000);
@@ -593,22 +671,21 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
   return (
     <div className="space-y-6 lg:space-y-7">
-      <section className="overflow-hidden rounded-[2.1rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_30px_110px_-70px_rgba(10,31,34,0.84)]">
-        <div className="grid gap-6 px-5 py-6 sm:px-8 sm:py-7 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+      <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_30px_110px_-70px_rgba(10,31,34,0.84)]">
+        <div className="grid gap-5 px-5 py-5 sm:px-8 sm:py-7 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
           <div className="max-w-3xl">
-            <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[0.7rem] font-medium uppercase tracking-[0.28em] text-white/80">
+            <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[0.67rem] font-medium uppercase tracking-[0.26em] text-white/78">
               Transactions workspace
             </div>
-            <h1 className="mt-4 text-[2.35rem] font-semibold tracking-tight text-white sm:text-[3rem]">
+            <h1 className="mt-3.5 max-w-[13ch] text-[1.9rem] font-semibold leading-[1.02] tracking-tight text-white sm:mt-4 sm:max-w-[12ch] sm:text-[3rem] sm:leading-[0.98]">
               A cleaner ledger for income, spending, transfers, and debt movement.
             </h1>
-            <p className="mt-4 max-w-2xl text-[0.98rem] leading-8 text-white/72">
-              Veyra tracks real money events with the right account effects underneath, so the
-              interface stays calm even when the finance logic gets richer.
+            <p className="mt-3 max-w-[28rem] text-[0.94rem] leading-7 text-white/72 sm:mt-4 sm:max-w-2xl sm:text-[0.98rem] sm:leading-8">
+              Track real money events without turning the workspace into a ledger wall.
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="hidden space-y-3 xl:block">
             <div className="rounded-[1.65rem] border border-white/12 bg-white/10 px-5 py-4 backdrop-blur">
               <p className="text-[0.72rem] font-medium uppercase tracking-[0.28em] text-white/60">
                 Total events
@@ -622,43 +699,147 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 Transfers and payments
               </p>
               <p className="mt-3 text-3xl font-semibold tracking-tight">
-                {(summaryQuery.data?.transferEvents ?? 0) + (summaryQuery.data?.creditPaymentEvents ?? 0)}
+                {heroTransferAndPaymentCount}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:hidden">
+            <div className="rounded-[1.35rem] border border-white/12 bg-white/10 px-4 py-3.5 backdrop-blur">
+              <p className="text-[0.66rem] font-medium uppercase tracking-[0.24em] text-white/60">
+                Total events
+              </p>
+              <p className="mt-2 text-[1.9rem] font-semibold tracking-tight">
+                {summaryQuery.data?.totalEvents ?? 0}
+              </p>
+            </div>
+            <div className="rounded-[1.35rem] border border-white/12 bg-white/10 px-4 py-3.5 backdrop-blur">
+              <p className="text-[0.66rem] font-medium uppercase tracking-[0.24em] text-white/60">
+                Transfers and payments
+              </p>
+              <p className="mt-2 text-[1.9rem] font-semibold tracking-tight">
+                {heroTransferAndPaymentCount}
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
+      <section className="space-y-4">
+        <div
+          ref={summaryScrollerRef}
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {summaryCards.map((card) => {
+            const Icon = card.icon;
 
-          return (
-            <Card
-              key={card.label}
-              className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
-            >
-              <CardContent className="p-4.5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                      {card.label}
-                    </p>
-                    <p className="mt-2.5 text-[1.75rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                      {card.value}
-                    </p>
-                    <p className="mt-2 text-[0.9rem] leading-6 text-muted-foreground">
-                      {card.detail}
-                    </p>
+            return (
+              <div
+                key={card.label}
+                data-summary-slide
+                className="min-w-0 shrink-0 basis-full snap-center"
+              >
+                <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]">
+                  <CardContent className="p-4.5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                          {card.label}
+                        </p>
+                        <p className="mt-2.5 text-[1.75rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                          {card.value}
+                        </p>
+                        <p className="mt-2 text-[0.9rem] leading-6 text-muted-foreground">
+                          {card.detail}
+                        </p>
+                      </div>
+                      <div className="flex size-9 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
+                        <Icon className="size-4.5" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })}
+        </div>
+
+        {summaryCards.length > 1 ? (
+          <div className="flex items-center justify-between md:hidden">
+            <div className="flex items-center gap-2">
+              {summaryCards.map((card, index) => (
+                <button
+                  key={card.label}
+                  type="button"
+                  aria-label={`Go to ${card.label}`}
+                  aria-pressed={activeSummaryIndex === index}
+                  className={`h-2.5 rounded-full transition-all ${
+                    activeSummaryIndex === index ? "w-6 bg-primary" : "w-2.5 bg-border"
+                  }`}
+                  onClick={() => scrollSummaryCards(index)}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full"
+                onClick={() => scrollSummaryCards(Math.max(0, activeSummaryIndex - 1))}
+                disabled={activeSummaryIndex === 0}
+              >
+                <span aria-hidden="true">‹</span>
+                <span className="sr-only">Previous summary card</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full"
+                onClick={() =>
+                  scrollSummaryCards(Math.min(summaryCards.length - 1, activeSummaryIndex + 1))
+                }
+                disabled={activeSummaryIndex === summaryCards.length - 1}
+              >
+                <span aria-hidden="true">›</span>
+                <span className="sr-only">Next summary card</span>
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-5">
+          {summaryCards.map((card) => {
+            const Icon = card.icon;
+
+            return (
+              <Card
+                key={card.label}
+                className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
+              >
+                <CardContent className="p-4.5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                        {card.label}
+                      </p>
+                      <p className="mt-2.5 text-[1.75rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                        {card.value}
+                      </p>
+                      <p className="mt-2 text-[0.9rem] leading-6 text-muted-foreground">
+                        {card.detail}
+                      </p>
+                    </div>
+                    <div className="flex size-9 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
+                      <Icon className="size-4.5" />
+                    </div>
                   </div>
-                  <div className="flex size-9 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
-                    <Icon className="size-4.5" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </section>
 
       <section>

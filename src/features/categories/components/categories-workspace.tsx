@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import { Pencil, Plus, Search, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
@@ -79,6 +79,8 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
   const [kindFilter, setKindFilter] = useState<"all" | CategoryKind>("all");
   const [draft, setDraft] = useState<CategoryDraft>(initialDraft);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const summaryScrollerRef = useRef<HTMLDivElement | null>(null);
+  const [activeSummaryIndex, setActiveSummaryIndex] = useState(0);
 
   const refreshCategories = async () => {
     await Promise.all([
@@ -153,6 +155,74 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
 
   const expenseCategories = visibleCategories.filter((category) => category.kind === "expense");
   const incomeCategories = visibleCategories.filter((category) => category.kind === "income");
+  const summaryCards = [
+    {
+      label: "Categories",
+      value: String(summaryQuery.data?.totalCategories ?? 0),
+      detail: "Keep the list compact and useful for real transaction capture.",
+    },
+    {
+      label: "Expense",
+      value: String(summaryQuery.data?.expenseCategories ?? 0),
+      detail: "Spending categories for expenses, budgets, and future insights.",
+    },
+    {
+      label: "Income",
+      value: String(summaryQuery.data?.incomeCategories ?? 0),
+      detail: "Inflow categories for salary, reimbursements, and other incoming money.",
+    },
+  ];
+
+  useEffect(() => {
+    if (!summaryScrollerRef.current) return;
+
+    const handleScroll = () => {
+      const scroller = summaryScrollerRef.current;
+      if (!scroller) return;
+
+      const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-summary-slide]"));
+      if (cards.length === 0) return;
+
+      const scrollerCenter = scroller.scrollLeft + scroller.clientWidth / 2;
+      let closestIndex = 0;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      cards.forEach((card, index) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const distance = Math.abs(cardCenter - scrollerCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      setActiveSummaryIndex(closestIndex);
+    };
+
+    handleScroll();
+    const scroller = summaryScrollerRef.current;
+    if (!scroller) return;
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", handleScroll);
+    };
+  }, [summaryCards.length]);
+
+  const scrollSummaryCards = (index: number) => {
+    const scroller = summaryScrollerRef.current;
+    if (!scroller) return;
+
+    const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-summary-slide]"));
+    const nextCard = cards[index];
+    if (!nextCard) return;
+
+    nextCard.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  };
 
   const openCreateDialog = () => {
     setDraft(initialDraft);
@@ -188,48 +258,99 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
 
   return (
     <div className="space-y-6 lg:space-y-7">
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
-          <CardContent className="p-5">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              Categories
-            </p>
-            <p className="mt-2 text-[1.8rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-              {summaryQuery.data?.totalCategories ?? 0}
-            </p>
-            <p className="mt-2 text-[0.92rem] leading-6 text-muted-foreground">
-              Keep the list compact and useful for real transaction capture.
-            </p>
-          </CardContent>
-        </Card>
+      <section className="space-y-4">
+        <div
+          ref={summaryScrollerRef}
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {summaryCards.map((card) => (
+            <div
+              key={card.label}
+              data-summary-slide
+              className="min-w-0 shrink-0 basis-full snap-center"
+            >
+              <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
+                <CardContent className="p-5">
+                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                    {card.label}
+                  </p>
+                  <p className="mt-2 text-[1.8rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                    {card.value}
+                  </p>
+                  <p className="mt-2 text-[0.92rem] leading-6 text-muted-foreground">
+                    {card.detail}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          ))}
+        </div>
 
-        <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
-          <CardContent className="p-5">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              Expense
-            </p>
-            <p className="mt-2 text-[1.8rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-              {summaryQuery.data?.expenseCategories ?? 0}
-            </p>
-            <p className="mt-2 text-[0.92rem] leading-6 text-muted-foreground">
-              Spending categories for expenses, budgets, and future insights.
-            </p>
-          </CardContent>
-        </Card>
+        {summaryCards.length > 1 ? (
+          <div className="flex items-center justify-between md:hidden">
+            <div className="flex items-center gap-2">
+              {summaryCards.map((card, index) => (
+                <button
+                  key={card.label}
+                  type="button"
+                  aria-label={`Go to ${card.label}`}
+                  aria-pressed={activeSummaryIndex === index}
+                  className={`h-2.5 rounded-full transition-all ${
+                    activeSummaryIndex === index ? "w-6 bg-primary" : "w-2.5 bg-border"
+                  }`}
+                  onClick={() => scrollSummaryCards(index)}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full"
+                onClick={() => scrollSummaryCards(Math.max(0, activeSummaryIndex - 1))}
+                disabled={activeSummaryIndex === 0}
+              >
+                <span aria-hidden="true">‹</span>
+                <span className="sr-only">Previous summary card</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full"
+                onClick={() =>
+                  scrollSummaryCards(Math.min(summaryCards.length - 1, activeSummaryIndex + 1))
+                }
+                disabled={activeSummaryIndex === summaryCards.length - 1}
+              >
+                <span aria-hidden="true">›</span>
+                <span className="sr-only">Next summary card</span>
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
-        <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
-          <CardContent className="p-5">
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-              Income
-            </p>
-            <p className="mt-2 text-[1.8rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-              {summaryQuery.data?.incomeCategories ?? 0}
-            </p>
-            <p className="mt-2 text-[0.92rem] leading-6 text-muted-foreground">
-              Inflow categories for salary, reimbursements, and other incoming money.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="hidden gap-4 md:grid md:grid-cols-3">
+          {summaryCards.map((card) => (
+            <Card
+              key={card.label}
+              className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]"
+            >
+              <CardContent className="p-5">
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                  {card.label}
+                </p>
+                <p className="mt-2 text-[1.8rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  {card.value}
+                </p>
+                <p className="mt-2 text-[0.92rem] leading-6 text-muted-foreground">
+                  {card.detail}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </section>
 
       <section>
@@ -248,7 +369,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
 
               <Button
                 type="button"
-                className="rounded-full bg-[#17393c] hover:bg-[#1d4a4d]"
+                className="w-full rounded-full bg-[#17393c] hover:bg-[#1d4a4d] sm:w-auto"
                 onClick={openCreateDialog}
               >
                 <Plus className="size-4" />
@@ -256,7 +377,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               </Button>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="space-y-3">
               <div className="relative min-w-0">
                 <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -266,19 +387,42 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                   className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10 pr-4 text-[0.92rem] dark:bg-[#162022]"
                 />
               </div>
-              <Select
-                value={kindFilter}
-                onValueChange={(value) => setKindFilter(value as "all" | CategoryKind)}
-              >
-                <SelectTrigger className="h-12 rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem] dark:bg-[#162022]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All categories</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
-                  <SelectItem value="income">Income</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2 md:hidden">
+                {[
+                  { label: "All", value: "all" as const },
+                  { label: "Expense", value: "expense" as const },
+                  { label: "Income", value: "income" as const },
+                ].map((option) => (
+                  <Button
+                    key={option.value}
+                    type="button"
+                    variant={kindFilter === option.value ? "default" : "outline"}
+                    className={`flex-1 rounded-full ${
+                      kindFilter === option.value
+                        ? "bg-[#17393c] text-white hover:bg-[#1d4a4d]"
+                        : ""
+                    }`}
+                    onClick={() => setKindFilter(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+              <div className="hidden md:block">
+                <Select
+                  value={kindFilter}
+                  onValueChange={(value) => setKindFilter(value as "all" | CategoryKind)}
+                >
+                  <SelectTrigger className="h-12 rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem] dark:bg-[#162022]">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All categories</SelectItem>
+                    <SelectItem value="expense">Expense</SelectItem>
+                    <SelectItem value="income">Income</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
 
@@ -311,7 +455,81 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                 </Button>
               </div>
             ) : (
-              <div className="grid gap-4 xl:grid-cols-2">
+              <>
+                <div className="space-y-4 md:hidden">
+                  {[
+                    { items: expenseCategories, kind: "expense" as const },
+                    { items: incomeCategories, kind: "income" as const },
+                  ]
+                    .filter((group) => group.items.length > 0)
+                    .map((group) => {
+                      const meta = getKindMeta(group.kind);
+                      const Icon = meta.icon;
+
+                      return (
+                        <div key={group.kind} className="space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 text-[#10292B] dark:text-foreground">
+                              <Icon className="size-4.5" />
+                              <p className="text-[1rem] font-semibold tracking-tight">
+                                {meta.label}
+                              </p>
+                            </div>
+                            <span
+                              className={`inline-flex rounded-full border px-2.5 py-1 text-[0.72rem] font-medium ${meta.tone}`}
+                            >
+                              {group.items.length}
+                            </span>
+                          </div>
+
+                          <div className="space-y-3">
+                            {group.items.map((category) => (
+                              <div
+                                key={category.id}
+                                className="flex items-center justify-between gap-4 rounded-[1.35rem] border border-border/70 bg-[#fdfcf8] px-4 py-3 dark:bg-[#141d1f]"
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                                    {category.name}
+                                  </p>
+                                  <p className="mt-1 text-[0.8rem] text-muted-foreground">
+                                    Used for {category.kind} events.
+                                  </p>
+                                </div>
+
+                                <div className="flex shrink-0 gap-2">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-sm"
+                                    className="rounded-full"
+                                    onClick={() => openEditDialog(category)}
+                                  >
+                                    <Pencil className="size-4" />
+                                    <span className="sr-only">Edit category</span>
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-sm"
+                                    className="rounded-full text-destructive hover:text-destructive"
+                                    onClick={() =>
+                                      setDeleteTarget({ id: category.id, name: category.name })
+                                    }
+                                  >
+                                    <Trash2 className="size-4" />
+                                    <span className="sr-only">Delete category</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                <div className="hidden gap-4 md:grid xl:grid-cols-2">
                 {[
                   { items: expenseCategories, kind: "expense" as const },
                   { items: incomeCategories, kind: "income" as const },
@@ -390,7 +608,8 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                       </div>
                     );
                   })}
-              </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

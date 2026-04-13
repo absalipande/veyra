@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   AlertTriangle,
@@ -189,6 +189,8 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [draft, setDraft] = useState<BudgetDraft>(initialDraft);
   const [formError, setFormError] = useState<string | null>(null);
+  const summaryScrollerRef = useRef<HTMLDivElement | null>(null);
+  const [activeSummaryIndex, setActiveSummaryIndex] = useState(0);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -372,6 +374,79 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
     (budgetSummary?.warningBudgets ?? 0) +
     (budgetSummary?.dangerBudgets ?? 0) +
     (budgetSummary?.exceededBudgets ?? 0);
+  const summaryCards = [
+    {
+      label: "Active budgets",
+      value: String(totalTracked),
+      detail: "Budget windows currently live in your workspace.",
+    },
+    {
+      label: "Remaining to use",
+      value: formatBudgetMoney(totalRemaining),
+      detail: "Remaining across parent budget windows this cycle.",
+    },
+    {
+      label: "Spent this cycle",
+      value: formatBudgetMoney(totalSpent),
+      detail: "Tracked from expense events already tied to budgets.",
+    },
+    {
+      label: "Needs attention",
+      value: String(attentionCount),
+      detail: "Budgets currently in warning, danger, or exceeded territory.",
+    },
+  ];
+
+  useEffect(() => {
+    if (!summaryScrollerRef.current) return;
+
+    const handleScroll = () => {
+      const scroller = summaryScrollerRef.current;
+      if (!scroller) return;
+
+      const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-summary-slide]"));
+      if (cards.length === 0) return;
+
+      const scrollerCenter = scroller.scrollLeft + scroller.clientWidth / 2;
+      let closestIndex = 0;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      cards.forEach((card, index) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const distance = Math.abs(cardCenter - scrollerCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      setActiveSummaryIndex(closestIndex);
+    };
+
+    handleScroll();
+    const scroller = summaryScrollerRef.current;
+    if (!scroller) return;
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", handleScroll);
+    };
+  }, [summaryCards.length]);
+
+  const scrollSummaryCards = (index: number) => {
+    const scroller = summaryScrollerRef.current;
+    if (!scroller) return;
+
+    const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-summary-slide]"));
+    const nextCard = cards[index];
+    if (!nextCard) return;
+
+    nextCard.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -397,59 +472,99 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
-          <CardHeader className="px-5 pb-2 pt-5">
-            <CardDescription className="text-xs uppercase tracking-[0.32em]">
-              Active budgets
-            </CardDescription>
-            <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
-              {totalTracked}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
-            Budget windows currently live in your workspace.
-          </CardContent>
-        </Card>
-        <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
-          <CardHeader className="px-5 pb-2 pt-5">
-            <CardDescription className="text-xs uppercase tracking-[0.32em]">
-              Remaining to use
-            </CardDescription>
-            <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
-              {formatBudgetMoney(totalRemaining)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
-            Remaining across parent budget windows this cycle.
-          </CardContent>
-        </Card>
-        <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
-          <CardHeader className="px-5 pb-2 pt-5">
-            <CardDescription className="text-xs uppercase tracking-[0.32em]">
-              Spent this cycle
-            </CardDescription>
-            <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
-              {formatBudgetMoney(totalSpent)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
-            Tracked from expense events already tied to budgets.
-          </CardContent>
-        </Card>
-        <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
-          <CardHeader className="px-5 pb-2 pt-5">
-            <CardDescription className="text-xs uppercase tracking-[0.32em]">
-              Needs attention
-            </CardDescription>
-            <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
-              {attentionCount}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
-            Budgets currently in warning, danger, or exceeded territory.
-          </CardContent>
-        </Card>
+      <section className="space-y-4">
+        <div
+          ref={summaryScrollerRef}
+          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {summaryCards.map((card) => (
+            <div
+              key={card.label}
+              data-summary-slide
+              className="min-w-0 shrink-0 basis-full snap-center"
+            >
+              <Card className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]">
+                <CardHeader className="px-5 pb-2 pt-5">
+                  <CardDescription className="text-xs uppercase tracking-[0.32em]">
+                    {card.label}
+                  </CardDescription>
+                  <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
+                    {card.value}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
+                  {card.detail}
+                </CardContent>
+              </Card>
+            </div>
+          ))}
+        </div>
+
+        {summaryCards.length > 1 ? (
+          <div className="flex items-center justify-between md:hidden">
+            <div className="flex items-center gap-2">
+              {summaryCards.map((card, index) => (
+                <button
+                  key={card.label}
+                  type="button"
+                  aria-label={`Go to ${card.label}`}
+                  aria-pressed={activeSummaryIndex === index}
+                  className={`h-2.5 rounded-full transition-all ${
+                    activeSummaryIndex === index ? "w-6 bg-primary" : "w-2.5 bg-border"
+                  }`}
+                  onClick={() => scrollSummaryCards(index)}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full"
+                onClick={() => scrollSummaryCards(Math.max(0, activeSummaryIndex - 1))}
+                disabled={activeSummaryIndex === 0}
+              >
+                <span aria-hidden="true">‹</span>
+                <span className="sr-only">Previous summary card</span>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="rounded-full"
+                onClick={() =>
+                  scrollSummaryCards(Math.min(summaryCards.length - 1, activeSummaryIndex + 1))
+                }
+                disabled={activeSummaryIndex === summaryCards.length - 1}
+              >
+                <span aria-hidden="true">›</span>
+                <span className="sr-only">Next summary card</span>
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
+          {summaryCards.map((card) => (
+            <Card
+              key={card.label}
+              className="rounded-[1.5rem] border-white/75 bg-white/80 dark:border-white/8 dark:bg-[#182123]"
+            >
+              <CardHeader className="px-5 pb-2 pt-5">
+                <CardDescription className="text-xs uppercase tracking-[0.32em]">
+                  {card.label}
+                </CardDescription>
+                <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
+                  {card.value}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
+                {card.detail}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.85fr)]">
