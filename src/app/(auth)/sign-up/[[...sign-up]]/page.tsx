@@ -47,7 +47,7 @@ export default async function SignUpPage() {
     <AuthShell
       badge="Create account"
       title="Create your account"
-      description="Create an account to start your Veyra workspace and return to it anytime."
+      description="Set up your workspace."
       sideEyebrow="Personal finance, refined"
       sideTitle="A more thoughtful home for your money."
       sideDescription="Set up your account and step into a workspace shaped for day-to-day clarity, not clutter."
@@ -56,13 +56,13 @@ export default async function SignUpPage() {
       sideFootnote="Clear enough for everyday use. Polished enough to enjoy."
     >
       <ClerkLoaded>
-        <div className="space-y-5">
+        <div className="w-full space-y-3.5 sm:space-y-5">
           <div className="space-y-2 text-center">
-            <h2 className="text-[1.85rem] font-semibold tracking-tight text-[#10292B]">
-              Create your veyra account
+            <h2 className="text-[1.55rem] font-semibold tracking-tight text-[#232634] sm:text-[1.85rem]">
+              Get started
             </h2>
-            <p className="text-[1rem] leading-7 text-[#6d8381]">
-              Set up your workspace and come back to it anytime.
+            <p className="text-[0.94rem] leading-7 text-[#73777f]">
+              Use Google or email to create your account.
             </p>
           </div>
           <SignUp
@@ -72,36 +72,37 @@ export default async function SignUpPage() {
             fallbackRedirectUrl="/dashboard"
             appearance={{
               elements: {
-                rootBox: "mx-auto w-full max-w-[26rem]",
-                cardBox: "w-full shadow-none",
-                card: "w-full shadow-none border-0 bg-transparent p-0",
+                rootBox: "mx-auto !flex !w-full !max-w-none min-w-0",
+                cardBox: "!w-full !max-w-none min-w-0 !shadow-none",
+                card: "!w-full !max-w-none !border-0 !bg-transparent !p-0 !shadow-none",
                 main: "gap-5",
                 header: "hidden",
                 headerTitle: "hidden",
                 headerSubtitle: "hidden",
                 socialButtonsBlock: "gap-3",
                 socialButtonsBlockButton:
-                  "h-12 rounded-2xl border border-[#d7e3dc] bg-[#fbfcfa] shadow-none hover:bg-white",
-                socialButtonsBlockButtonText: "font-medium text-[#17393c]",
+                  "h-11 w-full rounded-[1.2rem] border border-[#d7e3dc] bg-[#fbfcfa] px-3 shadow-none hover:bg-white sm:h-12 sm:rounded-2xl",
+                socialButtonsBlockButtonText: "font-medium text-[#5b5f67]",
                 dividerLine: "bg-[#dfe8e2]",
-                dividerText: "text-[#7c918f]",
+                dividerText: "text-[#7b7f87]",
                 form: "gap-5",
                 formFieldRow: "gap-3",
-                formFieldLabel: "text-[#17393c] font-medium",
+                formFieldLabel: "font-medium text-[#232634]",
                 formFieldInput:
-                  "h-12 rounded-2xl border border-[#d7e3dc] bg-white px-4 shadow-none focus:border-[#8fc8b3]",
+                  "h-11 w-full rounded-[1.2rem] border border-[#d7e3dc] bg-white px-4 shadow-none focus:border-[#b6c2d5] sm:h-12 sm:rounded-2xl",
                 formButtonPrimary:
-                  "h-12 rounded-2xl bg-[#17393c] text-white shadow-[0_18px_40px_-24px_rgba(23,57,60,0.9)] hover:bg-[#1d4a4d]",
-                footer: "pt-5",
-                footerActionText: "text-[#6d8381]",
-                footerActionLink: "text-[#17393c] hover:text-[#10292b]",
+                  "h-11 w-full rounded-[1.2rem] bg-[#383845] text-white shadow-[0_18px_40px_-24px_rgba(44,46,58,0.9)] hover:bg-[#30303c] sm:h-12 sm:rounded-2xl",
+                footer: "!w-full pt-5",
+                footerAction: "justify-center",
+                footerActionText: "text-[#6d7178]",
+                footerActionLink: "text-[#232634] hover:text-[#232634]",
               },
             }}
           />
         </div>
       </ClerkLoaded>
       <ClerkLoading>
-        <div className="flex min-h-[320px] items-center justify-center">
+        <div className="flex min-h-[260px] items-center justify-center sm:min-h-[320px]">
           <Loader2 className="size-6 animate-spin text-muted-foreground" />
         </div>
       </ClerkLoading>

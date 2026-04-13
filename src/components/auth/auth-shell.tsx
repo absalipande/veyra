@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+
 import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
-import { Badge } from "@/components/ui/badge";
 
 type AuthShellProps = {
   badge: string;
@@ -30,28 +30,46 @@ export function AuthShell({
   children,
 }: AuthShellProps) {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,rgba(251,249,243,0.98),rgba(244,248,244,0.95))] lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-      <section className="relative flex min-h-screen items-center justify-center px-6 py-12 sm:px-10 lg:px-14">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(143,200,179,0.22),transparent_64%)]" />
-        <div className="relative w-full max-w-[30rem]">
+    <main className="min-h-screen bg-[linear-gradient(180deg,rgba(251,249,243,0.98),rgba(245,248,244,0.95))] lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <section className="relative flex min-h-screen items-start justify-center px-5 py-8 sm:px-8 sm:py-12 lg:items-center lg:px-14">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(143,200,179,0.14),transparent_68%)] lg:h-48 lg:bg-[radial-gradient(circle_at_top,rgba(143,200,179,0.24),transparent_68%)]" />
+
+        <div className="relative w-full max-w-[32rem] lg:hidden">
+          <div className="mx-auto flex w-full max-w-[27rem] flex-col items-center pt-6 text-center">
+            <div className="space-y-3">
+              <h1 className="text-[2.45rem] font-semibold leading-[1.02] tracking-tight text-[#2E2A47] sm:text-[3rem]">
+                {title}
+              </h1>
+              <p className="text-[0.94rem] leading-7 text-[#7E8CA0] sm:text-[1rem] sm:leading-8">
+                {description}
+              </p>
+            </div>
+
+            <div className="mt-7 w-full rounded-[1.9rem] border border-[#dfe4e8] bg-white px-4 py-5 shadow-[0_22px_60px_-42px_rgba(20,29,44,0.28)] sm:px-6 sm:py-7">
+              <div className="mx-auto w-full max-w-full">{children}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative hidden w-full max-w-[32rem] lg:block">
           <div className="space-y-6">
             <VeyraWordmark
               iconClassName="size-11"
               textClassName="text-[2rem] font-semibold tracking-tight text-[#10292B]"
             />
-            <Badge className="rounded-full bg-primary/10 px-4 py-1 text-primary hover:bg-primary/10">
-              {badge}
-            </Badge>
             <div className="space-y-4">
-              <h1 className="max-w-md text-5xl font-semibold tracking-tight text-[#10292B] sm:text-6xl">
+              <p className="text-[0.82rem] font-medium uppercase tracking-[0.22em] text-[#567170]">
+                {badge}
+              </p>
+              <h1 className="max-w-md text-5xl font-semibold leading-[0.94] tracking-tight text-[#10292B] lg:text-6xl">
                 {title}
               </h1>
               <p className="max-w-xl text-lg leading-8 text-[#5C7472]">{description}</p>
             </div>
           </div>
 
-          <div className="mt-8 rounded-[1.9rem] border border-white/80 bg-white/84 p-3 shadow-[0_28px_90px_-55px_rgba(10,31,34,0.38)] backdrop-blur sm:p-4">
-            <div className="mx-auto w-full max-w-[26rem]">{children}</div>
+          <div className="mt-8 rounded-[1.9rem] border border-white/80 bg-white/84 p-4 shadow-[0_28px_90px_-55px_rgba(10,31,34,0.38)] backdrop-blur">
+            <div className="mx-auto w-full max-w-[27rem]">{children}</div>
           </div>
         </div>
       </section>
