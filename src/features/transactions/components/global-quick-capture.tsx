@@ -38,9 +38,9 @@ type ParsedQuickCapture = {
 };
 
 const examplePrompts = [
-  "paid 360 for lunch today",
-  "received 2500 side hustle yesterday",
-  "transferred 5000 from bdo to maya",
+  "spent 360 on lunch today",
+  "received 2500 from freelance payout yesterday",
+  "transferred 5000 from bdo payroll to maya wallet",
 ] as const;
 
 function normalizeValue(value: string) {
@@ -406,12 +406,12 @@ export function GlobalQuickCapture() {
                   autoFocus
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Try: paid 360 for lunch today"
+                  placeholder="Try: spent 360 on lunch today"
                   className="h-12 rounded-[1.35rem] border-border/80 bg-background pl-11 text-[0.95rem] dark:bg-[#141d1f]"
                 />
               </div>
               <p className="hidden text-[0.85rem] leading-6 text-muted-foreground sm:block">
-                Works best for expenses, income, and transfers. If something is missing, Veyra will ask only for that field.
+                Use one sentence with amount + action + context. If something is missing, Veyra only asks for the missing field.
               </p>
               <div className="flex flex-wrap gap-2">
                 {examplePrompts.map((prompt) => (
@@ -576,7 +576,7 @@ export function GlobalQuickCapture() {
 
                 {!parsed.intent ? (
                   <div className="rounded-[1.4rem] border border-dashed border-border/70 bg-background/76 px-4 py-4 text-[0.9rem] leading-6 text-muted-foreground dark:bg-[#162022]">
-                    Start with an action like <span className="font-medium text-foreground">paid</span>, <span className="font-medium text-foreground">received</span>, or <span className="font-medium text-foreground">transferred</span>.
+                    Start with an action like <span className="font-medium text-foreground">spent</span>, <span className="font-medium text-foreground">received</span>, or <span className="font-medium text-foreground">transferred</span>.
                   </div>
                 ) : null}
               </div>
@@ -584,17 +584,17 @@ export function GlobalQuickCapture() {
               <div className="hidden gap-3 sm:grid sm:grid-cols-3">
                 <div className="rounded-[1.35rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
                   <p className="text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground">Expense</p>
-                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">paid 360 for lunch today</p>
+                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">spent 360 on lunch today</p>
                   <p className="mt-1 text-[0.84rem] leading-6 text-muted-foreground">Creates an expense draft and asks for the account if it is still unclear.</p>
                 </div>
                 <div className="rounded-[1.35rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
                   <p className="text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground">Income</p>
-                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">received 2500 side hustle yesterday</p>
+                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">received 2500 from freelance payout yesterday</p>
                   <p className="mt-1 text-[0.84rem] leading-6 text-muted-foreground">Keeps the capture fast and only asks where the money landed.</p>
                 </div>
                 <div className="rounded-[1.35rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
                   <p className="text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground">Transfer</p>
-                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">transferred 5000 from bdo to maya</p>
+                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">transferred 5000 from bdo payroll to maya wallet</p>
                   <p className="mt-1 text-[0.84rem] leading-6 text-muted-foreground">Matches both sides of the movement, then asks only if one account is missing.</p>
                 </div>
               </div>
