@@ -85,14 +85,6 @@ export function SettingsWorkspace() {
     );
   }, [baseDraft, draft]);
 
-  const normalizedConfirmation = clearConfirmation.trim().toUpperCase();
-  const isDeleteEnabled =
-    normalizedConfirmation === DELETE_CONFIRMATION_PHRASE && !clearWorkspacePending();
-
-  function clearWorkspacePending() {
-    return clearWorkspace.isPending;
-  }
-
   const updateSettings = trpc.settings.update.useMutation({
     onSuccess: async (result) => {
       utils.settings.get.setData(undefined, result.settings);
@@ -136,6 +128,10 @@ export function SettingsWorkspace() {
       });
     },
   });
+
+  const normalizedConfirmation = clearConfirmation.trim().toUpperCase();
+  const isDeleteEnabled =
+    normalizedConfirmation === DELETE_CONFIRMATION_PHRASE && !clearWorkspace.isPending;
 
   if (settingsQuery.isLoading || !draft) {
     return (
@@ -426,8 +422,8 @@ export function SettingsWorkspace() {
             </div>
           </div>
 
-          <DialogFooter className="border-t border-border/60 px-4 pt-4 pb-7 sm:px-5 sm:pb-6">
-            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 px-5 pt-4 pb-7 sm:px-6 sm:pb-6">
+            <div className="grid w-full grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant="destructive"
@@ -437,7 +433,7 @@ export function SettingsWorkspace() {
                     confirmation: DELETE_CONFIRMATION_PHRASE,
                   })
                 }
-                className="h-11 rounded-full px-6 sm:min-w-[13rem]"
+                className="h-11 w-full rounded-full px-4 sm:px-6"
               >
                 {clearWorkspace.isPending ? "Deleting..." : "Delete permanently"}
               </Button>
@@ -450,7 +446,7 @@ export function SettingsWorkspace() {
                   setClearConfirmation("");
                 }}
                 disabled={clearWorkspace.isPending}
-                className="h-11 rounded-full px-6 sm:min-w-[10rem]"
+                className="h-11 w-full rounded-full px-4 sm:px-6"
               >
                 Cancel
               </Button>

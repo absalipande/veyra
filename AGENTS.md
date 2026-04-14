@@ -668,7 +668,9 @@ Modal and sheet behavior:
 - mobile dialogs must always have a reachable close control
 - use a fixed header, scrollable body, and clear footer action when forms are long
 - never let a mobile modal trap the user below the fold without scroll
-- full-width primary footer actions are preferred on mobile
+- for mobile footer actions, use either:
+  - two equal-width side-by-side buttons for binary confirm/cancel flows, or
+  - one full-width primary action when there is no competing secondary action
 - mobile dialogs should account for safe areas (`env(safe-area-inset-top|bottom)`) so content
   does not collide with the dynamic island or home indicator
 - guard against horizontal overflow in custom dialogs; avoid footer layouts that introduce
@@ -676,6 +678,10 @@ Modal and sheet behavior:
 - reduce mobile modal height by hiding non-critical support copy and desktop-only explanatory cards
 - when using shared dialog primitives with opinionated footer spacing, explicitly override
   those styles in feature modals if they create clipping or overflow
+- desktop modal footers should keep actions inside container bounds; avoid fixed button min-width
+  combinations that can push actions outside narrower desktop modal widths
+- destructive dialogs should keep copy concise and practical: one short warning block, one clear
+  confirmation step, and no decorative promo-style sections
 
 Pagination and density:
 - mobile lists may use smaller page sizes than desktop when that improves scanability and reduces scroll fatigue
@@ -693,6 +699,7 @@ Current mobile precedents in Veyra:
 - categories mobile uses segmented type filters and a tighter single-column list
 - global search mobile uses segmented `All/Accounts/Transactions` sections (not a carousel)
 - quick capture mobile dialog uses safe-area-aware sizing and overflow controls with compact footer actions
+- settings destructive modal uses compact copy, two-column action footer, and explicit containment-safe spacing
 
 Auth mobile pattern:
 - mobile auth should be simpler than desktop
