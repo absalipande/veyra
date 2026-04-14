@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { AlertTriangle, ArrowUpRight, Landmark, ReceiptText } from "lucide-react";
+import { AlertTriangle, Landmark, ReceiptText } from "lucide-react";
 
 import { trpc } from "@/trpc/react";
 

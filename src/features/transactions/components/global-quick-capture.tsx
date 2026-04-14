@@ -6,6 +6,7 @@ import { ArrowRightLeft, Landmark, Plus, Search, TrendingDown, TrendingUp, Walle
 import { toast } from "sonner";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
+import { buildTransactionDisplayTitle } from "@/features/transactions/lib/display-title";
 import {
   formatDateWithPreferences,
   resolveDatePreferences,
@@ -139,7 +140,19 @@ function parseQuickCapture(
 
     sourceAccountId = findAccountMatch(sourcePhrase, accounts)?.id ?? null;
     destinationAccountId = findAccountMatch(destinationPhrase, accounts)?.id ?? null;
-    description = "Transfer";
+    const sourceAccountName = sourceAccountId
+      ? accounts.find((account) => account.id === sourceAccountId)?.name ?? null
+      : null;
+    const destinationAccountName = destinationAccountId
+      ? accounts.find((account) => account.id === destinationAccountId)?.name ?? null
+      : null;
+
+    description = buildTransactionDisplayTitle({
+      type: "transfer",
+      description: normalized,
+      sourceAccountName,
+      destinationAccountName,
+    });
   } else {
     const descriptionMatch = normalized.match(/\bfor\s+(.+?)(?:\s+(?:today|yesterday))?$/i);
     if (descriptionMatch?.[1]) {
@@ -163,6 +176,10 @@ function parseQuickCapture(
     sourceAccountId = matchedAccount?.id ?? null;
 
     if (intent === "expense" || intent === "income") {
+      description = buildTransactionDisplayTitle({
+        type: intent,
+        description,
+      });
       categoryId = findCategoryMatch(description, categories, intent)?.id ?? null;
     }
   }

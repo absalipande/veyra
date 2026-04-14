@@ -9,6 +9,7 @@ import {
   listTransactionEventsSchema,
   updateTransactionEventSchema,
 } from "@/features/transactions/server/schema";
+import { buildTransactionDisplayTitle } from "@/features/transactions/lib/display-title";
 import type { TRPCContext } from "@/server/api/trpc";
 
 type CreateTransactionEventInput = z.infer<typeof createTransactionEventSchema>;
@@ -317,6 +318,39 @@ function buildEntriesForEvent(
   }
 }
 
+function buildEventDisplayTitle(
+  input: Pick<CreateTransactionEventInput, "type" | "description">,
+  accountMap: Map<string, AccountRecord> | null,
+  accountRefs?: {
+    sourceAccountId?: string;
+    destinationAccountId?: string;
+    creditAccountId?: string;
+    loanAccountId?: string;
+  }
+) {
+  const sourceAccountName = accountRefs?.sourceAccountId
+    ? accountMap?.get(accountRefs.sourceAccountId)?.name ?? null
+    : null;
+  const destinationAccountName = accountRefs?.destinationAccountId
+    ? accountMap?.get(accountRefs.destinationAccountId)?.name ?? null
+    : null;
+  const creditAccountName = accountRefs?.creditAccountId
+    ? accountMap?.get(accountRefs.creditAccountId)?.name ?? null
+    : null;
+  const loanAccountName = accountRefs?.loanAccountId
+    ? accountMap?.get(accountRefs.loanAccountId)?.name ?? null
+    : null;
+
+  return buildTransactionDisplayTitle({
+    type: input.type,
+    description: input.description,
+    sourceAccountName,
+    destinationAccountName,
+    creditAccountName,
+    loanAccountName,
+  });
+}
+
 async function applyBalanceEntries(
   tx: BalanceMutationClient,
   entries: BalanceEntry[],
@@ -540,6 +574,26 @@ export async function createTransactionEvent(
 
   const accountMap = await getUserAccounts(ctx, getAccountIdsForEventInput(input));
   const { currency, entries } = buildEntriesForEvent(input, accountMap);
+  const description = buildEventDisplayTitle(
+    input,
+    accountMap,
+    input.type === "transfer"
+      ? {
+          sourceAccountId: input.sourceAccountId,
+          destinationAccountId: input.destinationAccountId,
+        }
+      : input.type === "credit_payment"
+        ? {
+            sourceAccountId: input.sourceAccountId,
+            creditAccountId: input.creditAccountId,
+          }
+        : input.type === "loan_disbursement"
+          ? {
+              loanAccountId: input.loanAccountId,
+              destinationAccountId: input.destinationAccountId,
+            }
+          : undefined
+  );
 
   const eventId = crypto.randomUUID();
   let eventInserted = false;
@@ -557,7 +611,7 @@ export async function createTransactionEvent(
       budgetId: input.type === "expense" ? input.budgetId ?? null : null,
       categoryId:
         input.type === "income" || input.type === "expense" ? input.categoryId ?? null : null,
-      description: input.description,
+      description,
       notes: input.notes || null,
       occurredAt: input.date,
     });
@@ -623,6 +677,26 @@ export async function updateTransactionEvent(
 
   const accountMap = await getUserAccounts(ctx, getAccountIdsForEventInput(input));
   const { currency, entries } = buildEntriesForEvent(input, accountMap);
+  const description = buildEventDisplayTitle(
+    input,
+    accountMap,
+    input.type === "transfer"
+      ? {
+          sourceAccountId: input.sourceAccountId,
+          destinationAccountId: input.destinationAccountId,
+        }
+      : input.type === "credit_payment"
+        ? {
+            sourceAccountId: input.sourceAccountId,
+            creditAccountId: input.creditAccountId,
+          }
+        : input.type === "loan_disbursement"
+          ? {
+              loanAccountId: input.loanAccountId,
+              destinationAccountId: input.destinationAccountId,
+            }
+          : undefined
+  );
 
   let balancesRolledBack = false;
   let newLedgerInserted = false;
@@ -643,7 +717,7 @@ export async function updateTransactionEvent(
         budgetId: input.type === "expense" ? input.budgetId ?? null : null,
         categoryId:
           input.type === "income" || input.type === "expense" ? input.categoryId ?? null : null,
-        description: input.description,
+        description,
         notes: input.notes || null,
         occurredAt: input.date,
         updatedAt: new Date(),
