@@ -369,7 +369,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
 
               <Button
                 type="button"
-                className="w-full rounded-full bg-[#17393c] hover:bg-[#1d4a4d] sm:w-auto"
+                className="w-auto self-start rounded-full bg-[#17393c] hover:bg-[#1d4a4d]"
                 onClick={openCreateDialog}
               >
                 <Plus className="size-4" />
@@ -624,38 +624,42 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
           }
         }}
       >
-        <DialogContent className="rounded-[1.9rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-xl">
-          <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16">
-            <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[92vh] sm:max-w-xl sm:rounded-[1.9rem]">
+          <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
+            <div className="inline-flex w-fit rounded-lg border border-[#17393c]/10 bg-[#17393c]/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary sm:rounded-full sm:px-3 sm:text-[0.68rem] sm:tracking-[0.22em]">
               Category setup
             </div>
-            <DialogTitle className="pt-3 text-[1.8rem] tracking-tight text-[#10292B] dark:text-foreground">
+            <DialogTitle className="pt-1.5 text-[1.2rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.8rem]">
               {draft.id ? "Edit category" : "Create a category"}
             </DialogTitle>
-            <DialogDescription className="max-w-md text-[0.95rem] leading-7">
+            <DialogDescription className="max-w-md text-[0.82rem] leading-6 sm:text-[0.95rem] sm:leading-7">
               Keep names short and durable so they stay useful as transaction filters and dropdown
               options.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5 px-7 py-6">
+          <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-7 sm:py-6">
             <div className="space-y-3">
-              <label className="text-[0.95rem] font-semibold text-foreground">Category name</label>
+              <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                Category name
+              </label>
               <Input
                 value={draft.name}
                 onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
                 placeholder="e.g. Groceries"
-                className="h-13 rounded-[1.35rem] border-border/80 bg-background px-5"
+                className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-13 sm:rounded-[1.35rem] sm:px-5 sm:text-base"
               />
             </div>
 
             <div className="space-y-3">
-              <label className="text-[0.95rem] font-semibold text-foreground">Type</label>
+              <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                Type
+              </label>
               <Select
                 value={draft.kind}
                 onValueChange={(value) => setDraft((current) => ({ ...current, kind: value as CategoryKind }))}
               >
-                <SelectTrigger className="h-13 rounded-[1.35rem] border-border/80 bg-background px-5">
+                <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-13 sm:rounded-[1.35rem] sm:px-5 sm:text-base">
                   <SelectValue placeholder="Category type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -665,16 +669,16 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               </Select>
             </div>
 
-            <div className="rounded-[1.3rem] border border-border/70 bg-[#fbfaf6] px-4 py-3 text-[0.83rem] leading-6 text-muted-foreground dark:bg-[#162022]">
+            <div className="rounded-xl border border-border/70 bg-[#fbfaf6] px-3.5 py-3 text-[0.76rem] leading-5 text-muted-foreground dark:bg-[#162022] sm:rounded-[1.3rem] sm:px-4 sm:text-[0.83rem] sm:leading-6">
               Categories show up as dropdown choices inside the transaction composer. Start narrow
               and expand only when a new label would genuinely change how you review spending.
             </div>
 
-            <DialogFooter className="bg-transparent px-0 pt-2">
+            <DialogFooter className="!-mx-0 !-mb-0 flex-row items-center justify-end gap-2 bg-transparent px-0 pt-1.5 sm:pt-2 [&>button]:w-auto">
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full"
+                className="h-9 rounded-lg text-sm sm:h-10 sm:rounded-full sm:text-base"
                 onClick={() => setOpen(false)}
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
@@ -682,7 +686,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               </Button>
               <Button
                 type="button"
-                className="rounded-full bg-[#17393c] hover:bg-[#1d4a4d]"
+                className="h-9 rounded-lg bg-[#17393c] text-sm hover:bg-[#1d4a4d] sm:h-10 sm:rounded-full sm:text-base"
                 onClick={submitCategory}
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
@@ -705,26 +709,26 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
           }
         }}
       >
-        <DialogContent className="overflow-hidden rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-w-lg">
-          <DialogHeader className="border-b border-border/70 px-7 pb-5 pt-7 pr-16">
-            <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
+        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.6rem]">
+          <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
+            <div className="inline-flex w-fit rounded-lg border border-destructive/15 bg-destructive/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-destructive sm:rounded-full sm:px-3 sm:text-[0.68rem] sm:tracking-[0.22em]">
               Confirm delete
             </div>
-            <DialogTitle className="pt-3 text-[1.65rem] tracking-tight text-[#10292B] dark:text-foreground">
+            <DialogTitle className="pt-1.5 text-[1.12rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.65rem]">
               Delete category?
             </DialogTitle>
-            <DialogDescription className="max-w-md text-[0.95rem] leading-7">
+            <DialogDescription className="max-w-md text-[0.82rem] leading-6 sm:text-[0.95rem] sm:leading-7">
               {deleteTarget
                 ? `Remove "${deleteTarget.name}" from your workspace? Existing transactions will keep their amounts and dates, but the category link will be cleared.`
                 : "Remove this category from your workspace? Existing transactions will keep their amounts and dates, but the category link will be cleared."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-3 px-7 py-6 sm:flex-row sm:justify-end">
+          <div className="flex items-center justify-end gap-2 px-4 py-4 sm:px-7 sm:py-6">
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-full px-5"
+              className="h-9 rounded-lg px-4 text-sm sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
               onClick={() => setDeleteTarget(null)}
               disabled={deleteCategory.isPending}
             >
@@ -732,7 +736,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
             </Button>
             <Button
               type="button"
-              className="h-11 rounded-full bg-destructive px-5 text-white hover:bg-destructive/90"
+              className="h-9 rounded-lg bg-destructive px-4 text-sm text-white hover:bg-destructive/90 sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
               onClick={() => deleteTarget && deleteCategory.mutate({ id: deleteTarget.id })}
               disabled={deleteCategory.isPending}
             >

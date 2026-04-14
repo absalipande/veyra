@@ -879,23 +879,23 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
       </section>
 
       <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? resetDialog() : setOpen(true))}>
-        <DialogContent className="max-h-[92vh] w-[calc(100vw-1.25rem)] max-w-[1360px] overflow-y-auto rounded-[2rem] border-border/70 bg-background/96 p-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur sm:w-[calc(100vw-3rem)]">
-          <div className="border-b border-border/60 px-6 py-5 sm:px-8 sm:py-6">
-            <div className="inline-flex rounded-full border border-border/70 bg-background/80 px-4 py-1 text-xs uppercase tracking-[0.28em] text-muted-foreground">
+        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-[1360px] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-border/70 bg-background/96 p-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur sm:max-h-[92vh] sm:w-[calc(100vw-3rem)] sm:rounded-[2rem]">
+          <div className="border-b border-border/60 px-4 py-4 sm:px-8 sm:py-6">
+            <div className="inline-flex rounded-lg border border-border/70 bg-background/80 px-3 py-1 text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground sm:rounded-full sm:px-4 sm:text-xs sm:tracking-[0.28em]">
               Budget setup
             </div>
-            <DialogHeader className="mt-4 space-y-2.5">
-              <DialogTitle className="text-[2rem] font-semibold tracking-tight sm:text-[2.4rem]">
+            <DialogHeader className="mt-3 space-y-2 sm:mt-4 sm:space-y-2.5">
+              <DialogTitle className="text-[1.2rem] font-semibold tracking-tight sm:text-[2.4rem]">
                 {editingBudgetId ? "Edit budget" : "Create a budget"}
               </DialogTitle>
-              <DialogDescription className="max-w-[46rem] text-[0.95rem] leading-7">
+              <DialogDescription className="max-w-[46rem] text-[0.82rem] leading-6 sm:text-[0.95rem] sm:leading-7">
                 Define the amount, cadence, and optional roll-up parent first. Budget assignment
                 inside transactions can come next once the structure is in place.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="space-y-6 px-6 py-5 sm:px-8 sm:py-6">
+          <div className="space-y-4 px-4 py-4 sm:space-y-6 sm:px-8 sm:py-6">
             {formError ? (
               <div className="rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
                 {formError}
@@ -903,7 +903,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
             ) : null}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Budget name</label>
+              <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">Budget name</label>
               <Input
                 value={draft.name}
                 onChange={(event) => {
@@ -911,13 +911,13 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   setDraft((current) => ({ ...current, name: event.target.value }));
                 }}
                 placeholder="e.g. Household operating budget"
-                className="h-12 rounded-2xl border-border/70 bg-background/90"
+                className="h-9 rounded-lg border-border/70 bg-background/90 text-sm sm:h-12 sm:rounded-2xl sm:text-base"
               />
             </div>
 
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+            <div className="grid grid-cols-1 gap-4 sm:[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Budget amount</label>
+                <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">Budget amount</label>
                 <Input
                   value={draft.amount}
                   onChange={(event) => {
@@ -926,25 +926,27 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   }}
                   placeholder="0.00"
                   inputMode="decimal"
-                  className="h-12 rounded-2xl border-border/70 bg-background/90"
+                  className="h-9 rounded-lg border-border/70 bg-background/90 text-sm sm:h-12 sm:rounded-2xl sm:text-base"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Budget window starts</label>
+                <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                  Budget window starts
+                </label>
                 <Input
                   type="date"
                   value={draft.startDate}
                   onChange={(event) =>
                     setDraft((current) => ({ ...current, startDate: event.target.value }))
                   }
-                  className="h-12 rounded-2xl border-border/70 bg-background/90"
+                  className="h-9 rounded-lg border-border/70 bg-background/90 text-sm sm:h-12 sm:rounded-2xl sm:text-base"
                 />
               </div>
             </div>
 
             <div className="space-y-3">
-              <label className="text-sm font-medium text-foreground">Period</label>
-              <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
+              <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">Period</label>
+              <div className="grid grid-cols-1 gap-3 sm:[grid-template-columns:repeat(auto-fit,minmax(190px,1fr))]">
                 {periodOptions.map((option) => (
                   <button
                     key={option.value}
@@ -953,15 +955,15 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                       setFormError(null);
                       setDraft((current) => ({ ...current, period: option.value }));
                     }}
-                    className={`min-h-[120px] rounded-[1.35rem] border px-4 py-4 text-left transition ${
+                    className={`min-h-[96px] rounded-lg border px-3 py-3 text-left transition sm:min-h-[120px] sm:rounded-[1.35rem] sm:px-4 sm:py-4 ${
                       draft.period === option.value
                         ? "border-[#17393c] bg-[#17393c] text-white shadow-[0_18px_40px_-30px_rgba(23,57,60,0.7)]"
                         : "border-border/70 bg-background/80 text-foreground hover:bg-muted/50"
                     }`}
                   >
-                    <div className="text-[1rem] font-medium">{option.label}</div>
+                    <div className="text-[0.9rem] font-medium sm:text-[1rem]">{option.label}</div>
                     <div
-                      className={`mt-2 text-[0.9rem] leading-6 ${draft.period === option.value ? "text-white/78" : "text-muted-foreground"}`}
+                      className={`mt-1.5 text-[0.78rem] leading-5 sm:mt-2 sm:text-[0.9rem] sm:leading-6 ${draft.period === option.value ? "text-white/78" : "text-muted-foreground"}`}
                     >
                       {option.description}
                     </div>
@@ -971,9 +973,9 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
             </div>
 
             {draft.period === "bi-weekly" ? (
-              <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
+              <div className="grid grid-cols-1 gap-4 sm:[grid-template-columns:repeat(auto-fit,minmax(220px,1fr))]">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Salary date 1</label>
+                  <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">Salary date 1</label>
                   <Input
                     value={draft.salaryDatePrimary}
                     onChange={(event) => {
@@ -984,11 +986,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                       }));
                     }}
                     placeholder="e.g. 15"
-                    className="h-12 rounded-2xl border-border/70 bg-background/90"
+                    className="h-9 rounded-lg border-border/70 bg-background/90 text-sm sm:h-12 sm:rounded-2xl sm:text-base"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Salary date 2</label>
+                  <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">Salary date 2</label>
                   <Input
                     value={draft.salaryDateSecondary}
                     onChange={(event) => {
@@ -999,15 +1001,15 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                       }));
                     }}
                     placeholder="e.g. 30"
-                    className="h-12 rounded-2xl border-border/70 bg-background/90"
+                    className="h-9 rounded-lg border-border/70 bg-background/90 text-sm sm:h-12 sm:rounded-2xl sm:text-base"
                   />
                 </div>
               </div>
             ) : null}
 
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
+            <div className="grid grid-cols-1 gap-4 sm:[grid-template-columns:repeat(auto-fit,minmax(240px,1fr))]">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Parent budget</label>
+                <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">Parent budget</label>
                 <Select
                   value={draft.parentBudgetId}
                   onValueChange={(value) => {
@@ -1015,7 +1017,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                     setDraft((current) => ({ ...current, parentBudgetId: value }));
                   }}
                 >
-                  <SelectTrigger className="h-12 w-full rounded-2xl border-border/70 bg-background/90">
+                  <SelectTrigger className="h-9 w-full rounded-lg border-border/70 bg-background/90 text-sm sm:h-12 sm:rounded-2xl sm:text-base">
                     <SelectValue placeholder="No parent budget" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1027,18 +1029,18 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[0.85rem] leading-6 text-muted-foreground">
+                <p className="text-[0.76rem] leading-5.5 text-muted-foreground sm:text-[0.85rem] sm:leading-6">
                   Selecting a parent creates a child budget inside that parent budget.
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Status</label>
+                <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">Status</label>
                 <button
                   type="button"
                   onClick={() =>
                     setDraft((current) => ({ ...current, isActive: !current.isActive }))
                   }
-                  className={`flex h-12 w-full items-center justify-center rounded-2xl border px-4 text-sm font-medium transition ${
+                  className={`flex h-9 w-full items-center justify-center rounded-lg border px-3 text-sm font-medium transition sm:h-12 sm:rounded-2xl sm:px-4 ${
                     draft.isActive
                       ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                       : "border-border/70 bg-background/80 text-muted-foreground"
@@ -1050,18 +1052,18 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
             </div>
           </div>
 
-          <DialogFooter className="rounded-b-[2rem] border-t border-border/60 bg-background/85 px-6 py-5 sm:px-8">
+          <DialogFooter className="!-mx-0 !-mb-0 flex-row items-center justify-end gap-2 rounded-b-[1.45rem] border-t border-border/60 bg-background/85 px-4 py-4 sm:rounded-b-[2rem] sm:px-8 sm:py-5 [&>button]:w-auto">
             <Button
               type="button"
               variant="outline"
-              className="rounded-full px-5"
+              className="h-9 rounded-lg px-4 text-sm sm:h-10 sm:rounded-full sm:px-5 sm:text-base"
               onClick={resetDialog}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              className="rounded-full px-5"
+              className="h-9 rounded-lg px-4 text-sm sm:h-10 sm:rounded-full sm:px-5 sm:text-base"
               onClick={submitBudget}
               disabled={isSubmitting}
             >
@@ -1075,24 +1077,24 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
         open={Boolean(deleteTarget)}
         onOpenChange={(nextOpen) => (!nextOpen ? setDeleteTarget(null) : null)}
       >
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md rounded-[1.4rem] border-border/70 bg-background/96 p-0 sm:max-w-lg sm:rounded-[1.75rem]">
-          <div className="px-5 py-5 sm:px-7 sm:py-7">
+        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/96 p-0 sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.75rem]">
+          <div className="px-4 py-4 sm:px-7 sm:py-7">
             <DialogHeader className="space-y-3">
-              <DialogTitle className="text-[1.65rem] font-semibold tracking-tight sm:text-3xl">
+              <DialogTitle className="text-[1.15rem] font-semibold tracking-tight sm:text-3xl">
                 Delete budget?
               </DialogTitle>
-              <DialogDescription className="text-[0.9rem] leading-7 sm:text-base">
+              <DialogDescription className="text-[0.82rem] leading-6 sm:text-base">
                 Remove {deleteTarget?.name ? `"${deleteTarget.name}"` : "this budget"} from your
                 workspace? This does not remove existing transactions, but it does remove the budget
                 structure and roll-up.
               </DialogDescription>
             </DialogHeader>
           </div>
-          <DialogFooter className="border-t border-border/60 bg-transparent px-7 py-7 sm:px-7 sm:py-6">
+          <DialogFooter className="border-t border-border/60 bg-transparent px-4 py-4 sm:px-7 sm:py-6">
             <div className="flex w-full justify-end gap-3">
               <Button
                 type="button"
-                className="h-10 rounded-full bg-rose-600 px-5 text-[0.95rem] text-white hover:bg-rose-700 sm:min-w-32"
+                className="h-9 rounded-lg bg-rose-600 px-4 text-sm text-white hover:bg-rose-700 sm:h-10 sm:min-w-32 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
                 onClick={() => deleteTarget && removeBudget.mutate({ id: deleteTarget.id })}
                 disabled={removeBudget.isPending}
               >
@@ -1101,7 +1103,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-full px-5 text-[0.95rem] sm:min-w-32"
+                className="h-9 rounded-lg px-4 text-sm sm:h-10 sm:min-w-32 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
                 onClick={() => setDeleteTarget(null)}
               >
                 Cancel

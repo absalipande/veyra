@@ -141,7 +141,7 @@ export function DashboardRecentActivity() {
         </CardHeader>
         <CardContent className="grid gap-5 lg:grid-cols-2">
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[0.9rem] font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 text-[0.84rem] font-medium text-muted-foreground">
               <Landmark className="size-4" />
               Liquid positions
             </div>
@@ -156,9 +156,9 @@ export function DashboardRecentActivity() {
                   className="flex items-center justify-between gap-4 rounded-[1.5rem] border border-border/70 bg-background/72 px-4 py-4 dark:bg-[#12191b]"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-[0.95rem] font-medium tracking-tight">{account.name}</p>
+                    <p className="truncate text-[0.9rem] font-medium tracking-tight">{account.name}</p>
                   </div>
-                  <p className="shrink-0 text-[0.95rem] font-semibold tracking-tight">
+                  <p className="shrink-0 text-[0.9rem] font-semibold tracking-tight">
                     {formatCurrencyMiliunits(account.balance, account.currency)}
                   </p>
                 </div>
@@ -167,7 +167,7 @@ export function DashboardRecentActivity() {
           </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-[0.9rem] font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 text-[0.84rem] font-medium text-muted-foreground">
               <CreditCard className="size-4" />
               Liabilities
             </div>
@@ -182,9 +182,9 @@ export function DashboardRecentActivity() {
                   className="flex items-center justify-between gap-4 rounded-[1.5rem] border border-border/70 bg-background/72 px-4 py-4 dark:bg-[#12191b]"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-[0.95rem] font-medium tracking-tight">{account.name}</p>
+                    <p className="truncate text-[0.9rem] font-medium tracking-tight">{account.name}</p>
                   </div>
-                  <p className="shrink-0 text-[0.95rem] font-semibold tracking-tight">
+                  <p className="shrink-0 text-[0.9rem] font-semibold tracking-tight">
                     {formatCurrencyMiliunits(account.balance, account.currency)}
                   </p>
                 </div>
@@ -210,17 +210,17 @@ export function DashboardRecentActivity() {
                 key={signal.label}
                 className="rounded-[1.5rem] border border-border/70 bg-background/72 px-4 py-3.5 dark:bg-[#12191b]"
               >
-                <div className="flex items-center gap-2 text-[0.9rem] font-medium text-muted-foreground">
+                <div className="flex items-center gap-2 text-[0.84rem] font-medium text-muted-foreground">
                   <Icon className="size-4" />
                   {signal.label}
                 </div>
-                <p className="mt-2 text-[0.95rem] font-semibold tracking-tight">{signal.value}</p>
-                <p className="mt-1 text-[0.9rem] leading-6 text-muted-foreground">{signal.detail}</p>
+                <p className="mt-2 text-[0.9rem] font-semibold tracking-tight">{signal.value}</p>
+                <p className="mt-1 text-[0.84rem] leading-6 text-muted-foreground">{signal.detail}</p>
               </div>
             );
           })}
           <div className="rounded-[1.5rem] border border-border/70 bg-background/72 px-4 py-3.5 dark:bg-[#12191b]">
-            <div className="flex items-center gap-2 text-[0.9rem] font-medium text-muted-foreground">
+            <div className="flex items-center gap-2 text-[0.84rem] font-medium text-muted-foreground">
               {budgetPosture.budgetsNeedingAttention > 0 ? (
                 <AlertTriangle className="size-4" />
               ) : (
@@ -228,14 +228,14 @@ export function DashboardRecentActivity() {
               )}
               Budget posture
             </div>
-            <p className="mt-2 text-[0.95rem] font-semibold tracking-tight">
+            <p className="mt-2 text-[0.9rem] font-semibold tracking-tight">
               {budgetPosture.activeBudgets === 0
                 ? "No active budgets yet"
                 : budgetPosture.budgetsNeedingAttention > 0
                   ? `${budgetPosture.budgetsNeedingAttention} budget${budgetPosture.budgetsNeedingAttention === 1 ? "" : "s"} need attention`
                   : "Budgets are on track"}
             </p>
-            <p className="mt-1 text-[0.9rem] leading-6 text-muted-foreground">
+            <p className="mt-1 text-[0.84rem] leading-6 text-muted-foreground">
               {budgetPosture.activeBudgets === 0
                 ? "Set one monthly or weekly budget when you want cycle pressure visible from home."
                 : budgetPosture.tightestBudget

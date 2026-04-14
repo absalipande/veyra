@@ -20,10 +20,10 @@ export default async function SignUpPage() {
             <Badge className="rounded-full bg-primary/10 px-4 py-1 text-primary hover:bg-primary/10">
               Session active
             </Badge>
-            <h1 className="text-4xl font-semibold tracking-tight text-[#10292B]">
+            <h1 className="text-3xl font-semibold tracking-tight text-[#10292B]">
               You’re already signed in
             </h1>
-            <p className="max-w-xl text-base leading-7 text-[#5E7272]">
+            <p className="max-w-xl text-[0.96rem] leading-7 text-[#5E7272]">
               Since you already have an account session, Veyra won’t show the sign-up form here
               unless you sign out first.
             </p>
@@ -46,26 +46,26 @@ export default async function SignUpPage() {
   return (
     <AuthShell
       badge="Create account"
-      title="Create your account"
-      description="Set up your workspace."
+      title="Set up your Veyra workspace."
+      description="Create an account to organize balances, budgets, and money movement."
       sideEyebrow="Personal finance, refined"
       sideTitle="A more thoughtful home for your money."
-      sideDescription="Set up your account and step into a workspace shaped for day-to-day clarity, not clutter."
+      sideDescription="Bring your money setup into one focused place designed for day-to-day clarity."
       sideCtaHref="/sign-in"
       sideCtaLabel="Already have an account"
-      sideFootnote="Clear enough for everyday use. Polished enough to enjoy."
+      sideFootnote="Structured enough for planning. Calm enough for daily use."
     >
       <ClerkLoaded>
         <div className="w-full space-y-3.5 sm:space-y-5">
-          <div className="space-y-2 text-center">
-            <h2 className="text-[1.55rem] font-semibold tracking-tight text-[#232634] sm:text-[1.85rem]">
+          <div className="space-y-1.5 text-center">
+            <h2 className="text-[1.38rem] font-semibold tracking-tight text-[#232634] sm:text-[1.6rem]">
               Get started
             </h2>
-            <p className="text-[0.94rem] leading-7 text-[#73777f]">
-              Use Google or email to create your account.
+            <p className="text-[0.9rem] leading-6 text-[#73777f]">
+              Create your account with Google or email.
             </p>
           </div>
-          <div className="mx-auto w-full max-w-[22.5rem] min-w-0 px-2 sm:max-w-[26rem] sm:px-0">
+          <div className="mx-auto w-full max-w-[22.5rem] min-w-0 px-2 sm:max-w-[28rem] sm:px-0">
             <SignUp
               path="/sign-up"
               routing="path"
@@ -80,23 +80,26 @@ export default async function SignUpPage() {
                   header: "hidden",
                   headerTitle: "hidden",
                   headerSubtitle: "hidden",
-                  socialButtonsBlock: "gap-3",
+                  socialButtonsBlock: "w-full gap-3",
                   socialButtonsBlockButton:
-                    "h-11 w-full rounded-[1.2rem] border border-[#d7e3dc] bg-[#fbfcfa] px-3 shadow-none hover:bg-white sm:h-12 sm:rounded-2xl",
-                  socialButtonsBlockButtonText: "font-medium text-[#5b5f67]",
+                    "h-10 !w-full rounded-[1.05rem] border border-[#d7e3dc] bg-[#fbfcfa] px-3 text-sm shadow-none hover:bg-white sm:h-11 sm:rounded-xl",
+                  socialButtonsBlockButtonText: "text-sm font-medium text-[#5b5f67]",
                   dividerLine: "bg-[#dfe8e2]",
-                  dividerText: "text-[#7b7f87]",
+                  dividerText: "text-xs text-[#7b7f87]",
                   form: "gap-5",
-                  formFieldRow: "gap-3",
-                  formFieldLabel: "font-medium text-[#232634]",
+                  formField: "w-full",
+                  formFieldLabelRow: "w-full",
+                  formFieldInputContainer: "w-full",
+                  formFieldRow: "w-full gap-2.5",
+                  formFieldLabel: "text-sm font-medium text-[#232634]",
                   formFieldInput:
-                    "h-11 w-full rounded-[1.2rem] border border-[#d7e3dc] bg-white px-4 shadow-none focus:border-[#b6c2d5] sm:h-12 sm:rounded-2xl",
+                    "h-10 !w-full rounded-[1.05rem] border border-[#d7e3dc] bg-white px-3.5 text-sm shadow-none focus:border-[#b6c2d5] sm:h-11 sm:rounded-xl",
                   formButtonPrimary:
-                    "h-11 w-full rounded-[1.2rem] bg-[#383845] text-white shadow-[0_18px_40px_-24px_rgba(44,46,58,0.9)] hover:bg-[#30303c] sm:h-12 sm:rounded-2xl",
-                  footer: "!w-full pt-5",
-                  footerAction: "justify-center",
-                  footerActionText: "text-[#6d7178]",
-                  footerActionLink: "text-[#232634] hover:text-[#232634]",
+                    "h-10 !w-full rounded-[1.05rem] bg-[#383845] text-sm text-white shadow-[0_18px_40px_-24px_rgba(44,46,58,0.9)] hover:bg-[#30303c] sm:h-11 sm:rounded-xl",
+                  footer: "!w-full pt-4",
+                  footerAction: "w-full justify-center",
+                  footerActionText: "text-sm text-[#6d7178]",
+                  footerActionLink: "text-sm text-[#232634] hover:text-[#232634]",
                 },
               }}
             />

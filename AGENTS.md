@@ -682,7 +682,8 @@ Carousel guidance:
 Filters and controls:
 - on mobile, convert large filter bars into stacked controls
 - prefer segmented tabs over dropdowns when the option set is small and high-frequency
-- primary actions such as `Create`, `Add`, or `Record` should often become full-width on mobile
+- primary actions such as `Create`, `Add`, or `Record` should be full-width on mobile only when
+  it improves clarity; utility pages may keep compact auto-width pills aligned with nearby copy
 - for mobile global search, prefer segmented sections such as `All`, `Accounts`, `Transactions`
   over carousels; search results should remain vertically scannable and tappable
 
@@ -698,6 +699,7 @@ Modal and sheet behavior:
 - never let a mobile modal trap the user below the fold without scroll
 - for mobile footer actions, use either:
   - two equal-width side-by-side buttons for binary confirm/cancel flows, or
+  - compact side-by-side auto-width actions when the flow is form-heavy and a dense footer is clearer
   - one full-width primary action when there is no competing secondary action
 - mobile dialogs should account for safe areas (`env(safe-area-inset-top|bottom)`) so content
   does not collide with the dynamic island or home indicator
@@ -714,13 +716,16 @@ Modal and sheet behavior:
 UI-QA modal baseline (April 2026):
 - close icon must never hug modal borders; keep explicit inset offsets on custom dialogs
 - prefer modal shells that use:
-  - `max-h-[calc(100dvh-1rem)]`
+  - `max-h-[calc(86dvh-env(safe-area-inset-top))]` on mobile
   - `w-[calc(100vw-1rem)]` on mobile
   - `overflow-x-hidden overflow-y-auto`
 - use safe-area-aware paddings on long-form dialogs:
   - header top padding with `env(safe-area-inset-top)`
   - footer bottom padding with `env(safe-area-inset-bottom)`
 - on mobile confirm/cancel flows, use a two-column footer action row
+- for form dialogs using shared `DialogFooter`, explicitly override default mobile stacking when needed:
+  - remove inherited negative margins if they cause clipping
+  - keep actions inline with `w-auto` unless the page intentionally requires full-width CTAs
 - avoid “chubby” controls:
   - use compact heights (`h-9`/`h-10`)
   - restrained radii (`rounded-lg`/`rounded-xl`)
@@ -744,11 +749,16 @@ Current mobile precedents in Veyra:
 - dashboard summary cards use a mobile carousel
 - accounts summary cards use a mobile carousel
 - accounts hero stats use a compact 2-up row on mobile
+- transactions hero stats use a compact 2-up row on mobile
 - transactions summary cards use a mobile carousel
 - budgets summary cards use a mobile carousel
 - categories summary cards use a mobile carousel
 - categories mobile uses segmented type filters and a tighter single-column list
 - global search mobile uses segmented `All/Accounts/Transactions` sections (not a carousel)
+- transactions composer modal uses compact mobile typography, restrained input radii, and non-fullscreen height
+- budgets setup modal uses compact controls, overflow-safe single-column mobile grids, and inline action footers
+- loans setup modal follows the same compact mobile modal spec and side-by-side footer actions
+- categories setup modal follows the same compact mobile modal spec and side-by-side footer actions
 - quick capture mobile dialog uses safe-area-aware sizing and overflow controls with compact footer actions
 - settings destructive modal uses compact copy, two-column action footer, and explicit containment-safe spacing
 

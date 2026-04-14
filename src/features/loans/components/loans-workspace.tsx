@@ -99,8 +99,8 @@ const initialDraft: LoanDraft = {
   repaymentPlan: [],
 };
 
-const loanFieldClassName = "h-9 w-full rounded-lg px-3 text-[0.96rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-[0.98rem]";
-const loanLabelClassName = "text-[0.92rem] font-medium text-foreground";
+const loanFieldClassName = "h-9 w-full rounded-lg px-3 text-sm sm:h-11 sm:rounded-xl sm:px-4 sm:text-[0.98rem]";
+const loanLabelClassName = "text-[0.84rem] font-medium text-foreground sm:text-[0.92rem]";
 
 function formatDate(value: Date | string | null | undefined) {
   if (!value) return "No due date";
@@ -656,7 +656,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
               <Button
                 type="button"
                 onClick={openCreateDialog}
-                className="order-1 h-9 w-full rounded-full bg-[#17393c] px-4 text-[0.95rem] text-white hover:bg-[#1d4a4d] sm:order-2 sm:h-9 sm:w-auto"
+                className="order-1 h-9 w-auto self-start rounded-full bg-[#17393c] px-4 text-[0.95rem] text-white hover:bg-[#1d4a4d] sm:order-2 sm:h-9"
               >
                 <Plus className="size-4" />
                 Add loan
@@ -716,23 +716,23 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
           setOpen(nextOpen);
         }}
       >
-        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.75rem] border-border/70 bg-background/96 p-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur sm:max-h-[92vh] sm:w-[calc(100vw-3rem)] sm:max-w-3xl sm:rounded-[2rem]">
-          <div className="border-b border-border/60 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-8 sm:py-6">
+        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-border/70 bg-background/96 p-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur sm:max-h-[92vh] sm:w-[calc(100vw-3rem)] sm:max-w-3xl sm:rounded-[2rem]">
+          <div className="border-b border-border/60 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] sm:px-8 sm:py-6">
             <DialogHeader className="space-y-2">
-              <div className="inline-flex w-fit rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs uppercase tracking-[0.22em] text-muted-foreground">
+              <div className="inline-flex w-fit rounded-lg border border-border/70 bg-background/80 px-2.5 py-1 text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground sm:rounded-full sm:px-3 sm:text-xs sm:tracking-[0.22em]">
                 Loan setup
               </div>
-              <DialogTitle className="text-[1.55rem] tracking-tight sm:text-[2.15rem]">
+              <DialogTitle className="text-[1.2rem] tracking-tight sm:text-[2.15rem]">
                 {draft.id ? "Edit loan" : "Create loan"}
               </DialogTitle>
-              <DialogDescription className="max-w-2xl text-[0.92rem] leading-6 sm:text-[0.95rem] sm:leading-7">
+              <DialogDescription className="max-w-2xl text-[0.82rem] leading-6 sm:text-[0.95rem] sm:leading-7">
                 Keep this practical: identify the lender, set principal and outstanding amounts,
                 and map where proceeds landed.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="space-y-3.5 px-5 py-4 sm:space-y-5 sm:px-8 sm:py-6">
+          <div className="space-y-3 px-4 py-3.5 sm:space-y-5 sm:px-8 sm:py-6">
             {formError ? (
               <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
                 {formError}
@@ -767,7 +767,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                   value={draft.kind}
                   onValueChange={(value) => setDraft((current) => ({ ...current, kind: value as LoanKind }))}
                 >
-                  <SelectTrigger className="h-9 w-full rounded-lg text-[0.95rem] sm:h-11 sm:rounded-xl">
+                  <SelectTrigger className="h-9 w-full rounded-lg text-sm sm:h-11 sm:rounded-xl sm:text-[0.95rem]">
                     <SelectValue placeholder="Loan kind" />
                   </SelectTrigger>
                   <SelectContent>
@@ -782,7 +782,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                   value={draft.status}
                   onValueChange={(value) => setDraft((current) => ({ ...current, status: value as LoanStatus }))}
                 >
-                  <SelectTrigger className="h-9 w-full rounded-lg text-[0.95rem] sm:h-11 sm:rounded-xl">
+                  <SelectTrigger className="h-9 w-full rounded-lg text-sm sm:h-11 sm:rounded-xl sm:text-[0.95rem]">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -802,7 +802,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                     }))
                   }
                 >
-                  <SelectTrigger className="h-9 w-full rounded-lg text-[0.95rem] sm:h-11 sm:rounded-xl">
+                  <SelectTrigger className="h-9 w-full rounded-lg text-sm sm:h-11 sm:rounded-xl sm:text-[0.95rem]">
                     <SelectValue placeholder="Currency" />
                   </SelectTrigger>
                   <SelectContent>
@@ -866,7 +866,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                     setDraft((current) => ({ ...current, destinationAccountId: value }))
                   }
                 >
-                  <SelectTrigger className="h-9 w-full rounded-lg text-[0.95rem] sm:h-11 sm:rounded-xl">
+                  <SelectTrigger className="h-9 w-full rounded-lg text-sm sm:h-11 sm:rounded-xl sm:text-[0.95rem]">
                     <SelectValue placeholder="Where proceeds were received" />
                   </SelectTrigger>
                   <SelectContent>
@@ -891,7 +891,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                     }))
                   }
                 >
-                  <SelectTrigger className="h-9 w-full rounded-lg text-[0.95rem] sm:h-11 sm:rounded-xl">
+                  <SelectTrigger className="h-9 w-full rounded-lg text-sm sm:h-11 sm:rounded-xl sm:text-[0.95rem]">
                     <SelectValue placeholder="Loan liability account" />
                   </SelectTrigger>
                   <SelectContent>
@@ -916,7 +916,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                     setDraft((current) => ({ ...current, cadence: value as LoanDraft["cadence"] }))
                   }
                 >
-                  <SelectTrigger className="h-9 w-full rounded-lg text-[0.95rem] sm:h-11 sm:rounded-xl">
+                  <SelectTrigger className="h-9 w-full rounded-lg text-sm sm:h-11 sm:rounded-xl sm:text-[0.95rem]">
                     <SelectValue placeholder="Optional" />
                   </SelectTrigger>
                   <SelectContent>
@@ -977,7 +977,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                       className="grid items-end gap-2 rounded-xl border border-border/70 bg-background/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:p-4"
                     >
                       <div className="space-y-1.5">
-                        <label className="text-[0.8rem] font-medium text-muted-foreground">
+                        <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
                           Due #{index + 1}
                         </label>
                         <Input
@@ -997,7 +997,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[0.8rem] font-medium text-muted-foreground">
+                        <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
                           Amount
                         </label>
                         <Input
@@ -1021,7 +1021,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         type="button"
                         variant="outline"
                         size="icon-sm"
-                        className="rounded-full text-destructive hover:text-destructive"
+                        className="rounded-lg text-destructive hover:text-destructive sm:rounded-full"
                         onClick={() =>
                           setDraft((current) => ({
                             ...current,
@@ -1053,7 +1053,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                       }))
                     }
                   >
-                    <SelectTrigger className="h-10 w-full rounded-xl text-[0.95rem] sm:h-12 sm:rounded-2xl">
+                    <SelectTrigger className="h-9 w-full rounded-lg text-sm sm:h-12 sm:rounded-2xl sm:text-[0.95rem]">
                       <SelectValue placeholder="Record disbursement event" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1104,11 +1104,11 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             </div>
           </div>
 
-          <DialogFooter className="!mx-0 !mb-0 grid grid-cols-2 rounded-b-[2rem] border-t border-border/60 bg-background/85 px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 sm:flex sm:justify-end sm:px-8 sm:py-5">
+          <DialogFooter className="!mx-0 !mb-0 flex-row items-center justify-end gap-2 rounded-b-[1.45rem] border-t border-border/60 bg-background/85 px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))] pt-2.5 sm:rounded-b-[2rem] sm:px-8 sm:py-5 [&>button]:w-auto">
             <Button
               type="button"
               variant="outline"
-              className="h-9 w-full rounded-full text-[0.95rem] sm:h-11 sm:w-auto"
+              className="h-9 rounded-lg text-sm sm:h-11 sm:rounded-full sm:text-[0.95rem]"
               onClick={resetDialog}
               disabled={isSaving}
             >
@@ -1116,7 +1116,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             </Button>
             <Button
               type="button"
-              className="h-9 w-full rounded-full bg-[#17393c] text-[0.95rem] hover:bg-[#1d4a4d] sm:h-11 sm:w-auto"
+              className="h-9 rounded-lg bg-[#17393c] text-sm hover:bg-[#1d4a4d] sm:h-11 sm:rounded-full sm:text-[0.95rem]"
               onClick={submitLoan}
               disabled={isSaving || liquidAccounts.length === 0}
             >
@@ -1134,20 +1134,20 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
           }
         }}
       >
-        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md rounded-[1.4rem] border-border/70 bg-background/96 p-0 sm:max-w-lg sm:rounded-[1.75rem]">
-          <DialogHeader className="border-b border-border/60 px-7 pb-4 pt-7 pr-16">
-            <DialogTitle className="text-[1.45rem] tracking-tight">Delete loan?</DialogTitle>
-            <DialogDescription className="pt-1 text-[0.93rem] leading-7">
+        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/96 p-0 sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.75rem]">
+          <DialogHeader className="border-b border-border/60 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-4 sm:pt-7 sm:pr-16">
+            <DialogTitle className="text-[1.12rem] tracking-tight sm:text-[1.45rem]">Delete loan?</DialogTitle>
+            <DialogDescription className="pt-1 text-[0.82rem] leading-6 sm:text-[0.93rem] sm:leading-7">
               {deleteTarget
                 ? `Remove "${deleteTarget.name}" from Loans? This only removes the loan record and does not delete underlying account or transaction history.`
                 : "Remove this loan from Loans? This only removes the loan record and does not delete underlying account or transaction history."}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="border-t border-border/60 bg-transparent px-7 py-6">
+          <DialogFooter className="!mx-0 !-mb-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-transparent px-4 py-4 sm:px-7 sm:py-6 [&>button]:w-auto">
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-full px-5"
+              className="h-9 rounded-lg px-4 text-sm sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
               onClick={() => setDeleteTarget(null)}
               disabled={removeLoan.isPending}
             >
@@ -1155,7 +1155,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             </Button>
             <Button
               type="button"
-              className="h-11 rounded-full bg-destructive px-5 text-white hover:bg-destructive/90"
+              className="h-9 rounded-lg bg-destructive px-4 text-sm text-white hover:bg-destructive/90 sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
               onClick={() => deleteTarget && removeLoan.mutate({ id: deleteTarget.id })}
               disabled={removeLoan.isPending}
             >
