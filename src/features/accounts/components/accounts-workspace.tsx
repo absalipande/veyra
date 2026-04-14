@@ -741,51 +741,51 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
 
   return (
     <div className="space-y-6 lg:space-y-7">
-      <section className="overflow-hidden rounded-[2.1rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_30px_110px_-70px_rgba(10,31,34,0.84)]">
-        <div className="grid gap-5 px-5 py-5 sm:px-8 sm:py-7 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+      <section className="overflow-hidden rounded-[1.8rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_28px_95px_-72px_rgba(10,31,34,0.82)]">
+        <div className="grid gap-4 px-4 py-4 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
           <div className="max-w-3xl">
-            <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[0.7rem] font-medium uppercase tracking-[0.28em] text-white/80">
+            <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[0.64rem] font-medium uppercase tracking-[0.22em] text-white/78">
               Accounts workspace
             </div>
-            <h1 className="mt-3 text-[1.95rem] font-semibold tracking-tight text-white sm:mt-4 sm:text-[3rem]">
+            <h1 className="mt-2.5 max-w-[20ch] text-[1.55rem] font-semibold leading-[1.08] tracking-tight text-white sm:mt-3 sm:text-[2.2rem] sm:leading-[1.02]">
               Manage balances without losing the shape of each account.
             </h1>
-            <p className="mt-3 max-w-2xl text-[0.94rem] leading-7 text-white/72 sm:mt-4 sm:text-[0.98rem] sm:leading-8">
+            <p className="mt-2 max-w-[34rem] text-[0.9rem] leading-6 text-white/72 sm:mt-2.5 sm:text-[0.95rem] sm:leading-7">
               Keep liquid accounts, liabilities, and currencies visible without turning the page into a ledger wall.
             </p>
           </div>
 
-          <div className="hidden space-y-3 xl:block">
-            <div className="rounded-[1.65rem] border border-white/12 bg-white/10 px-5 py-4 backdrop-blur">
-              <p className="text-[0.72rem] font-medium uppercase tracking-[0.28em] text-white/60">
+          <div className="hidden space-y-2.5 xl:block">
+            <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
+              <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
                 Bank and wallet accounts
               </p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight">
+              <p className="mt-2 text-2xl font-semibold tracking-tight">
                 {formatCount(accountGroups.liquid.length, "account")}
               </p>
             </div>
-            <div className="rounded-[1.65rem] border border-white/12 bg-white/10 px-5 py-4 backdrop-blur">
-              <p className="text-[0.72rem] font-medium uppercase tracking-[0.28em] text-white/60">
+            <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
+              <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
                 Currencies in use
               </p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight">
+              <p className="mt-2 text-2xl font-semibold tracking-tight">
                 {summaryQuery.data?.activeCurrencies ?? 0}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="px-5 pb-5 xl:hidden">
-          <div className="grid grid-cols-2 gap-2.5">
+        <div className="px-4 pb-4 xl:hidden sm:px-6 sm:pb-5">
+          <div className="grid grid-cols-2 gap-2">
             {mobileHeroStats.map((item) => (
               <div
                 key={item.label}
-                className="rounded-[1.2rem] border border-white/12 bg-white/10 px-3.5 py-3 backdrop-blur"
+                className="rounded-[1.05rem] border border-white/12 bg-white/10 px-3 py-2.5 backdrop-blur"
               >
-                <p className="text-[0.62rem] font-medium uppercase tracking-[0.24em] text-white/58">
+                <p className="text-[0.6rem] font-medium uppercase tracking-[0.2em] text-white/58">
                   {item.label}
                 </p>
-                <p className="mt-1.5 text-[1.2rem] font-semibold tracking-tight text-white">
+                <p className="mt-1 text-[1.1rem] font-semibold tracking-tight text-white">
                   {item.value}
                 </p>
               </div>

@@ -1,9 +1,9 @@
 import { UserButton } from "@clerk/nextjs";
-import { Sparkles } from "lucide-react";
 
 import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
 import { DesktopAppNavigation, MobileAppNavigation } from "@/components/app/app-navigation";
 import { GlobalSearch } from "@/components/app/global-search";
+import { SidebarTodaySnapshot } from "@/components/app/sidebar-today-snapshot";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { GlobalQuickCapture } from "@/features/transactions/components/global-quick-capture";
 
@@ -27,15 +27,7 @@ export function AppShell({ children }: AppShellProps) {
             <DesktopAppNavigation />
           </div>
 
-          <div className="mt-auto rounded-[1.9rem] border border-white/75 bg-[linear-gradient(145deg,rgba(18,50,52,0.98),rgba(25,66,69,0.95))] p-5 text-white shadow-[0_26px_90px_-60px_rgba(10,31,34,0.8)]">
-            <div className="inline-flex rounded-full border border-white/12 bg-white/10 p-2">
-              <Sparkles className="size-4" />
-            </div>
-            <p className="mt-4 text-lg font-semibold tracking-tight">Foundation in place</p>
-            <p className="mt-2 text-sm leading-6 text-white/72">
-              Auth and branding are ready. Accounts becomes the first real product slice from here.
-            </p>
-          </div>
+          <SidebarTodaySnapshot />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">

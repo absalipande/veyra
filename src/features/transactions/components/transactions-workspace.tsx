@@ -667,53 +667,53 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
   return (
     <div className="space-y-6 lg:space-y-7">
-      <section className="overflow-hidden rounded-[2rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_30px_110px_-70px_rgba(10,31,34,0.84)]">
-        <div className="grid gap-5 px-5 py-5 sm:px-8 sm:py-7 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-end">
+      <section className="overflow-hidden rounded-[1.8rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_28px_95px_-72px_rgba(10,31,34,0.82)]">
+        <div className="grid gap-4 px-4 py-4 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
           <div className="max-w-3xl">
-            <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[0.67rem] font-medium uppercase tracking-[0.26em] text-white/78">
+            <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[0.64rem] font-medium uppercase tracking-[0.22em] text-white/78">
               Transactions workspace
             </div>
-            <h1 className="mt-3.5 max-w-[13ch] text-[1.9rem] font-semibold leading-[1.02] tracking-tight text-white sm:mt-4 sm:max-w-[12ch] sm:text-[3rem] sm:leading-[0.98]">
+            <h1 className="mt-2.5 max-w-[21ch] text-[1.55rem] font-semibold leading-[1.08] tracking-tight text-white sm:mt-3 sm:text-[2.2rem] sm:leading-[1.02]">
               A cleaner ledger for income, spending, transfers, and debt movement.
             </h1>
-            <p className="mt-3 max-w-[28rem] text-[0.94rem] leading-7 text-white/72 sm:mt-4 sm:max-w-2xl sm:text-[0.98rem] sm:leading-8">
+            <p className="mt-2 max-w-[34rem] text-[0.9rem] leading-6 text-white/72 sm:mt-2.5 sm:text-[0.95rem] sm:leading-7">
               Track real money events without turning the workspace into a ledger wall.
             </p>
           </div>
 
-          <div className="hidden space-y-3 xl:block">
-            <div className="rounded-[1.65rem] border border-white/12 bg-white/10 px-5 py-4 backdrop-blur">
-              <p className="text-[0.72rem] font-medium uppercase tracking-[0.28em] text-white/60">
+          <div className="hidden space-y-2.5 xl:block">
+            <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
+              <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
                 Total events
               </p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight">
+              <p className="mt-2 text-2xl font-semibold tracking-tight">
                 {summaryQuery.data?.totalEvents ?? 0}
               </p>
             </div>
-            <div className="rounded-[1.65rem] border border-white/12 bg-white/10 px-5 py-4 backdrop-blur">
-              <p className="text-[0.72rem] font-medium uppercase tracking-[0.28em] text-white/60">
+            <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
+              <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
                 Transfers and payments
               </p>
-              <p className="mt-3 text-3xl font-semibold tracking-tight">
+              <p className="mt-2 text-2xl font-semibold tracking-tight">
                 {heroTransferAndPaymentCount}
               </p>
             </div>
           </div>
 
-          <div className="grid gap-2.5 sm:grid-cols-2 xl:hidden">
-            <div className="rounded-[1.35rem] border border-white/12 bg-white/10 px-4 py-3.5 backdrop-blur">
-              <p className="text-[0.66rem] font-medium uppercase tracking-[0.24em] text-white/60">
+          <div className="grid gap-2 sm:grid-cols-2 xl:hidden">
+            <div className="rounded-[1.1rem] border border-white/12 bg-white/10 px-3.5 py-3 backdrop-blur">
+              <p className="text-[0.62rem] font-medium uppercase tracking-[0.2em] text-white/60">
                 Total events
               </p>
-              <p className="mt-2 text-[1.9rem] font-semibold tracking-tight">
+              <p className="mt-1.5 text-[1.5rem] font-semibold tracking-tight">
                 {summaryQuery.data?.totalEvents ?? 0}
               </p>
             </div>
-            <div className="rounded-[1.35rem] border border-white/12 bg-white/10 px-4 py-3.5 backdrop-blur">
-              <p className="text-[0.66rem] font-medium uppercase tracking-[0.24em] text-white/60">
+            <div className="rounded-[1.1rem] border border-white/12 bg-white/10 px-3.5 py-3 backdrop-blur">
+              <p className="text-[0.62rem] font-medium uppercase tracking-[0.2em] text-white/60">
                 Transfers and payments
               </p>
-              <p className="mt-2 text-[1.9rem] font-semibold tracking-tight">
+              <p className="mt-1.5 text-[1.5rem] font-semibold tracking-tight">
                 {heroTransferAndPaymentCount}
               </p>
             </div>
