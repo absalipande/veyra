@@ -49,6 +49,70 @@ export const accounts = pgTable(
   })
 );
 
+export const loans = pgTable(
+  "veyra_loans",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    kind: text("kind", {
+      enum: ["institution", "personal"],
+    }).notNull(),
+    name: text("name").notNull(),
+    lenderName: text("lender_name").notNull(),
+    currency: text("currency").default("PHP").notNull(),
+    principalAmount: integer("principal_amount").notNull(),
+    outstandingAmount: integer("outstanding_amount").notNull(),
+    disbursedAt: timestamp("disbursed_at", { mode: "date" }).notNull(),
+    status: text("status", {
+      enum: ["active", "closed"],
+    })
+      .default("active")
+      .notNull(),
+    destinationAccountId: text("destination_account_id")
+      .references(() => accounts.id, { onDelete: "set null" })
+      .notNull(),
+    underlyingLoanAccountId: text("underlying_loan_account_id").references(() => accounts.id, {
+      onDelete: "set null",
+    }),
+    cadence: text("cadence", {
+      enum: ["weekly", "bi-weekly", "monthly"],
+    }),
+    nextDueDate: timestamp("next_due_date", { mode: "date" }),
+    notes: text("notes"),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_loans_clerk_user_idx").on(table.clerkUserId),
+    statusIdx: index("veyra_loans_status_idx").on(table.status),
+    destinationAccountIdx: index("veyra_loans_destination_account_idx").on(table.destinationAccountId),
+    underlyingAccountIdx: index("veyra_loans_underlying_account_idx").on(table.underlyingLoanAccountId),
+    dueDateIdx: index("veyra_loans_next_due_date_idx").on(table.nextDueDate),
+  })
+);
+
+export const loanInstallments = pgTable(
+  "veyra_loan_installments",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    loanId: text("loan_id")
+      .references(() => loans.id, { onDelete: "cascade" })
+      .notNull(),
+    sequence: integer("sequence").notNull(),
+    dueDate: timestamp("due_date", { mode: "date" }).notNull(),
+    amount: integer("amount").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_loan_installments_clerk_user_idx").on(table.clerkUserId),
+    loanIdx: index("veyra_loan_installments_loan_idx").on(table.loanId),
+    dueDateIdx: index("veyra_loan_installments_due_date_idx").on(table.dueDate),
+  })
+);
+
 export const budgets = pgTable(
   "veyra_budgets",
   {

@@ -523,6 +523,34 @@ V1 Loans page guidance:
   - forcing users into raw account setup
   - showing only internal ledger structure without loan context
 
+Current implemented loans baseline (April 2026):
+- data model is live with:
+  - `veyra_loans`
+  - `veyra_loan_installments`
+- Drizzle artifacts must stay in sync:
+  - migration SQL files under `drizzle/`
+  - matching snapshots under `drizzle/meta/`
+  - updated `drizzle/meta/_journal.json`
+- routes and app wiring are active:
+  - page: `src/app/(app)/loans/page.tsx`
+  - router: `src/server/api/routers/loans.ts`
+  - root router registration in `src/server/api/root.ts`
+  - nav item in `src/components/app/app-navigation.tsx`
+  - protected route in `src/proxy.ts`
+- service behavior now includes:
+  - optional auto-created underlying loan account
+  - optional opening `loan_disbursement` event
+  - repayment-plan persistence via installments
+  - derived finance metrics from installments:
+    - `totalPayable`
+    - `financeCharge`
+    - derived `nextDueDate`
+- UI behavior now includes:
+  - compact loans hero aligned with other pages
+  - mobile summary carousel with dots and prev/next
+  - repayment-plan builder in the loan modal
+  - derived finance preview in-form (no manual interest input required)
+
 ## Design System Direction
 
 Veyra uses a calm premium visual system.
@@ -682,6 +710,29 @@ Modal and sheet behavior:
   combinations that can push actions outside narrower desktop modal widths
 - destructive dialogs should keep copy concise and practical: one short warning block, one clear
   confirmation step, and no decorative promo-style sections
+
+UI-QA modal baseline (April 2026):
+- close icon must never hug modal borders; keep explicit inset offsets on custom dialogs
+- prefer modal shells that use:
+  - `max-h-[calc(100dvh-1rem)]`
+  - `w-[calc(100vw-1rem)]` on mobile
+  - `overflow-x-hidden overflow-y-auto`
+- use safe-area-aware paddings on long-form dialogs:
+  - header top padding with `env(safe-area-inset-top)`
+  - footer bottom padding with `env(safe-area-inset-bottom)`
+- on mobile confirm/cancel flows, use a two-column footer action row
+- avoid “chubby” controls:
+  - use compact heights (`h-9`/`h-10`)
+  - restrained radii (`rounded-lg`/`rounded-xl`)
+  - tighter inner padding
+- trim excessive desktop footer whitespace; avoid oversized bottom padding
+- use responsive field grids with `md`/`xl` breakpoints instead of fixed narrow columns
+- for transaction composer hierarchy:
+  - keep `Amount` as the primary visual field
+  - group required fields under `Primary details`
+  - group non-critical fields under `Optional details`
+  - keep grammar natural in titles (`a/an` helper for event labels)
+  - allow optional description with deterministic fallback labels at submit-time
 
 Pagination and density:
 - mobile lists may use smaller page sizes than desktop when that improves scanability and reduces scroll fatigue

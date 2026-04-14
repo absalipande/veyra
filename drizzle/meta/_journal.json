@@ -64,6 +64,20 @@
       "when": 1776071896269,
       "tag": "0008_bumpy_wrecker",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776177252436,
+      "tag": "0009_uneven_warbird",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776179989940,
+      "tag": "0010_sharp_vector",
+      "breakpoints": true
     }
   ]
 }

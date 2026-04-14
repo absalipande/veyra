@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   BadgeDollarSign,
   CreditCard,
+  HandCoins,
   LayoutDashboard,
   Menu,
   PiggyBank,
@@ -40,6 +41,12 @@ const items = [
     label: "Budgets",
     href: "/budgets",
     icon: PiggyBank,
+    available: true,
+  },
+  {
+    label: "Loans",
+    href: "/loans",
+    icon: HandCoins,
     available: true,
   },
   {

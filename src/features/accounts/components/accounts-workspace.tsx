@@ -60,9 +60,9 @@ function getInitialState(defaultCurrency: CreateState["currency"] = "PHP"): Crea
 }
 
 const accountFieldClassName =
-  "h-13 rounded-[1.35rem] border-border/80 bg-background px-5 text-[0.95rem] shadow-none dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/30";
+  "h-9 w-full rounded-lg border-border/80 bg-background px-3 text-[0.94rem] shadow-none dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/30 sm:h-10 sm:rounded-xl sm:px-4 sm:text-[0.95rem]";
 
-const accountFieldLabelClassName = "text-[1.02rem] font-semibold text-foreground";
+const accountFieldLabelClassName = "text-[0.92rem] font-semibold text-foreground sm:text-[1.02rem]";
 
 type AccountSortOption =
   | "newest"
@@ -939,12 +939,12 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                 </Button>
               </DialogTrigger>
 
-              <DialogContent className="max-h-[calc(100svh-1rem)] overflow-hidden rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:max-w-[52rem] sm:rounded-[2rem]">
-                <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-5 pr-14 sm:px-8 sm:pb-6 sm:pt-8 sm:pr-16">
+              <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-[52rem] sm:overflow-hidden sm:rounded-[2rem]">
+                <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-8 sm:pb-6 sm:pt-8 sm:pr-16">
                   <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                     Account setup
                   </div>
-                  <DialogTitle className="pt-3 text-[1.7rem] tracking-tight sm:text-[2rem]">
+                  <DialogTitle className="pt-2 text-[1.5rem] tracking-tight sm:pt-3 sm:text-[2rem]">
                     {editingId ? "Edit account" : "Add account"}
                   </DialogTitle>
                   <p className="max-w-xl text-[0.92rem] leading-6 text-muted-foreground sm:text-[0.96rem] sm:leading-7">
@@ -952,9 +952,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   </p>
                 </DialogHeader>
 
-                <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-8 sm:py-7">
-                  <div className="space-y-5 sm:space-y-6">
-                  <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
+                <div className="min-h-0 overflow-x-hidden overflow-y-auto px-5 py-4 sm:px-8 sm:py-6">
+                  <div className="space-y-4 sm:space-y-5">
+                  <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
                     <label className={accountFieldLabelClassName}>Account name</label>
                     <Input
                       value={form.name}
@@ -966,8 +966,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     />
                   </div>
 
-                  <div className="grid gap-5 sm:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)] sm:items-start">
-                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)] sm:items-start">
+                    <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
                       <label className={accountFieldLabelClassName}>Account type</label>
                       <div className="grid grid-cols-2 gap-3">
                         {accountTypeOptions.map((option) => (
@@ -975,7 +975,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                             key={option.value}
                             type="button"
                             onClick={() => setForm((current) => ({ ...current, type: option.value }))}
-                            className={`min-h-13 rounded-[1.35rem] border px-4 py-2.5 text-[0.95rem] transition ${
+                            className={`min-h-9 rounded-lg border px-3.5 py-1.5 text-[0.9rem] transition sm:min-h-10 sm:rounded-xl sm:px-4 sm:py-2 sm:text-[0.94rem] ${
                               form.type === option.value
                                 ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
                                 : "border-border/80 bg-background text-foreground hover:bg-muted/70"
@@ -987,7 +987,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                       </div>
                     </div>
 
-                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
+                    <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
                       <label className={accountFieldLabelClassName}>Currency</label>
                       <Select
                         value={form.currency}
@@ -1013,7 +1013,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   </div>
 
                   {form.type !== "credit" ? (
-                    <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
+                    <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
                       <label className={accountFieldLabelClassName}>
                         {form.type === "loan" ? "Current loan balance" : "Opening balance"}
                       </label>
@@ -1031,8 +1031,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   ) : null}
 
                   {form.type === "credit" ? (
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
                         <label className={accountFieldLabelClassName}>Credit limit</label>
                         <Input
                           type="number"
@@ -1044,7 +1044,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         />
                       </div>
 
-                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4 dark:bg-[#162022]">
+                      <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
                         <label className={accountFieldLabelClassName}>Input mode</label>
                         <div className="grid grid-cols-2 gap-3">
                           {[
@@ -1060,7 +1060,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                   creditInputMode: option.value,
                                 }))
                               }
-                              className={`min-h-13 rounded-[1.35rem] border px-4 py-2.5 text-[0.88rem] transition ${
+                              className={`min-h-9 rounded-lg border px-3.5 py-1.5 text-[0.84rem] transition sm:min-h-10 sm:rounded-xl sm:px-4 sm:py-2 sm:text-[0.87rem] ${
                                 form.creditInputMode === option.value
                                   ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
                                   : "border-border/80 bg-background text-foreground hover:bg-muted/70"
@@ -1072,7 +1072,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         </div>
                       </div>
 
-                      <div className="space-y-3 rounded-[1.4rem] border border-border/70 bg-[#fcfbf7] px-4 py-4">
+                      <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5">
                         <label className={accountFieldLabelClassName}>
                           {form.creditInputMode === "available"
                             ? "Available credit"
@@ -1092,13 +1092,13 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         />
                       </div>
 
-                      <div className="space-y-3 rounded-[1.4rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-4 dark:bg-[#162022]">
+                      <div className="space-y-2.5 rounded-xl border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3.5 dark:bg-[#162022]">
                         <label className={accountFieldLabelClassName}>
                           {form.creditInputMode === "available"
                             ? "Computed current balance"
                             : "Computed available credit"}
                         </label>
-                        <div className="flex min-h-13 items-center rounded-[1.35rem] border border-border/80 bg-background px-5 text-[0.95rem] text-muted-foreground">
+                        <div className="flex min-h-9 items-center rounded-lg border border-border/80 bg-background px-3 text-[0.94rem] text-muted-foreground sm:min-h-10 sm:rounded-xl sm:px-4 sm:text-[0.95rem]">
                           {form.creditInputMode === "available"
                             ? formatCurrencyMiliunits(parsedBalance, form.currency)
                             : formatCurrencyMiliunits(parsedAvailableCredit, form.currency)}
@@ -1107,7 +1107,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     </div>
                   ) : null}
 
-                  <div className="rounded-[1.25rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 dark:bg-[#162022]">
+                  <div className="rounded-xl border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 dark:bg-[#162022]">
                     <p className="text-[0.9rem] leading-6 text-muted-foreground">
                       {form.type === "credit"
                         ? "For credit cards, credit limit stays fixed while current balance tracks what you owe. If you only know the available credit from your banking app, Veyra can derive the balance for you."
@@ -1123,12 +1123,12 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   </div>
                 </div>
 
-                  <div className="shrink-0 border-t border-border/70 px-5 py-4 sm:px-8">
+                  <div className="shrink-0 border-t border-border/70 px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:py-4">
                     <div className="flex items-center justify-end">
                     <Button
                       onClick={onSubmit}
                       disabled={!form.name.trim() || isSubmitting}
-                      className="h-11 w-full rounded-full bg-[#17393c] px-6 text-[0.96rem] hover:bg-[#1d4a4d] sm:h-12 sm:min-w-44 sm:w-auto sm:text-[0.98rem]"
+                      className="h-10 w-full rounded-full bg-[#17393c] px-6 text-[0.95rem] hover:bg-[#1d4a4d] sm:h-10 sm:min-w-40 sm:w-auto sm:text-[0.95rem]"
                     >
                       {isSubmitting
                         ? editingId
@@ -1154,12 +1154,12 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           }
         }}
       >
-        <DialogContent className="max-h-[calc(100svh-1rem)] overflow-hidden rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:max-w-lg sm:rounded-[1.6rem]">
-          <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-5 pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-lg sm:rounded-[1.6rem]">
+          <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
               Confirm delete
             </div>
-            <DialogTitle className="pt-3 text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.7rem]">
+            <DialogTitle className="pt-2 text-[1.35rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.7rem]">
               Remove this account?
             </DialogTitle>
             <p className="max-w-md text-[0.92rem] leading-6 text-muted-foreground sm:text-[0.95rem] sm:leading-7">
@@ -1169,11 +1169,11 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             </p>
           </DialogHeader>
 
-          <div className="flex shrink-0 flex-col gap-3 px-5 py-5 sm:flex-row sm:justify-end sm:px-7 sm:py-6">
+          <div className="grid shrink-0 grid-cols-2 gap-3 px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 sm:flex sm:justify-end sm:px-7 sm:py-6">
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-full px-5"
+              className="h-10 w-full rounded-full px-5 sm:h-11 sm:w-auto"
               onClick={() => setDeleteTarget(null)}
               disabled={isDeleting}
             >
@@ -1181,7 +1181,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             </Button>
             <Button
               type="button"
-              className="h-11 rounded-full bg-destructive px-5 text-white hover:bg-destructive/90"
+              className="h-10 w-full rounded-full bg-destructive px-5 text-white hover:bg-destructive/90 sm:h-11 sm:w-auto"
               onClick={onConfirmDelete}
               disabled={isDeleting}
             >
