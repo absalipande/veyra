@@ -932,7 +932,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
               <DialogTrigger asChild>
                 <Button
                   onClick={startCreate}
-                  className="rounded-full bg-[#17393c] px-5 hover:bg-[#1d4a4d]"
+                  className="rounded-full bg-[#17393c] px-5 text-white hover:bg-[#1d4a4d] dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c]"
                 >
                   <Plus className="size-4" />
                   Add account
@@ -1128,7 +1128,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     <Button
                       onClick={onSubmit}
                       disabled={!form.name.trim() || isSubmitting}
-                      className="h-9 w-full rounded-full bg-[#17393c] px-6 text-[0.94rem] hover:bg-[#1d4a4d] sm:h-10 sm:min-w-40 sm:w-auto sm:text-[0.95rem]"
+                      className="h-9 w-full rounded-full bg-[#17393c] px-6 text-[0.94rem] text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:h-10 sm:min-w-40 sm:w-auto sm:text-[0.95rem]"
                     >
                       {isSubmitting
                         ? editingId

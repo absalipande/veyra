@@ -1505,7 +1505,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               </Button>
               <Button
                 type="button"
-                className="h-9 rounded-lg bg-[#17393c] text-sm hover:bg-[#1d4a4d] sm:h-11 sm:rounded-full sm:text-base"
+                className="h-9 rounded-lg bg-[#17393c] text-sm text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:h-11 sm:rounded-full sm:text-base"
                 onClick={submitEvent}
                 disabled={createEvent.isPending || updateEvent.isPending}
               >

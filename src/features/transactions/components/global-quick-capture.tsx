@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import { ArrowRightLeft, Landmark, Plus, Search, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRightLeft, Landmark, Loader2, Plus, Search, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
@@ -323,6 +323,7 @@ export function GlobalQuickCapture() {
       : parsed.intent === "transfer"
         ? Boolean(parsed.amountMiliunits && selectedSourceAccountId && selectedDestinationAccountId)
         : false;
+  const isSubmitting = createEvent.isPending;
 
   const submit = () => {
     if (!canSubmit || !parsed.amountMiliunits) return;
@@ -371,8 +372,9 @@ export function GlobalQuickCapture() {
       <Dialog
         open={open}
         onOpenChange={(nextOpen) => {
+          if (isSubmitting && !nextOpen) return;
           setOpen(nextOpen);
-          if (!nextOpen && !createEvent.isPending) {
+          if (!nextOpen && !isSubmitting) {
             setInput("");
           }
         }}
@@ -407,6 +409,7 @@ export function GlobalQuickCapture() {
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder="Try: spent 360 on lunch today"
+                  disabled={isSubmitting}
                   className="h-12 rounded-[1.35rem] border-border/80 bg-background pl-11 text-[0.95rem] dark:bg-[#141d1f]"
                 />
               </div>
@@ -422,6 +425,7 @@ export function GlobalQuickCapture() {
                     variant="outline"
                     className="rounded-full text-[0.82rem]"
                     onClick={() => setInput(prompt)}
+                    disabled={isSubmitting}
                   >
                     {prompt}
                   </Button>
@@ -478,12 +482,13 @@ export function GlobalQuickCapture() {
                             variant={selectedAccountId === account.id ? "default" : "outline"}
                             className="rounded-full"
                             onClick={() => setSelectedAccountId(account.id)}
+                            disabled={isSubmitting}
                           >
                             {account.name}
                           </Button>
                         ))}
                       </div>
-                      <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+                      <Select value={selectedAccountId} onValueChange={setSelectedAccountId} disabled={isSubmitting}>
                         <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
                           <SelectValue placeholder="Choose account" />
                         </SelectTrigger>
@@ -511,12 +516,13 @@ export function GlobalQuickCapture() {
                             variant={selectedCategoryId === category.id ? "default" : "outline"}
                             className="rounded-full"
                             onClick={() => setSelectedCategoryId(category.id)}
+                            disabled={isSubmitting}
                           >
                             {category.name}
                           </Button>
                         ))}
                       </div>
-                      <Select value={selectedCategoryId || "none"} onValueChange={(value) => setSelectedCategoryId(value === "none" ? "" : value)}>
+                      <Select value={selectedCategoryId || "none"} onValueChange={(value) => setSelectedCategoryId(value === "none" ? "" : value)} disabled={isSubmitting}>
                         <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
                           <SelectValue placeholder="No category" />
                         </SelectTrigger>
@@ -540,7 +546,7 @@ export function GlobalQuickCapture() {
                         <Wallet className="size-4 text-primary" />
                         From
                       </div>
-                      <Select value={selectedSourceAccountId} onValueChange={setSelectedSourceAccountId}>
+                      <Select value={selectedSourceAccountId} onValueChange={setSelectedSourceAccountId} disabled={isSubmitting}>
                         <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
                           <SelectValue placeholder="Source account" />
                         </SelectTrigger>
@@ -558,7 +564,7 @@ export function GlobalQuickCapture() {
                         <ArrowRightLeft className="size-4 text-primary" />
                         To
                       </div>
-                      <Select value={selectedDestinationAccountId} onValueChange={setSelectedDestinationAccountId}>
+                      <Select value={selectedDestinationAccountId} onValueChange={setSelectedDestinationAccountId} disabled={isSubmitting}>
                         <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
                           <SelectValue placeholder="Destination account" />
                         </SelectTrigger>
@@ -608,17 +614,26 @@ export function GlobalQuickCapture() {
                 variant="outline"
                 className="h-11 w-full rounded-full px-6 sm:min-w-[10rem] sm:w-auto"
                 onClick={() => setOpen(false)}
-                disabled={createEvent.isPending}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button
                 type="button"
-                className="h-11 w-full rounded-full bg-[#17393c] px-6 text-[0.96rem] hover:bg-[#1d4a4d] sm:min-w-[13rem] sm:w-auto"
+                className="h-11 w-full rounded-full bg-[#17393c] px-6 text-[0.96rem] text-white hover:bg-[#1d4a4d] hover:text-white disabled:opacity-65 disabled:text-white/85 sm:min-w-[13rem] sm:w-auto"
                 onClick={submit}
-                disabled={!canSubmit || createEvent.isPending}
+                disabled={!canSubmit || isSubmitting}
               >
-                {parsed.intent ? `Record ${intentMeta.label.toLowerCase()}` : "Record"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Recording...
+                  </>
+                ) : parsed.intent ? (
+                  `Record ${intentMeta.label.toLowerCase()}`
+                ) : (
+                  "Record"
+                )}
               </Button>
             </div>
           </DialogFooter>

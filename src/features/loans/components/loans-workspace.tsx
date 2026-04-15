@@ -1514,7 +1514,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             </Button>
             <Button
               type="button"
-              className="h-9 rounded-lg bg-[#17393c] text-sm hover:bg-[#1d4a4d] sm:h-11 sm:rounded-full sm:text-[0.95rem]"
+              className="h-9 rounded-lg bg-[#17393c] text-sm text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:h-11 sm:rounded-full sm:text-[0.95rem]"
               onClick={submitLoan}
               disabled={isSaving || liquidAccounts.length === 0}
             >

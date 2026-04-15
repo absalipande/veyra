@@ -368,7 +368,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
 
               <Button
                 type="button"
-                className="w-auto self-start rounded-full bg-[#17393c] hover:bg-[#1d4a4d]"
+                className="w-auto self-start rounded-full bg-[#17393c] text-white hover:bg-[#1d4a4d] dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c]"
                 onClick={openCreateDialog}
               >
                 <Plus className="size-4" />
@@ -446,7 +446,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                 </p>
                 <Button
                   type="button"
-                  className="mt-5 rounded-full bg-[#17393c] hover:bg-[#1d4a4d]"
+                  className="mt-5 rounded-full bg-[#17393c] text-white hover:bg-[#1d4a4d] dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c]"
                   onClick={openCreateDialog}
                 >
                   <Plus className="size-4" />
@@ -685,7 +685,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               </Button>
               <Button
                 type="button"
-                className="h-9 rounded-lg bg-[#17393c] text-sm hover:bg-[#1d4a4d] sm:h-10 sm:w-auto sm:rounded-full sm:text-base"
+                className="h-9 rounded-lg bg-[#17393c] text-sm text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:h-10 sm:w-auto sm:rounded-full sm:text-base"
                 onClick={submitCategory}
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
