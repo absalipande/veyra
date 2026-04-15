@@ -796,18 +796,20 @@ Lists and cards:
 - treat categories, accounts, and similar admin-style screens as utility views, not mini dashboards
 
 Modal and sheet behavior:
-- mobile dialogs must always have a reachable close control
+- retain modal dialogs on desktop
+- use drawer-style sheets on mobile (similar to Mynt) for consistency during UI polish work
+- mobile drawers must always have a reachable close control
 - use a fixed header, scrollable body, and clear footer action when forms are long
-- never let a mobile modal trap the user below the fold without scroll
+- never let a mobile drawer trap the user below the fold without scroll
 - for mobile footer actions, use either:
   - two equal-width side-by-side buttons for binary confirm/cancel flows, or
   - compact side-by-side auto-width actions when the flow is form-heavy and a dense footer is clearer
   - one full-width primary action when there is no competing secondary action
-- mobile dialogs should account for safe areas (`env(safe-area-inset-top|bottom)`) so content
+- mobile drawers should account for safe areas (`env(safe-area-inset-top|bottom)`) so content
   does not collide with the dynamic island or home indicator
 - guard against horizontal overflow in custom dialogs; avoid footer layouts that introduce
   negative horizontal margins
-- reduce mobile modal height by hiding non-critical support copy and desktop-only explanatory cards
+- reduce mobile drawer height by hiding non-critical support copy and desktop-only explanatory cards
 - when using shared dialog primitives with opinionated footer spacing, explicitly override
   those styles in feature modals if they create clipping or overflow
 - desktop modal footers should keep actions inside container bounds; avoid fixed button min-width
@@ -815,9 +817,9 @@ Modal and sheet behavior:
 - destructive dialogs should keep copy concise and practical: one short warning block, one clear
   confirmation step, and no decorative promo-style sections
 
-UI-QA modal baseline (April 2026):
+UI-QA dialog baseline (April 2026):
 - close icon must never hug modal borders; keep explicit inset offsets on custom dialogs
-- prefer modal shells that use:
+- prefer mobile drawer shells that use:
   - `max-h-[calc(86dvh-env(safe-area-inset-top))]` on mobile
   - `w-[calc(100vw-1rem)]` on mobile
   - `overflow-x-hidden overflow-y-auto`
