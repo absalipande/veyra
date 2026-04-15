@@ -13,7 +13,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -674,11 +673,11 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               and expand only when a new label would genuinely change how you review spending.
             </div>
 
-            <DialogFooter className="!-mx-0 !-mb-0 flex-row items-center justify-end gap-2 bg-transparent px-0 pt-1.5 sm:pt-2 [&>button]:w-auto">
+            <div className="grid grid-cols-2 gap-2 border-t border-border/60 pt-3 sm:flex sm:items-center sm:justify-end sm:border-t-0 sm:pt-2">
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 rounded-lg text-sm sm:h-10 sm:rounded-full sm:text-base"
+                className="h-9 rounded-lg text-sm sm:h-10 sm:w-auto sm:rounded-full sm:text-base"
                 onClick={() => setOpen(false)}
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
@@ -686,7 +685,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               </Button>
               <Button
                 type="button"
-                className="h-9 rounded-lg bg-[#17393c] text-sm hover:bg-[#1d4a4d] sm:h-10 sm:rounded-full sm:text-base"
+                className="h-9 rounded-lg bg-[#17393c] text-sm hover:bg-[#1d4a4d] sm:h-10 sm:w-auto sm:rounded-full sm:text-base"
                 onClick={submitCategory}
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
@@ -696,7 +695,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                     ? "Save changes"
                     : "Create category"}
               </Button>
-            </DialogFooter>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

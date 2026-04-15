@@ -1111,7 +1111,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     <p className="text-[0.9rem] leading-6 text-muted-foreground">
                       {form.type === "credit"
                         ? "For credit cards, credit limit stays fixed while current balance tracks what you owe. If you only know the available credit from your banking app, Veyra can derive the balance for you."
-                        : "Balances are stored in each account&apos;s native currency. Cross-currency rollups can be layered on later."}
+                        : "Balances are stored in each account's native currency. Cross-currency rollups can be layered on later."}
                     </p>
                   </div>
 
