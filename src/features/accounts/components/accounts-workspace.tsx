@@ -939,22 +939,22 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                 </Button>
               </DialogTrigger>
 
-              <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.6rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-[52rem] sm:overflow-hidden sm:rounded-[2rem]">
-                <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-8 sm:pb-6 sm:pt-8 sm:pr-16">
+              <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-[52rem] sm:overflow-hidden sm:rounded-[2rem]">
+                <DialogHeader className="shrink-0 border-b border-border/70 px-4 pb-3 pt-[max(0.85rem,env(safe-area-inset-top))] pr-14 sm:px-8 sm:pb-6 sm:pt-8 sm:pr-16">
                   <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                     Account setup
                   </div>
-                  <DialogTitle className="pt-2 text-[1.5rem] tracking-tight sm:pt-3 sm:text-[2rem]">
+                  <DialogTitle className="pt-1.5 text-[1.2rem] tracking-tight sm:pt-3 sm:text-[2rem]">
                     {editingId ? "Edit account" : "Add account"}
                   </DialogTitle>
-                  <p className="max-w-xl text-[0.92rem] leading-6 text-muted-foreground sm:text-[0.96rem] sm:leading-7">
+                  <p className="hidden max-w-xl text-[0.92rem] leading-6 text-muted-foreground sm:block sm:text-[0.96rem] sm:leading-7">
                     Capture the essentials first: account name, type, currency, and opening balance.
                   </p>
                 </DialogHeader>
 
-                <div className="min-h-0 overflow-x-hidden overflow-y-auto px-5 py-4 sm:px-8 sm:py-6">
-                  <div className="space-y-4 sm:space-y-5">
-                  <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
+                <div className="min-h-0 overflow-x-hidden overflow-y-visible px-4 py-3 sm:overflow-y-auto sm:px-8 sm:py-6">
+                  <div className="space-y-3 sm:space-y-5">
+                  <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
                     <label className={accountFieldLabelClassName}>Account name</label>
                     <Input
                       value={form.name}
@@ -966,8 +966,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     />
                   </div>
 
-                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)] sm:items-start">
-                    <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)] sm:items-start sm:gap-4">
+                    <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
                       <label className={accountFieldLabelClassName}>Account type</label>
                       <div className="grid grid-cols-2 gap-3">
                         {accountTypeOptions.map((option) => (
@@ -987,7 +987,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                       </div>
                     </div>
 
-                    <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
+                    <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
                       <label className={accountFieldLabelClassName}>Currency</label>
                       <Select
                         value={form.currency}
@@ -1013,7 +1013,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   </div>
 
                   {form.type !== "credit" ? (
-                    <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
+                    <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
                       <label className={accountFieldLabelClassName}>
                         {form.type === "loan" ? "Current loan balance" : "Opening balance"}
                       </label>
@@ -1031,8 +1031,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   ) : null}
 
                   {form.type === "credit" ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
+                    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                      <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
                         <label className={accountFieldLabelClassName}>Credit limit</label>
                         <Input
                           type="number"
@@ -1044,7 +1044,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         />
                       </div>
 
-                      <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5 dark:bg-[#162022]">
+                      <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
                         <label className={accountFieldLabelClassName}>Input mode</label>
                         <div className="grid grid-cols-2 gap-3">
                           {[
@@ -1072,7 +1072,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         </div>
                       </div>
 
-                      <div className="space-y-2.5 rounded-xl border border-border/70 bg-[#fcfbf7] px-4 py-3.5">
+                      <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
                         <label className={accountFieldLabelClassName}>
                           {form.creditInputMode === "available"
                             ? "Available credit"
@@ -1092,7 +1092,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         />
                       </div>
 
-                      <div className="space-y-2.5 rounded-xl border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3.5 dark:bg-[#162022]">
+                      <div className="space-y-2 rounded-lg border border-dashed border-border/70 bg-[#fbfaf6] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
                         <label className={accountFieldLabelClassName}>
                           {form.creditInputMode === "available"
                             ? "Computed current balance"
@@ -1107,7 +1107,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     </div>
                   ) : null}
 
-                  <div className="rounded-xl border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 dark:bg-[#162022]">
+                  <div className="hidden rounded-xl border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 dark:bg-[#162022] sm:block">
                     <p className="text-[0.9rem] leading-6 text-muted-foreground">
                       {form.type === "credit"
                         ? "For credit cards, credit limit stays fixed while current balance tracks what you owe. If you only know the available credit from your banking app, Veyra can derive the balance for you."
@@ -1123,12 +1123,12 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   </div>
                 </div>
 
-                  <div className="shrink-0 border-t border-border/70 px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 sm:px-8 sm:py-4">
+                  <div className="shrink-0 border-t border-border/70 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-8 sm:py-4">
                     <div className="flex items-center justify-end">
                     <Button
                       onClick={onSubmit}
                       disabled={!form.name.trim() || isSubmitting}
-                      className="h-10 w-full rounded-full bg-[#17393c] px-6 text-[0.95rem] hover:bg-[#1d4a4d] sm:h-10 sm:min-w-40 sm:w-auto sm:text-[0.95rem]"
+                      className="h-9 w-full rounded-full bg-[#17393c] px-6 text-[0.94rem] hover:bg-[#1d4a4d] sm:h-10 sm:min-w-40 sm:w-auto sm:text-[0.95rem]"
                     >
                       {isSubmitting
                         ? editingId
