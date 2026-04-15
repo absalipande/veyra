@@ -595,6 +595,64 @@ Loan v2 implementation policy:
 - prioritize service and schema correctness before re-opening Loans UI actions
 - re-enable Loans page and transaction `loan_disbursement` action only after Loan v2 acceptance checks pass
 
+Loan v2 create flow guidance:
+- user entrypoint should be a `Create loan` modal with a first-step type chooser:
+  - `Personal flexible loan`
+  - `Institution loan (digital/traditional/bank app)`
+- this first-step chooser should reduce cognitive load and avoid showing institution-heavy fields
+  to users adding informal personal debt
+
+Loan v2 copy guidance for type chooser:
+- `Personal flexible loan`:
+  - borrowed from friends, family, or someone who paid on your behalf (including personal card use)
+- `Institution loan (digital/traditional/bank app)`:
+  - structured loans from banks and lending apps with formal terms and repayment schedules
+
+Loan v2 personal path fields:
+- `lenderName` (required)
+- `loanName` (optional)
+- `disbursementAccountId` (optional)
+- `loanAmount` (required)
+- `repaymentStyle`:
+  - `flexible`
+  - `scheduled`
+- if `repaymentStyle = flexible`:
+  - allow immediate save with optional `notes`
+- if `repaymentStyle = scheduled`:
+  - `cadence` (`weekly` or `monthly`)
+  - `installmentAmount`
+  - `firstPaymentDue`
+  - derive maturity info from cadence + count when count exists
+
+Loan v2 institution path fields:
+- `lenderName` (required)
+- `loanName` (required)
+- `disbursementAccountId` (required)
+- `applicationId` / `loanIdFromLender` (optional)
+- `approvedPrincipalAmount` (required)
+- `processingFees` (required, default 0)
+- `interestRate` (optional when contract total payable is known)
+- `durationMonths` (required for v2 institution setup)
+- `monthlyPayment` (required)
+- `disbursementDate` (required)
+- `firstPaymentDue` (required)
+- `notes` (optional)
+- do not include transaction-centric `category` or `payee` fields in loan setup modal
+
+Loan v2 institution computed block:
+- `amountReceived = approvedPrincipalAmount - processingFees`
+- `totalPayable = monthlyPayment * durationMonths` unless explicit lender contract total is provided
+- `interestAndFees = totalPayable - approvedPrincipalAmount`
+- `maturityDate = firstPaymentDue + (durationMonths - 1 months)`
+- show computed values as read-only surfaces with calm support copy
+
+Loan v2 schedule behavior details:
+- v2 should not assume equal principal/interest split per installment
+- when rate is present: amortize schedule from principal balance
+- when rate is missing but contract total exists: infer effective rate and amortize
+- allow fixed regular installments with final-installment reconciliation
+- expose final installment clearly when it deviates from regular monthly payment
+
 ## Design System Direction
 
 Veyra uses a calm premium visual system.
