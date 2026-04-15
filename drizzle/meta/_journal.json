@@ -78,6 +78,20 @@
       "when": 1776179989940,
       "tag": "0010_sharp_vector",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1776215233043,
+      "tag": "0011_broad_maelstrom",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1776215771697,
+      "tag": "0012_strong_overlord",
+      "breakpoints": true
     }
   ]
 }

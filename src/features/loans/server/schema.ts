@@ -8,6 +8,8 @@ export const loanCadences = ["weekly", "bi-weekly", "monthly"] as const;
 export const loanInstallmentSchema = z.object({
   dueDate: z.coerce.date(),
   amount: z.number().int().positive(),
+  principalAmount: z.number().int().nonnegative().optional(),
+  interestAmount: z.number().int().nonnegative().optional(),
 });
 
 export const listLoansSchema = z.object({
@@ -81,4 +83,13 @@ export const updateLoanSchema = z.object({
 
 export const deleteLoanSchema = z.object({
   id: z.string().uuid(),
+});
+
+export const recordLoanPaymentSchema = z.object({
+  loanId: z.string().uuid(),
+  installmentId: z.string().uuid().optional(),
+  sourceAccountId: z.string().uuid(),
+  amount: z.number().int().positive(),
+  paidAt: z.coerce.date(),
+  notes: z.string().trim().max(500).optional().or(z.literal("")),
 });

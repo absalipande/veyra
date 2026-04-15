@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
@@ -46,10 +47,13 @@ type AccountItem = RouterOutputs["accounts"]["list"][number];
 type LoanKind = LoanItem["kind"];
 type LoanStatus = LoanItem["status"];
 type LoanCadence = NonNullable<LoanItem["cadence"]>;
+type RepaymentMode = "auto" | "manual";
 type InstallmentDraft = {
   id: string;
   dueDate: string;
   amount: string;
+  principalAmount: string;
+  interestAmount: string;
 };
 
 type LoanDraft = {
@@ -70,6 +74,12 @@ type LoanDraft = {
   autoCreateUnderlyingAccount: boolean;
   createOpeningDisbursement: boolean;
   openingDisbursementAmount: string;
+  repaymentMode: RepaymentMode;
+  autoMonthlyPayment: string;
+  autoInstallmentCount: string;
+  autoFirstDueDate: string;
+  autoMonthlyRate: string;
+  autoTotalPayable: string;
   repaymentPlan: InstallmentDraft[];
 };
 
@@ -96,6 +106,12 @@ const initialDraft: LoanDraft = {
   autoCreateUnderlyingAccount: true,
   createOpeningDisbursement: false,
   openingDisbursementAmount: "",
+  repaymentMode: "auto",
+  autoMonthlyPayment: "",
+  autoInstallmentCount: "",
+  autoFirstDueDate: "",
+  autoMonthlyRate: "",
+  autoTotalPayable: "",
   repaymentPlan: [],
 };
 
@@ -133,7 +149,173 @@ function createInstallmentDraft(): InstallmentDraft {
     id: crypto.randomUUID(),
     dueDate: "",
     amount: "",
+    principalAmount: "",
+    interestAmount: "",
   };
+}
+
+function addMonths(input: Date, monthsToAdd: number) {
+  const copy = new Date(input);
+  copy.setMonth(copy.getMonth() + monthsToAdd);
+  return copy;
+}
+
+function toMoneyInput(value: number) {
+  return (value / 1000).toFixed(2);
+}
+
+function simulateScheduleByRate(input: {
+  principalAmount: number;
+  monthlyPayment: number;
+  installmentCount: number;
+  monthlyRate: number;
+}) {
+  let balance = input.principalAmount;
+  let totalPaid = 0;
+  const rows: Array<{ amount: number; principal: number; interest: number; balanceAfter: number }> = [];
+
+  for (let index = 0; index < input.installmentCount; index += 1) {
+    const interest = Math.max(Math.round(balance * input.monthlyRate), 0);
+    const isLast = index === input.installmentCount - 1;
+    const amount = isLast ? balance + interest : Math.min(input.monthlyPayment, balance + interest);
+    const principal = Math.max(Math.min(amount - interest, balance), 0);
+    balance = Math.max(balance - principal, 0);
+    totalPaid += amount;
+    rows.push({ amount, principal, interest: Math.max(amount - principal, 0), balanceAfter: balance });
+  }
+
+  return {
+    totalPaid,
+    rows,
+  };
+}
+
+function inferMonthlyRateFromTargetTotal(input: {
+  principalAmount: number;
+  monthlyPayment: number;
+  installmentCount: number;
+  targetTotalPayable: number;
+}) {
+  if (input.installmentCount <= 0 || input.monthlyPayment <= 0 || input.targetTotalPayable <= 0) {
+    return null;
+  }
+
+  let low = 0;
+  let high = 0.2;
+  let highSimulation = simulateScheduleByRate({
+    principalAmount: input.principalAmount,
+    monthlyPayment: input.monthlyPayment,
+    installmentCount: input.installmentCount,
+    monthlyRate: high,
+  });
+
+  while (highSimulation.totalPaid < input.targetTotalPayable && high < 1) {
+    high *= 1.6;
+    highSimulation = simulateScheduleByRate({
+      principalAmount: input.principalAmount,
+      monthlyPayment: input.monthlyPayment,
+      installmentCount: input.installmentCount,
+      monthlyRate: high,
+    });
+  }
+
+  for (let step = 0; step < 50; step += 1) {
+    const mid = (low + high) / 2;
+    const simulation = simulateScheduleByRate({
+      principalAmount: input.principalAmount,
+      monthlyPayment: input.monthlyPayment,
+      installmentCount: input.installmentCount,
+      monthlyRate: mid,
+    });
+    if (simulation.totalPaid < input.targetTotalPayable) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+
+  return (low + high) / 2;
+}
+
+function buildAutoRepaymentPlan(input: {
+  principalAmount: number;
+  monthlyPayment: number;
+  installmentCount: number;
+  firstDueDate: string;
+  monthlyRatePercent?: number;
+  totalPayable?: number;
+}) {
+  const firstDueDate = new Date(input.firstDueDate);
+  if (
+    !Number.isFinite(firstDueDate.getTime()) ||
+    input.monthlyPayment <= 0 ||
+    input.installmentCount <= 0
+  ) {
+    return [] as InstallmentDraft[];
+  }
+
+  const plan: InstallmentDraft[] = [];
+  const monthlyRate = input.monthlyRatePercent && input.monthlyRatePercent > 0
+    ? input.monthlyRatePercent / 100
+    : input.totalPayable && input.totalPayable > 0
+      ? inferMonthlyRateFromTargetTotal({
+          principalAmount: input.principalAmount,
+          monthlyPayment: input.monthlyPayment,
+          installmentCount: input.installmentCount,
+          targetTotalPayable: input.totalPayable,
+        })
+      : null;
+
+  if (monthlyRate) {
+    const simulation = simulateScheduleByRate({
+      principalAmount: input.principalAmount,
+      monthlyPayment: input.monthlyPayment,
+      installmentCount: input.installmentCount,
+      monthlyRate,
+    });
+    for (let index = 0; index < simulation.rows.length; index += 1) {
+      const dueDate = addMonths(firstDueDate, index);
+      const row = simulation.rows[index];
+      plan.push({
+        id: crypto.randomUUID(),
+        dueDate: dueDate.toISOString().slice(0, 10),
+        amount: toMoneyInput(row.amount),
+        principalAmount: toMoneyInput(row.principal),
+        interestAmount: toMoneyInput(row.interest),
+      });
+    }
+    return plan;
+  }
+
+  const targetTotalPayable =
+    input.totalPayable && input.totalPayable > 0
+      ? input.totalPayable
+      : input.monthlyPayment * input.installmentCount;
+  const financeCharge = Math.max(targetTotalPayable - input.principalAmount, 0);
+  let assignedFinance = 0;
+
+  for (let index = 0; index < input.installmentCount; index += 1) {
+    const dueDate = addMonths(firstDueDate, index);
+    const isLast = index === input.installmentCount - 1;
+    const amount = isLast
+      ? Math.max(targetTotalPayable - input.monthlyPayment * (input.installmentCount - 1), 0)
+      : input.monthlyPayment;
+    const interest = isLast
+      ? Math.max(financeCharge - assignedFinance, 0)
+      : Math.round(financeCharge * (amount / Math.max(targetTotalPayable, 1)));
+    assignedFinance += interest;
+    const principal = Math.max(amount - interest, 0);
+
+    plan.push({
+      id: crypto.randomUUID(),
+      dueDate: dueDate.toISOString().slice(0, 10),
+      amount: toMoneyInput(amount),
+      principalAmount: toMoneyInput(principal),
+      interestAmount: toMoneyInput(Math.max(amount - principal, 0)),
+    });
+  }
+
+  return plan;
 }
 
 function getAccountTypeLabel(type: AccountItem["type"]) {
@@ -212,6 +394,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       await Promise.all([
         utils.loans.list.invalidate(),
         utils.loans.summary.invalidate(),
+        utils.accounts.list.invalidate(),
+        utils.accounts.summary.invalidate(),
+        utils.transactions.list.invalidate(),
+        utils.transactions.summary.invalidate(),
       ]);
       toast.success("Loan deleted.");
       setDeleteTarget(null);
@@ -263,11 +449,25 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       detail: "Current outstanding across active loan records.",
     },
   ];
-  const repaymentPlanTotal = draft.repaymentPlan.reduce((sum, installment) => {
+  const principalPreview = parseMoneyToMiliunits(draft.principalAmount) ?? 0;
+  const autoMonthlyPayment = parseMoneyToMiliunits(draft.autoMonthlyPayment) ?? 0;
+  const autoInstallmentCount = Number.parseInt(draft.autoInstallmentCount, 10);
+  const autoMonthlyRate = Number.parseFloat(draft.autoMonthlyRate);
+  const autoTotalPayable = parseMoneyToMiliunits(draft.autoTotalPayable);
+  const autoGeneratedPlan = buildAutoRepaymentPlan({
+    principalAmount: principalPreview,
+    monthlyPayment: autoMonthlyPayment,
+    installmentCount: Number.isFinite(autoInstallmentCount) ? autoInstallmentCount : 0,
+    firstDueDate: draft.autoFirstDueDate,
+    monthlyRatePercent:
+      Number.isFinite(autoMonthlyRate) && autoMonthlyRate > 0 ? autoMonthlyRate : undefined,
+    totalPayable: autoTotalPayable ?? undefined,
+  });
+  const planForPreview = draft.repaymentMode === "auto" ? autoGeneratedPlan : draft.repaymentPlan;
+  const repaymentPlanTotal = planForPreview.reduce((sum, installment) => {
     const amount = parseMoneyToMiliunits(installment.amount);
     return sum + (amount ?? 0);
   }, 0);
-  const principalPreview = parseMoneyToMiliunits(draft.principalAmount) ?? 0;
   const financeChargePreview = Math.max(repaymentPlanTotal - principalPreview, 0);
 
   const isSaving = createLoan.isPending || updateLoan.isPending;
@@ -353,11 +553,22 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       autoCreateUnderlyingAccount: false,
       createOpeningDisbursement: false,
       openingDisbursementAmount: "",
+      repaymentMode: "manual",
+      autoMonthlyPayment:
+        loan.installments?.[0] ? toMoneyInput(loan.installments[0].amount) : "",
+      autoInstallmentCount: loan.installments?.length ? String(loan.installments.length) : "",
+      autoFirstDueDate: loan.installments?.[0]
+        ? new Date(loan.installments[0].dueDate).toISOString().slice(0, 10)
+        : "",
+      autoMonthlyRate: "",
+      autoTotalPayable: loan.totalPayable ? toMoneyInput(loan.totalPayable) : "",
       repaymentPlan:
         loan.installments?.map((installment) => ({
           id: installment.id,
           dueDate: new Date(installment.dueDate).toISOString().slice(0, 10),
           amount: toInputAmount(installment.amount),
+          principalAmount: toInputAmount(installment.principalAmount ?? 0),
+          interestAmount: toInputAmount(installment.interestAmount ?? 0),
         })) ?? [],
     });
     setFormError(null);
@@ -405,10 +616,36 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       return;
     }
 
-    const normalizedRepaymentPlan = draft.repaymentPlan
+    let sourceRepaymentPlan = draft.repaymentPlan;
+    if (draft.repaymentMode === "auto") {
+      if (!draft.autoFirstDueDate) {
+        setFormError("Choose the first due date for auto plan.");
+        return;
+      }
+
+      if (!Number.isFinite(autoInstallmentCount) || autoInstallmentCount <= 0) {
+        setFormError("Enter a valid number of installments.");
+        return;
+      }
+
+      if (autoMonthlyPayment <= 0) {
+        setFormError("Enter a valid monthly installment amount.");
+        return;
+      }
+
+      sourceRepaymentPlan = autoGeneratedPlan;
+      if (sourceRepaymentPlan.length === 0) {
+        setFormError("Unable to generate plan. Check auto plan inputs.");
+        return;
+      }
+    }
+
+    const normalizedRepaymentPlan = sourceRepaymentPlan
       .map((installment) => ({
         dueDate: installment.dueDate,
         amount: parseMoneyToMiliunits(installment.amount),
+        principalAmount: parseMoneyToMiliunits(installment.principalAmount),
+        interestAmount: parseMoneyToMiliunits(installment.interestAmount),
       }))
       .sort((left, right) => left.dueDate.localeCompare(right.dueDate));
 
@@ -417,6 +654,8 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       .map((installment) => ({
         dueDate: installment.dueDate,
         amount: installment.amount,
+        principalAmount: installment.principalAmount,
+        interestAmount: installment.interestAmount,
       }));
 
     for (const installment of repaymentPlan) {
@@ -457,6 +696,8 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
         repaymentPlan: repaymentPlan.map((installment) => ({
           dueDate: new Date(installment.dueDate),
           amount: installment.amount ?? 0,
+          principalAmount: installment.principalAmount ?? undefined,
+          interestAmount: installment.interestAmount ?? undefined,
         })),
       });
 
@@ -499,6 +740,8 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       repaymentPlan: repaymentPlan.map((installment) => ({
         dueDate: new Date(installment.dueDate),
         amount: installment.amount ?? 0,
+        principalAmount: installment.principalAmount ?? undefined,
+        interestAmount: installment.interestAmount ?? undefined,
       })),
       autoCreateUnderlyingAccount: draft.underlyingLoanAccountId === "auto",
       createOpeningDisbursement: draft.createOpeningDisbursement,
@@ -526,16 +769,16 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
 
             <div className="hidden space-y-2.5 xl:block">
               <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
-                <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
+                <p className="text-[0.64rem] font-medium uppercase tracking-[0.22em] text-white/60">
                   Active loans
                 </p>
-                <p className="mt-2 text-2xl font-semibold tracking-tight">{summary?.activeLoans ?? 0}</p>
+                <p className="mt-1.5 text-[1.75rem] font-semibold tracking-tight">{summary?.activeLoans ?? 0}</p>
               </div>
               <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
-                <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
+                <p className="text-[0.64rem] font-medium uppercase tracking-[0.22em] text-white/60">
                   Due soon
                 </p>
-                <p className="mt-2 text-2xl font-semibold tracking-tight">{summary?.dueSoonCount ?? 0}</p>
+                <p className="mt-1.5 text-[1.75rem] font-semibold tracking-tight">{summary?.dueSoonCount ?? 0}</p>
               </div>
             </div>
           </div>
@@ -571,13 +814,13 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             >
               <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]">
                 <CardContent className="p-5">
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                     {card.label}
                   </p>
-                  <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  <p className="mt-2.5 text-[1.65rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                     {card.value}
                   </p>
-                  <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.detail}</p>
+                  <p className="mt-1.5 text-[0.9rem] leading-6 text-muted-foreground">{card.detail}</p>
                 </CardContent>
               </Card>
             </div>
@@ -634,13 +877,13 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
               className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
             >
               <CardContent className="p-5">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+                <p className="text-[0.66rem] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                   {card.label}
                 </p>
-                <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                <p className="mt-2.5 text-[1.65rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                   {card.value}
                 </p>
-                <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.detail}</p>
+                <p className="mt-1.5 text-[0.9rem] leading-6 text-muted-foreground">{card.detail}</p>
               </CardContent>
             </Card>
           ))}
@@ -687,7 +930,12 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
           ) : null}
 
           {activeLoans.map((loan) => (
-            <LoanRow key={loan.id} loan={loan} onEdit={openEditDialog} onDelete={setDeleteTarget} />
+            <LoanRow
+              key={loan.id}
+              loan={loan}
+              onEdit={openEditDialog}
+              onDelete={setDeleteTarget}
+            />
           ))}
 
           {closedLoans.length > 0 ? (
@@ -697,7 +945,12 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
               </p>
               <div className="space-y-3">
                 {closedLoans.map((loan) => (
-                  <LoanRow key={loan.id} loan={loan} onEdit={openEditDialog} onDelete={setDeleteTarget} />
+                  <LoanRow
+                    key={loan.id}
+                    loan={loan}
+                    onEdit={openEditDialog}
+                    onDelete={setDeleteTarget}
+                  />
                 ))}
               </div>
             </div>
@@ -949,93 +1202,238 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className={loanLabelClassName}>Repayment plan</label>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="rounded-full"
-                  onClick={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      repaymentPlan: [...current.repaymentPlan, createInstallmentDraft()],
-                    }))
-                  }
-                >
-                  Add due
-                </Button>
+                <div className="inline-flex rounded-full border border-border/70 bg-muted/35 p-1">
+                  <Button
+                    type="button"
+                    variant={draft.repaymentMode === "auto" ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 rounded-full px-3 text-xs"
+                    onClick={() => setDraft((current) => ({ ...current, repaymentMode: "auto" }))}
+                  >
+                    Auto
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={draft.repaymentMode === "manual" ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 rounded-full px-3 text-xs"
+                    onClick={() => setDraft((current) => ({ ...current, repaymentMode: "manual" }))}
+                  >
+                    Manual
+                  </Button>
+                </div>
               </div>
               <div className="space-y-2">
-                {draft.repaymentPlan.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border/70 px-3 py-3 text-[0.86rem] text-muted-foreground sm:px-4 sm:text-[0.9rem]">
-                    No repayment rows yet. Add due dates and amounts to compute total payable and
-                    finance charge automatically.
-                  </div>
-                ) : (
-                  draft.repaymentPlan.map((installment, index) => (
-                    <div
-                      key={installment.id}
-                      className="grid items-end gap-2 rounded-xl border border-border/70 bg-background/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:p-4"
-                    >
+                {draft.repaymentMode === "auto" ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                       <div className="space-y-1.5">
                         <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
-                          Due #{index + 1}
-                        </label>
-                        <Input
-                          type="date"
-                          value={installment.dueDate}
-                          onChange={(event) =>
-                            setDraft((current) => ({
-                              ...current,
-                              repaymentPlan: current.repaymentPlan.map((entry) =>
-                                entry.id === installment.id
-                                  ? { ...entry, dueDate: event.target.value }
-                                  : entry
-                              ),
-                            }))
-                          }
-                          className={loanFieldClassName}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
-                          Amount
+                          Monthly installment
                         </label>
                         <Input
                           inputMode="decimal"
-                          value={installment.amount}
+                          value={draft.autoMonthlyPayment}
                           onChange={(event) =>
-                            setDraft((current) => ({
-                              ...current,
-                              repaymentPlan: current.repaymentPlan.map((entry) =>
-                                entry.id === installment.id
-                                  ? { ...entry, amount: event.target.value }
-                                  : entry
-                              ),
-                            }))
+                            setDraft((current) => ({ ...current, autoMonthlyPayment: event.target.value }))
                           }
                           placeholder="0.00"
                           className={loanFieldClassName}
                         />
                       </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon-sm"
-                        className="rounded-lg text-destructive hover:text-destructive sm:rounded-full"
-                        onClick={() =>
-                          setDraft((current) => ({
-                            ...current,
-                            repaymentPlan: current.repaymentPlan.filter(
-                              (entry) => entry.id !== installment.id
-                            ),
-                          }))
-                        }
-                      >
-                        <Trash2 className="size-4" />
-                        <span className="sr-only">Remove due item</span>
-                      </Button>
+                      <div className="space-y-1.5">
+                        <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
+                          No. of installments
+                        </label>
+                        <Input
+                          inputMode="numeric"
+                          value={draft.autoInstallmentCount}
+                          onChange={(event) =>
+                            setDraft((current) => ({ ...current, autoInstallmentCount: event.target.value }))
+                          }
+                          placeholder="e.g. 18"
+                          className={loanFieldClassName}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
+                          First due date
+                        </label>
+                        <Input
+                          type="date"
+                          value={draft.autoFirstDueDate}
+                          onChange={(event) =>
+                            setDraft((current) => ({ ...current, autoFirstDueDate: event.target.value }))
+                          }
+                          className={loanFieldClassName}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
+                          Monthly rate % (optional)
+                        </label>
+                        <Input
+                          inputMode="decimal"
+                          value={draft.autoMonthlyRate}
+                          onChange={(event) =>
+                            setDraft((current) => ({ ...current, autoMonthlyRate: event.target.value }))
+                          }
+                          placeholder="e.g. 2.5"
+                          className={loanFieldClassName}
+                        />
+                      </div>
                     </div>
-                  ))
+                    <div className="space-y-1.5">
+                      <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
+                        Total payable override (optional)
+                      </label>
+                      <Input
+                        inputMode="decimal"
+                        value={draft.autoTotalPayable}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, autoTotalPayable: event.target.value }))
+                        }
+                        placeholder="Leave blank to use monthly installment x number of installments"
+                        className={loanFieldClassName}
+                      />
+                      <p className="text-[0.72rem] text-muted-foreground">
+                        If monthly rate is empty, Veyra infers an effective rate from this total to
+                        produce declining interest and a realistic final payment.
+                      </p>
+                    </div>
+                    {autoGeneratedPlan.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-border/70 px-3 py-3 text-[0.86rem] text-muted-foreground sm:px-4 sm:text-[0.9rem]">
+                        Enter monthly installment, number of installments, and first due date to auto-build repayment plan.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {autoGeneratedPlan.map((installment, index) => (
+                          <div
+                            key={installment.id}
+                            className="grid items-end gap-2 rounded-xl border border-border/70 bg-background/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] sm:p-4"
+                          >
+                            <div className="space-y-1">
+                              <p className="text-[0.74rem] font-medium text-muted-foreground">Due #{index + 1}</p>
+                              <p className="text-sm font-medium text-foreground">{installment.dueDate}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[0.74rem] font-medium text-muted-foreground">Amount</p>
+                              <p className="text-sm font-medium text-foreground">{installment.amount}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-[0.74rem] font-medium text-muted-foreground">Principal / Interest</p>
+                              <p className="text-sm font-medium text-foreground">
+                                {installment.principalAmount} / {installment.interestAmount}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : draft.repaymentPlan.length === 0 ? (
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          repaymentPlan: [...current.repaymentPlan, createInstallmentDraft()],
+                        }))
+                      }
+                    >
+                      Add due
+                    </Button>
+                    <div className="rounded-xl border border-dashed border-border/70 px-3 py-3 text-[0.86rem] text-muted-foreground sm:px-4 sm:text-[0.9rem]">
+                      No repayment rows yet. Add due dates and amounts to compute total payable and
+                      finance charge automatically.
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() =>
+                        setDraft((current) => ({
+                          ...current,
+                          repaymentPlan: [...current.repaymentPlan, createInstallmentDraft()],
+                        }))
+                      }
+                    >
+                      Add due
+                    </Button>
+                    {draft.repaymentPlan.map((installment, index) => (
+                      <div
+                        key={installment.id}
+                        className="grid items-end gap-2 rounded-xl border border-border/70 bg-background/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:p-4"
+                      >
+                        <div className="space-y-1.5">
+                          <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
+                            Due #{index + 1}
+                          </label>
+                          <Input
+                            type="date"
+                            value={installment.dueDate}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                repaymentPlan: current.repaymentPlan.map((entry) =>
+                                  entry.id === installment.id
+                                    ? { ...entry, dueDate: event.target.value }
+                                    : entry
+                                ),
+                              }))
+                            }
+                            className={loanFieldClassName}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[0.74rem] font-medium text-muted-foreground sm:text-[0.8rem]">
+                            Amount
+                          </label>
+                          <Input
+                            inputMode="decimal"
+                            value={installment.amount}
+                            onChange={(event) =>
+                              setDraft((current) => ({
+                                ...current,
+                                repaymentPlan: current.repaymentPlan.map((entry) =>
+                                  entry.id === installment.id
+                                    ? { ...entry, amount: event.target.value }
+                                    : entry
+                                ),
+                              }))
+                            }
+                            placeholder="0.00"
+                            className={loanFieldClassName}
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon-sm"
+                          className="rounded-lg text-destructive hover:text-destructive sm:rounded-full"
+                          onClick={() =>
+                            setDraft((current) => ({
+                              ...current,
+                              repaymentPlan: current.repaymentPlan.filter(
+                                (entry) => entry.id !== installment.id
+                              ),
+                            }))
+                          }
+                        >
+                          <Trash2 className="size-4" />
+                          <span className="sr-only">Remove due item</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </>
                 )}
               </div>
             </div>
@@ -1188,6 +1586,9 @@ function LoanRow({
         </div>
 
         <div className="flex items-center gap-2">
+          <Button asChild type="button" variant="outline" className="h-8 rounded-full px-3 text-xs">
+            <Link href={`/loans/${loan.id}`}>View details</Link>
+          </Button>
           <span
             className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] ${
               loan.status === "active"

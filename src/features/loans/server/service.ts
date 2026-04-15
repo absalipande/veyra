@@ -2,12 +2,20 @@ import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { accounts, ledgerEntries, loanInstallments, loans, transactionEvents } from "@/db/schema";
+import {
+  accounts,
+  ledgerEntries,
+  loanInstallments,
+  loanPayments,
+  loans,
+  transactionEvents,
+} from "@/db/schema";
 import {
   createLoanSchema,
   deleteLoanSchema,
   getLoanSchema,
   listLoansSchema,
+  recordLoanPaymentSchema,
   updateLoanSchema,
 } from "@/features/loans/server/schema";
 import type { TRPCContext } from "@/server/api/trpc";
@@ -17,6 +25,7 @@ type GetLoanInput = z.infer<typeof getLoanSchema>;
 type CreateLoanInput = z.infer<typeof createLoanSchema>;
 type UpdateLoanInput = z.infer<typeof updateLoanSchema>;
 type DeleteLoanInput = z.infer<typeof deleteLoanSchema>;
+type RecordLoanPaymentInput = z.infer<typeof recordLoanPaymentSchema>;
 type LoanInstallmentInput = CreateLoanInput["repaymentPlan"][number];
 
 type AccountRecord = typeof accounts.$inferSelect;
@@ -28,6 +37,7 @@ type BalanceEntry = {
 
 type LoanRecord = typeof loans.$inferSelect;
 type LoanInstallmentRecord = typeof loanInstallments.$inferSelect;
+type LoanPaymentRecord = typeof loanPayments.$inferSelect;
 
 function assertUserId(userId: string | null | undefined): string {
   if (!userId) {
@@ -155,6 +165,115 @@ function normalizeRepaymentPlan(plan: LoanInstallmentInput[]) {
   return [...plan].sort((left, right) => left.dueDate.getTime() - right.dueDate.getTime());
 }
 
+function deriveInstallmentBreakdown(
+  plan: LoanInstallmentInput[],
+  principalAmount: number
+) {
+  if (plan.length === 0) {
+    return [];
+  }
+
+  const totalPayable = plan.reduce((sum, installment) => sum + installment.amount, 0);
+  if (totalPayable <= 0) {
+    return plan.map((installment) => ({
+      ...installment,
+      principalAmount: installment.principalAmount ?? installment.amount,
+      interestAmount: installment.interestAmount ?? 0,
+    }));
+  }
+
+  let principalAssigned = 0;
+  let interestAssigned = 0;
+
+  return plan.map((installment, index) => {
+    const hasManualBreakdown =
+      typeof installment.principalAmount === "number" || typeof installment.interestAmount === "number";
+
+    if (hasManualBreakdown) {
+      const principal = Math.max(installment.principalAmount ?? 0, 0);
+      const interest = Math.max(installment.interestAmount ?? installment.amount - principal, 0);
+      principalAssigned += principal;
+      interestAssigned += interest;
+      return {
+        ...installment,
+        principalAmount: principal,
+        interestAmount: interest,
+      };
+    }
+
+    const isLast = index === plan.length - 1;
+    const principal = isLast
+      ? Math.max(principalAmount - principalAssigned, 0)
+      : Math.round((principalAmount * installment.amount) / totalPayable);
+    principalAssigned += principal;
+
+    const interest = isLast
+      ? Math.max(totalPayable - principalAmount - interestAssigned, 0)
+      : Math.max(installment.amount - principal, 0);
+    interestAssigned += interest;
+
+    return {
+      ...installment,
+      principalAmount: Math.min(principal, installment.amount),
+      interestAmount: Math.max(installment.amount - Math.min(principal, installment.amount), 0),
+    };
+  });
+}
+
+function getInstallmentRemainingAmount(installment: LoanInstallmentRecord) {
+  return Math.max(installment.amount - installment.paidAmount, 0);
+}
+
+function getInstallmentStatus(installment: LoanInstallmentRecord) {
+  if (installment.paidAmount >= installment.amount || installment.status === "paid") {
+    return "paid" as const;
+  }
+
+  if (installment.dueDate < new Date()) {
+    return "overdue" as const;
+  }
+
+  return "pending" as const;
+}
+
+function deriveInitialInstallmentPaymentState(
+  plan: LoanInstallmentInput[],
+  outstandingAmount: number,
+  principalAmount: number
+) {
+  const normalizedPlan = deriveInstallmentBreakdown(plan, principalAmount);
+  const totalPayable = normalizedPlan.reduce((sum, installment) => sum + installment.amount, 0);
+  const installmentRows = normalizedPlan.map((installment, index) => {
+    const status: LoanInstallmentRecord["status"] = "pending";
+    const principalAmount = installment.principalAmount ?? 0;
+    const interestAmount = installment.interestAmount ?? Math.max(installment.amount - principalAmount, 0);
+
+    return {
+      id: crypto.randomUUID(),
+      sequence: index + 1,
+      dueDate: installment.dueDate,
+      amount: installment.amount,
+      principalAmount,
+      interestAmount,
+      paidAmount: 0,
+      paidPrincipalAmount: 0,
+      paidInterestAmount: 0,
+      paidAt: null,
+      status,
+    };
+  });
+
+  const normalizedOutstanding = outstandingAmount;
+  const firstPending = installmentRows[0] ?? null;
+
+  return {
+    installmentRows,
+    totalPayable,
+    normalizedOutstanding,
+    nextDueDate: firstPending?.dueDate ?? null,
+  };
+}
+
 function deriveLoanMetrics(loan: LoanRecord, installments: LoanInstallmentRecord[]) {
   const sortedInstallments = [...installments].sort(
     (left, right) => left.dueDate.getTime() - right.dueDate.getTime()
@@ -164,16 +283,26 @@ function deriveLoanMetrics(loan: LoanRecord, installments: LoanInstallmentRecord
       ? sortedInstallments.reduce((sum, installment) => sum + installment.amount, 0)
       : loan.outstandingAmount;
   const financeCharge = Math.max(totalPayable - loan.principalAmount, 0);
+  const paidInstallmentCount = sortedInstallments.filter(
+    (installment) => getInstallmentStatus(installment) === "paid"
+  ).length;
+  const derivedOutstandingAmount = loan.outstandingAmount;
 
-  const now = new Date();
-  const derivedNextDueDate =
-    sortedInstallments.find((installment) => installment.dueDate >= now)?.dueDate ?? loan.nextDueDate;
+  const firstPendingInstallment = sortedInstallments.find(
+    (installment) => getInstallmentStatus(installment) !== "paid"
+  );
+  const derivedNextDueDate = firstPendingInstallment?.dueDate ?? null;
+  const derivedStatus: LoanRecord["status"] =
+    derivedOutstandingAmount <= 0 ? "closed" : "active";
 
   return {
     totalPayable,
     financeCharge,
     installmentCount: sortedInstallments.length,
+    paidInstallmentCount,
+    outstandingAmount: derivedOutstandingAmount,
     nextDueDate: derivedNextDueDate,
+    status: derivedStatus,
   };
 }
 
@@ -205,21 +334,56 @@ async function getLoanInstallmentsMap(
   return map;
 }
 
+async function getLoanPaymentsMap(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  loanIds: string[]
+) {
+  const userId = assertUserId(ctx.userId);
+  const uniqueIds = Array.from(new Set(loanIds));
+  if (uniqueIds.length === 0) {
+    return new Map<string, LoanPaymentRecord[]>();
+  }
+
+  const rows = await ctx.db.query.loanPayments.findMany({
+    where: and(eq(loanPayments.clerkUserId, userId), inArray(loanPayments.loanId, uniqueIds)),
+    orderBy: [desc(loanPayments.paidAt), desc(loanPayments.createdAt)],
+  });
+
+  const map = new Map<string, LoanPaymentRecord[]>();
+  for (const row of rows) {
+    const existing = map.get(row.loanId) ?? [];
+    existing.push(row);
+    map.set(row.loanId, existing);
+  }
+
+  return map;
+}
+
 function enrichLoanRecords(
   loanRows: LoanRecord[],
-  installmentsMap: Map<string, LoanInstallmentRecord[]>
+  installmentsMap: Map<string, LoanInstallmentRecord[]>,
+  paymentsMap: Map<string, LoanPaymentRecord[]>
 ) {
   return loanRows.map((loan) => {
     const installments = installmentsMap.get(loan.id) ?? [];
+    const payments = paymentsMap.get(loan.id) ?? [];
     const metrics = deriveLoanMetrics(loan, installments);
 
     return {
       ...loan,
+      status: metrics.status,
+      outstandingAmount: metrics.outstandingAmount,
       nextDueDate: metrics.nextDueDate,
       totalPayable: metrics.totalPayable,
       financeCharge: metrics.financeCharge,
       installmentCount: metrics.installmentCount,
-      installments,
+      paidInstallmentCount: metrics.paidInstallmentCount,
+      installments: installments.map((installment) => ({
+        ...installment,
+        status: getInstallmentStatus(installment),
+        remainingAmount: getInstallmentRemainingAmount(installment),
+      })),
+      payments,
     };
   });
 }
@@ -393,7 +557,11 @@ export async function listLoans(
     ctx,
     loanRows.map((loan) => loan.id)
   );
-  const items = enrichLoanRecords(loanRows, installmentsMap);
+  const paymentsMap = await getLoanPaymentsMap(
+    ctx,
+    loanRows.map((loan) => loan.id)
+  );
+  const items = enrichLoanRecords(loanRows, installmentsMap, paymentsMap);
 
   return {
     items,
@@ -410,7 +578,8 @@ export async function getLoan(
 ) {
   const loan = await requireLoan(ctx, input.id);
   const installmentsMap = await getLoanInstallmentsMap(ctx, [loan.id]);
-  const [enriched] = enrichLoanRecords([loan], installmentsMap);
+  const paymentsMap = await getLoanPaymentsMap(ctx, [loan.id]);
+  const [enriched] = enrichLoanRecords([loan], installmentsMap, paymentsMap);
 
   if (!enriched) {
     throw new TRPCError({
@@ -436,7 +605,11 @@ export async function getLoansSummary(ctx: Pick<TRPCContext, "db" | "userId">) {
     ctx,
     loanRows.map((loan) => loan.id)
   );
-  const enrichedLoans = enrichLoanRecords(loanRows, installmentsMap);
+  const paymentsMap = await getLoanPaymentsMap(
+    ctx,
+    loanRows.map((loan) => loan.id)
+  );
+  const enrichedLoans = enrichLoanRecords(loanRows, installmentsMap, paymentsMap);
   const activeLoans = enrichedLoans.filter((loan) => loan.status === "active");
   const dueSoonLoans = activeLoans.filter(
     (loan) => loan.nextDueDate && loan.nextDueDate <= dueSoonDate
@@ -534,6 +707,21 @@ export async function createLoan(
   let loanInserted = false;
   let openingEventId: string | null = null;
   const normalizedRepaymentPlan = normalizeRepaymentPlan(input.repaymentPlan);
+  const initialScheduleState = deriveInitialInstallmentPaymentState(
+    normalizedRepaymentPlan,
+    input.outstandingAmount,
+    input.principalAmount
+  );
+  const startingOutstanding =
+    normalizedRepaymentPlan.length > 0
+      ? initialScheduleState.normalizedOutstanding
+      : input.outstandingAmount;
+  const startingStatus = startingOutstanding <= 0 ? "closed" : input.status;
+  const startingNextDueDate =
+    input.nextDueDate ??
+    (normalizedRepaymentPlan.length > 0
+      ? initialScheduleState.nextDueDate
+      : normalizedRepaymentPlan[0]?.dueDate ?? null);
 
   try {
     await ctx.db.insert(loans).values({
@@ -544,13 +732,13 @@ export async function createLoan(
       lenderName: input.lenderName,
       currency: input.currency,
       principalAmount: input.principalAmount,
-      outstandingAmount: input.outstandingAmount,
+      outstandingAmount: startingOutstanding,
       disbursedAt: input.disbursedAt,
-      status: input.status,
+      status: startingStatus,
       destinationAccountId: accountResolution.destinationAccount.id,
       underlyingLoanAccountId: accountResolution.underlyingLoanAccount.id,
       cadence: input.cadence ?? null,
-      nextDueDate: input.nextDueDate ?? normalizedRepaymentPlan[0]?.dueDate ?? null,
+      nextDueDate: startingNextDueDate,
       notes: input.notes || null,
       metadata: input.metadata || null,
     });
@@ -558,13 +746,20 @@ export async function createLoan(
 
     if (normalizedRepaymentPlan.length > 0) {
       await ctx.db.insert(loanInstallments).values(
-        normalizedRepaymentPlan.map((installment, index) => ({
-          id: crypto.randomUUID(),
+        initialScheduleState.installmentRows.map((installment) => ({
+          id: installment.id,
           clerkUserId: userId,
           loanId,
-          sequence: index + 1,
+          sequence: installment.sequence,
           dueDate: installment.dueDate,
           amount: installment.amount,
+          principalAmount: installment.principalAmount,
+          interestAmount: installment.interestAmount,
+          paidAmount: installment.paidAmount,
+          paidPrincipalAmount: installment.paidPrincipalAmount,
+          paidInterestAmount: installment.paidInterestAmount,
+          paidAt: installment.paidAt,
+          status: installment.status,
         }))
       );
     }
@@ -629,6 +824,21 @@ export async function updateLoan(
   }
 
   const normalizedRepaymentPlan = normalizeRepaymentPlan(input.repaymentPlan);
+  const initialScheduleState = deriveInitialInstallmentPaymentState(
+    normalizedRepaymentPlan,
+    input.outstandingAmount,
+    input.principalAmount
+  );
+  const normalizedOutstanding =
+    normalizedRepaymentPlan.length > 0
+      ? initialScheduleState.normalizedOutstanding
+      : input.outstandingAmount;
+  const normalizedStatus = normalizedOutstanding <= 0 ? "closed" : input.status;
+  const normalizedNextDueDate =
+    input.nextDueDate ??
+    (normalizedRepaymentPlan.length > 0
+      ? initialScheduleState.nextDueDate
+      : normalizedRepaymentPlan[0]?.dueDate ?? null);
 
   const [updated] = await ctx.db
     .update(loans)
@@ -638,13 +848,13 @@ export async function updateLoan(
       lenderName: input.lenderName,
       currency: input.currency,
       principalAmount: input.principalAmount,
-      outstandingAmount: input.outstandingAmount,
+      outstandingAmount: normalizedOutstanding,
       disbursedAt: input.disbursedAt,
-      status: input.status,
+      status: normalizedStatus,
       destinationAccountId: input.destinationAccountId,
       underlyingLoanAccountId: input.underlyingLoanAccountId ?? null,
       cadence: input.cadence ?? null,
-      nextDueDate: input.nextDueDate ?? normalizedRepaymentPlan[0]?.dueDate ?? null,
+      nextDueDate: normalizedNextDueDate,
       notes: input.notes || null,
       metadata: input.metadata || null,
       updatedAt: new Date(),
@@ -664,22 +874,253 @@ export async function updateLoan(
 
   if (normalizedRepaymentPlan.length > 0) {
     await ctx.db.insert(loanInstallments).values(
-      normalizedRepaymentPlan.map((installment, index) => ({
-        id: crypto.randomUUID(),
+      initialScheduleState.installmentRows.map((installment) => ({
+        id: installment.id,
         clerkUserId: userId,
         loanId: existing.id,
-        sequence: index + 1,
+        sequence: installment.sequence,
         dueDate: installment.dueDate,
         amount: installment.amount,
+        principalAmount: installment.principalAmount,
+        interestAmount: installment.interestAmount,
+        paidAmount: installment.paidAmount,
+        paidPrincipalAmount: installment.paidPrincipalAmount,
+        paidInterestAmount: installment.paidInterestAmount,
+        paidAt: installment.paidAt,
+        status: installment.status,
       }))
     );
   }
 
   const installmentsMap = await getLoanInstallmentsMap(ctx, [existing.id]);
-  const [enrichedLoan] = enrichLoanRecords([updated], installmentsMap);
+  const paymentsMap = await getLoanPaymentsMap(ctx, [existing.id]);
+  const [enrichedLoan] = enrichLoanRecords([updated], installmentsMap, paymentsMap);
 
   return {
     loan: enrichedLoan ?? updated,
+  };
+}
+
+export async function recordLoanPayment(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  input: RecordLoanPaymentInput
+) {
+  const userId = assertUserId(ctx.userId);
+  const loan = await requireLoan(ctx, input.loanId, "Loan not found.");
+
+  if (loan.status === "closed" || loan.outstandingAmount <= 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "This loan is already closed.",
+    });
+  }
+
+  if (!loan.underlyingLoanAccountId) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Loan has no underlying account configured.",
+    });
+  }
+
+  const sourceAccount = await requireUserAccount(ctx, input.sourceAccountId, "Payment account");
+  const liabilityAccount = await requireUserAccount(
+    ctx,
+    loan.underlyingLoanAccountId,
+    "Underlying loan account"
+  );
+
+  assertAccountType(sourceAccount, ["cash", "wallet"], "Payment account");
+  assertAccountType(liabilityAccount, ["loan"], "Underlying loan account");
+  assertSameCurrency(
+    [sourceAccount, liabilityAccount],
+    "Payment account and loan account must use matching currencies."
+  );
+
+  const installments = await ctx.db.query.loanInstallments.findMany({
+    where: and(eq(loanInstallments.loanId, loan.id), eq(loanInstallments.clerkUserId, userId)),
+    orderBy: [asc(loanInstallments.sequence), asc(loanInstallments.dueDate)],
+  });
+
+  if (input.installmentId && !installments.some((installment) => installment.id === input.installmentId)) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Installment not found for this loan.",
+    });
+  }
+
+  const outstandingBefore = Math.max(loan.outstandingAmount, 0);
+  const effectivePaymentAmount = Math.min(input.amount, outstandingBefore);
+  const paymentDate = input.paidAt;
+  const requestedAmount = effectivePaymentAmount;
+  let remainingToAllocate = requestedAmount;
+
+  const startSequence =
+    input.installmentId
+      ? installments.find((installment) => installment.id === input.installmentId)?.sequence ?? 1
+      : 1;
+  const touchedInstallments: Array<{
+    before: LoanInstallmentRecord;
+    after: LoanInstallmentRecord;
+  }> = [];
+  let appliedPrincipalAmount = 0;
+  let appliedInterestAmount = 0;
+
+  for (const installment of installments) {
+    if (installment.sequence < startSequence) {
+      continue;
+    }
+
+    if (remainingToAllocate <= 0) {
+      break;
+    }
+
+    const remainingForInstallment = getInstallmentRemainingAmount(installment);
+    if (remainingForInstallment <= 0) {
+      continue;
+    }
+
+    const allocatedAmount = Math.min(remainingForInstallment, remainingToAllocate);
+    remainingToAllocate -= allocatedAmount;
+    const remainingPrincipalBefore = Math.max(installment.principalAmount - installment.paidPrincipalAmount, 0);
+    const remainingInterestBefore = Math.max(installment.interestAmount - installment.paidInterestAmount, 0);
+    let principalShare = remainingForInstallment > 0
+      ? Math.min(
+          remainingPrincipalBefore,
+          Math.round((allocatedAmount * remainingPrincipalBefore) / remainingForInstallment)
+        )
+      : 0;
+    let interestShare = Math.max(allocatedAmount - principalShare, 0);
+    if (interestShare > remainingInterestBefore) {
+      const overflow = interestShare - remainingInterestBefore;
+      interestShare = remainingInterestBefore;
+      const extraPrincipal = Math.min(overflow, remainingPrincipalBefore - principalShare);
+      principalShare += extraPrincipal;
+    }
+
+    const nextPaidAmount = installment.paidAmount + allocatedAmount;
+    const nextPaidPrincipalAmount = installment.paidPrincipalAmount + principalShare;
+    const nextPaidInterestAmount = installment.paidInterestAmount + interestShare;
+    const isPaid = nextPaidAmount >= installment.amount;
+    const nextStatus = isPaid ? "paid" : "pending";
+    const nextPaidAt = isPaid ? paymentDate : installment.paidAt;
+
+    await ctx.db
+      .update(loanInstallments)
+      .set({
+        paidAmount: nextPaidAmount,
+        paidPrincipalAmount: nextPaidPrincipalAmount,
+        paidInterestAmount: nextPaidInterestAmount,
+        paidAt: nextPaidAt,
+        status: nextStatus,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(loanInstallments.id, installment.id), eq(loanInstallments.clerkUserId, userId)));
+
+    appliedPrincipalAmount += principalShare;
+    appliedInterestAmount += interestShare;
+
+    touchedInstallments.push({
+      before: installment,
+      after: {
+        ...installment,
+        paidAmount: nextPaidAmount,
+        paidPrincipalAmount: nextPaidPrincipalAmount,
+        paidInterestAmount: nextPaidInterestAmount,
+        paidAt: nextPaidAt,
+        status: nextStatus,
+        updatedAt: new Date(),
+      },
+    });
+  }
+
+  const allocatedToSchedule = requestedAmount - remainingToAllocate;
+  const outstandingAfter = Math.max(outstandingBefore - requestedAmount, 0);
+
+  const refreshedInstallments = touchedInstallments.length
+    ? await ctx.db.query.loanInstallments.findMany({
+        where: and(eq(loanInstallments.loanId, loan.id), eq(loanInstallments.clerkUserId, userId)),
+        orderBy: [asc(loanInstallments.sequence), asc(loanInstallments.dueDate)],
+      })
+    : installments;
+  const nextPendingInstallment = refreshedInstallments.find(
+    (installment) => getInstallmentStatus(installment) !== "paid"
+  );
+  const nextDueDate = nextPendingInstallment?.dueDate ?? null;
+
+  const renderedPaymentAmount = (requestedAmount / 1000).toFixed(2);
+  const newNoteLine =
+    `[${paymentDate.toISOString().slice(0, 10)}] Loan payment ${renderedPaymentAmount}` +
+    (input.notes ? ` · ${input.notes}` : "");
+  const mergedNotes = [loan.notes, newNoteLine].filter(Boolean).join("\n");
+  const targetInstallmentId = input.installmentId ?? touchedInstallments[0]?.after.id ?? null;
+  const paymentRecordId = crypto.randomUUID();
+
+  let balanceAppliedEntries: BalanceEntry[] = [];
+  try {
+    balanceAppliedEntries = await applyBalanceEntries(ctx, userId, [
+      { accountId: sourceAccount.id, amountDelta: -requestedAmount },
+      { accountId: liabilityAccount.id, amountDelta: -requestedAmount },
+    ]);
+
+    await ctx.db
+      .update(loans)
+      .set({
+        outstandingAmount: outstandingAfter,
+        status: outstandingAfter <= 0 ? "closed" : "active",
+        nextDueDate,
+        notes: mergedNotes || null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(loans.id, loan.id), eq(loans.clerkUserId, userId)));
+
+    await ctx.db.insert(loanPayments).values({
+      id: paymentRecordId,
+      clerkUserId: userId,
+      loanId: loan.id,
+      installmentId: targetInstallmentId,
+      sourceAccountId: sourceAccount.id,
+      amount: requestedAmount,
+      appliedAmount: effectivePaymentAmount,
+      principalAmount: appliedPrincipalAmount,
+      interestAmount: appliedInterestAmount,
+      paidAt: paymentDate,
+      notes: input.notes || null,
+    });
+  } catch (error) {
+    for (const touched of touchedInstallments) {
+      await ctx.db
+        .update(loanInstallments)
+        .set({
+          paidAmount: touched.before.paidAmount,
+          paidPrincipalAmount: touched.before.paidPrincipalAmount,
+          paidInterestAmount: touched.before.paidInterestAmount,
+          paidAt: touched.before.paidAt,
+          status: touched.before.status,
+          updatedAt: touched.before.updatedAt,
+        })
+        .where(and(eq(loanInstallments.id, touched.before.id), eq(loanInstallments.clerkUserId, userId)))
+        .catch(() => undefined);
+    }
+    if (balanceAppliedEntries.length > 0) {
+      await rollbackBalanceEntries(ctx, userId, balanceAppliedEntries).catch(() => undefined);
+    }
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to record loan payment.",
+      cause: error,
+    });
+  }
+
+  const updatedLoan = await requireLoan(ctx, loan.id, "Loan not found after payment.");
+  const installmentsMap = await getLoanInstallmentsMap(ctx, [loan.id]);
+  const paymentsMap = await getLoanPaymentsMap(ctx, [loan.id]);
+  const [enrichedLoan] = enrichLoanRecords([updatedLoan], installmentsMap, paymentsMap);
+
+  return {
+    loan: enrichedLoan ?? updatedLoan,
+    appliedAmount: effectivePaymentAmount,
+    allocatedToSchedule,
+    unappliedAmount: remainingToAllocate,
   };
 }
 
@@ -689,6 +1130,56 @@ export async function deleteLoan(
 ) {
   const existing = await requireLoan(ctx, input.id);
   const userId = assertUserId(ctx.userId);
+
+  const openingDisbursementDescription = `Loan disbursement · ${existing.name}`;
+  const openingEvents = await ctx.db.query.transactionEvents.findMany({
+    where: and(
+      eq(transactionEvents.clerkUserId, userId),
+      eq(transactionEvents.type, "loan_disbursement"),
+      eq(transactionEvents.description, openingDisbursementDescription)
+    ),
+    orderBy: [desc(transactionEvents.createdAt)],
+  });
+
+  for (const event of openingEvents) {
+    const entries = await ctx.db.query.ledgerEntries.findMany({
+      where: and(
+        eq(ledgerEntries.eventId, event.id),
+        eq(ledgerEntries.clerkUserId, userId)
+      ),
+    });
+
+    const hasLoanLink =
+      entries.some(
+        (entry) =>
+          entry.role === "loan_account" &&
+          existing.underlyingLoanAccountId &&
+          entry.accountId === existing.underlyingLoanAccountId
+      ) &&
+      entries.some(
+        (entry) =>
+          entry.role === "disbursement_account" &&
+          entry.accountId === existing.destinationAccountId
+      );
+
+    if (!hasLoanLink) {
+      continue;
+    }
+
+    for (const entry of entries) {
+      await ctx.db
+        .update(accounts)
+        .set({
+          balance: sql`${accounts.balance} - ${entry.amountDelta}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(accounts.id, entry.accountId), eq(accounts.clerkUserId, userId)));
+    }
+
+    await ctx.db
+      .delete(transactionEvents)
+      .where(and(eq(transactionEvents.id, event.id), eq(transactionEvents.clerkUserId, userId)));
+  }
 
   await ctx.db.delete(loans).where(and(eq(loans.id, existing.id), eq(loans.clerkUserId, userId)));
 

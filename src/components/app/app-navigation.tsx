@@ -74,7 +74,9 @@ function NavigationList({ onNavigate }: NavigationListProps) {
     <div className="space-y-2">
       {items.map((item) => {
         const Icon = item.icon;
-        const isActive = item.available && pathname === item.href;
+        const isActive =
+          item.available &&
+          (pathname === item.href || pathname.startsWith(`${item.href}/`));
 
         if (!item.available) {
           return (

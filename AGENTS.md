@@ -551,6 +551,50 @@ Current implemented loans baseline (April 2026):
   - repayment-plan builder in the loan modal
   - derived finance preview in-form (no manual interest input required)
 
+Loan v2 reset decision (active, April 2026):
+- current Loans v1 is now considered a temporary/legacy foundation
+- `Loans` page creation/edit/payment flows are paused while Loan v2 is rebuilt
+- transaction composer action for `loan_disbursement` is temporarily disabled
+- existing legacy loan-disbursement events remain visible in ledger history but should be treated as read-only
+
+Loan v2 product objective:
+- support lender-accurate borrowing math instead of simplified fixed-split assumptions
+- represent real-world cases where:
+  - approved principal differs from net disbursed amount due to upfront fees/deductions
+  - monthly installment may be mostly fixed while final installment is lower (or otherwise adjusted)
+  - payment amounts do not equal principal reduction because principal/interest components differ
+
+Loan v2 domain rules:
+- track both:
+  - approved principal (`approvedPrincipalAmount`)
+  - net disbursed / received amount (`netDisbursedAmount`)
+- compute remaining principal from cumulative principal-paid, not from raw cash paid
+- payment history must be first-class:
+  - expected schedule (installments)
+  - actual payments (posted records)
+  - explicit principal and interest per posted payment
+- installment status must be derived from actual payment records, not inferred from date alone
+
+Loan v2 schedule engine rules:
+- support two generation modes:
+  - explicit monthly rate
+  - inferred effective rate from contract total payable
+- if rate is missing but `totalPayable` is present, solve for effective rate and amortize
+- generate `1..N` installments with reconciliation on final installment
+- allow manual override/edit for institution-specific exceptions
+
+Loan v2 onboarding/import rules:
+- include a starting-state flow for already-running loans:
+  - as-of date
+  - installments already paid (or first unpaid installment)
+  - optional historical payment imports
+- seed payment history rows during onboarding so timeline and repayment state are correct on day one
+
+Loan v2 implementation policy:
+- keep old data model readable for migration, but do not expand legacy v1 UI paths
+- prioritize service and schema correctness before re-opening Loans UI actions
+- re-enable Loans page and transaction `loan_disbursement` action only after Loan v2 acceptance checks pass
+
 ## Design System Direction
 
 Veyra uses a calm premium visual system.

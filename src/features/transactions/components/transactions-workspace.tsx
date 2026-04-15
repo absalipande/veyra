@@ -127,12 +127,6 @@ const eventTypeOptions = [
     description: "Pay down a credit account from a bank or wallet account.",
     icon: CreditCard,
   },
-  {
-    value: "loan_disbursement",
-    label: "Loan disbursement",
-    description: "Record a loan draw into a bank or wallet account.",
-    icon: HandCoins,
-  },
 ] as const satisfies Array<{
   value: TransactionEventType;
   label: string;
@@ -157,6 +151,7 @@ const initialDraft: EventDraft = {
 };
 
 function getEventTypeLabel(type: TransactionEventType) {
+  if (type === "loan_disbursement") return "Loan disbursement";
   return eventTypeOptions.find((option) => option.value === type)?.label ?? type;
 }
 
@@ -466,7 +461,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       ]
     : [];
 
-  const currentTypeMeta = eventTypeOptions.find((option) => option.value === draft.type)!;
+  const currentTypeMeta = eventTypeOptions.find((option) => option.value === draft.type) ?? {
+    value: "loan_disbursement" as const,
+    label: "Loan disbursement (disabled)",
+    description: "Loan disbursement capture is temporarily disabled while Loans v2 is in rebuild.",
+    icon: HandCoins,
+  };
   const heroTransferAndPaymentCount =
     (summaryQuery.data?.transferEvents ?? 0) + (summaryQuery.data?.creditPaymentEvents ?? 0);
 
@@ -635,30 +635,14 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       return;
     }
 
-    if (!draft.loanAccountId || !draft.destinationAccountId) return;
-
-    const payload: CreateTransactionEventInput = {
-      type: "loan_disbursement",
-      loanAccountId: draft.loanAccountId,
-      destinationAccountId: draft.destinationAccountId,
-      amount,
-      date: draft.date,
-      description: normalizedDescription,
-      notes: draft.notes,
-    };
-
-    if (isEditing) {
-      const updatePayload: UpdateTransactionEventInput = {
-        id: editingEventId!,
-        ...payload,
-      };
-      updateEvent.mutate(updatePayload);
-    } else {
-      createEvent.mutate(payload);
-    }
+    toast.error("Loan disbursement is temporarily disabled while Loans v2 is in rebuild.");
   };
 
   const openComposer = (type: TransactionEventType) => {
+    if (type === "loan_disbursement") {
+      toast.error("Loan disbursement is temporarily disabled while Loans v2 is in rebuild.");
+      return;
+    }
     setEditingEventId(null);
     setDraft({
       ...initialDraft,
@@ -678,6 +662,10 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   };
 
   const openEditComposer = (event: TransactionEventItem) => {
+    if (event.type === "loan_disbursement") {
+      toast.error("Legacy loan disbursement events are read-only while Loans v2 is in rebuild.");
+      return;
+    }
     setEditingEventId(event.id);
     setDraft(buildDraftFromEvent(event));
     setOpen(true);
@@ -874,12 +862,8 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   key={option.value}
                   type="button"
                   variant="outline"
-                  disabled={option.value === "loan_disbursement"}
-                  className="rounded-full bg-[#fbfaf6] px-3.5 text-[0.92rem] dark:bg-[#162022] disabled:border-border/50 disabled:bg-muted/50 disabled:text-muted-foreground disabled:opacity-100 dark:disabled:bg-[#141d1f] sm:px-4 sm:text-sm"
-                  onClick={() => {
-                    if (option.value === "loan_disbursement") return;
-                    openComposer(option.value);
-                  }}
+                  className="rounded-full bg-[#fbfaf6] px-3.5 text-[0.92rem] dark:bg-[#162022] sm:px-4 sm:text-sm"
+                  onClick={() => openComposer(option.value)}
                 >
                   <option.icon className="size-4" />
                   {option.label}
@@ -961,10 +945,10 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                   No events yet
                 </p>
-                <p className="mx-auto mt-3 max-w-md text-[0.98rem] leading-8 text-muted-foreground">
-                  Start with one income, expense, transfer, credit payment, or loan disbursement
+              <p className="mx-auto mt-3 max-w-md text-[0.98rem] leading-8 text-muted-foreground">
+                  Start with one income, expense, transfer, or credit payment
                   to bring the ledger to life.
-                </p>
+              </p>
               </div>
             ) : (
                 <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8] dark:bg-[#141d1f]">

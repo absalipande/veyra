@@ -103,6 +103,17 @@ export const loanInstallments = pgTable(
     sequence: integer("sequence").notNull(),
     dueDate: timestamp("due_date", { mode: "date" }).notNull(),
     amount: integer("amount").notNull(),
+    principalAmount: integer("principal_amount").default(0).notNull(),
+    interestAmount: integer("interest_amount").default(0).notNull(),
+    paidAmount: integer("paid_amount").default(0).notNull(),
+    paidPrincipalAmount: integer("paid_principal_amount").default(0).notNull(),
+    paidInterestAmount: integer("paid_interest_amount").default(0).notNull(),
+    paidAt: timestamp("paid_at", { mode: "date" }),
+    status: text("status", {
+      enum: ["pending", "paid", "overdue"],
+    })
+      .default("pending")
+      .notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -110,6 +121,37 @@ export const loanInstallments = pgTable(
     clerkUserIdx: index("veyra_loan_installments_clerk_user_idx").on(table.clerkUserId),
     loanIdx: index("veyra_loan_installments_loan_idx").on(table.loanId),
     dueDateIdx: index("veyra_loan_installments_due_date_idx").on(table.dueDate),
+    statusIdx: index("veyra_loan_installments_status_idx").on(table.status),
+  })
+);
+
+export const loanPayments = pgTable(
+  "veyra_loan_payments",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    loanId: text("loan_id")
+      .references(() => loans.id, { onDelete: "cascade" })
+      .notNull(),
+    installmentId: text("installment_id").references(() => loanInstallments.id, {
+      onDelete: "set null",
+    }),
+    sourceAccountId: text("source_account_id")
+      .references(() => accounts.id, { onDelete: "set null" })
+      .notNull(),
+    amount: integer("amount").notNull(),
+    appliedAmount: integer("applied_amount").notNull(),
+    principalAmount: integer("principal_amount").default(0).notNull(),
+    interestAmount: integer("interest_amount").default(0).notNull(),
+    paidAt: timestamp("paid_at", { mode: "date" }).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_loan_payments_clerk_user_idx").on(table.clerkUserId),
+    loanIdx: index("veyra_loan_payments_loan_idx").on(table.loanId),
+    installmentIdx: index("veyra_loan_payments_installment_idx").on(table.installmentId),
+    paidAtIdx: index("veyra_loan_payments_paid_at_idx").on(table.paidAt),
   })
 );
 
