@@ -381,7 +381,7 @@ export function GlobalQuickCapture() {
       >
         <DialogContent
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="top-auto bottom-[max(0.5rem,env(safe-area-inset-bottom))] max-h-[calc(100dvh-env(safe-area-inset-bottom)-1rem)] w-[min(92vw,42rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 -translate-y-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:top-[50svh] sm:bottom-auto sm:max-h-[92vh] sm:w-auto sm:max-w-[42rem] sm:-translate-y-1/2 sm:rounded-[2rem]"
+          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[min(92vw,42rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[92vh] sm:w-auto sm:max-w-[42rem] sm:rounded-[2rem]"
         >
           <DialogHeader className="border-b border-border/70 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-6 sm:pt-7 sm:pr-16">
             <div className="flex flex-wrap items-center gap-2">

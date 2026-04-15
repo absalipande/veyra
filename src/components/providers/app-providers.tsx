@@ -11,15 +11,17 @@ function VeyraToaster() {
   return (
     <Toaster
       theme={resolvedTheme === "dark" ? "dark" : "light"}
-      richColors
+      richColors={false}
       closeButton
       position="top-right"
       toastOptions={{
         classNames: {
           toast:
-            "border border-border/70 bg-white text-foreground shadow-[0_18px_60px_-36px_rgba(10,31,34,0.35)] dark:bg-[#172022] dark:text-foreground dark:shadow-[0_18px_60px_-36px_rgba(0,0,0,0.55)]",
+            "border border-border/70 bg-white text-foreground shadow-[0_18px_60px_-36px_rgba(10,31,34,0.35)] dark:bg-white dark:text-foreground",
           title: "text-sm font-semibold",
           description: "text-sm text-muted-foreground",
+          success: "!bg-white !text-foreground",
+          error: "!bg-white !text-foreground",
         },
       }}
     />

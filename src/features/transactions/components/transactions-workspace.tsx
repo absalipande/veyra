@@ -1188,7 +1188,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       onChange={(event) =>
                         setDraft((current) => ({ ...current, date: event.target.value }))
                       }
-                      className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
+                      className="h-9 max-w-full min-w-0 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
                     />
                   </div>
                 </div>
@@ -1252,7 +1252,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       onChange={(event) =>
                         setDraft((current) => ({ ...current, date: event.target.value }))
                       }
-                      className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
+                      className="h-9 max-w-full min-w-0 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
                     />
                   </div>
                 </>
@@ -1316,7 +1316,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       onChange={(event) =>
                         setDraft((current) => ({ ...current, date: event.target.value }))
                       }
-                      className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
+                      className="h-9 max-w-full min-w-0 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
                     />
                   </div>
                 </>
@@ -1380,7 +1380,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       onChange={(event) =>
                         setDraft((current) => ({ ...current, date: event.target.value }))
                       }
-                      className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
+                      className="h-9 max-w-full min-w-0 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
                     />
                   </div>
                 </>
@@ -1493,7 +1493,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               </div>
             </div>
 
-            <DialogFooter className="!-mx-0 !-mb-0 flex-row items-center justify-end gap-2 bg-transparent px-4 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-1.5 sm:px-8 sm:pb-5 sm:pt-3 [&>button]:w-auto">
+            <DialogFooter className="!mx-0 !mb-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-transparent px-4 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 sm:px-8 sm:pb-4 sm:pt-3 [&>button]:w-auto">
               <Button
                 type="button"
                 variant="outline"

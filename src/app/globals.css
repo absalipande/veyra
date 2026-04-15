@@ -108,3 +108,25 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* Keep native date inputs from overflowing narrow mobile modal columns */
+input[type="date"] {
+  max-width: 100%;
+}
+
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+/* Sonner: neutral white surfaces, status indicated by icon color only */
+[data-sonner-toast] {
+  background: #ffffff !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: #059669 !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: #dc2626 !important;
+}
