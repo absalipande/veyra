@@ -99,3 +99,12 @@ body {
       color-mix(in oklab, var(--color-background) 98%, black) 100%
     );
 }
+
+/* Prevent iOS Safari auto-zoom on focus for small form text */
+@media (max-width: 768px) and (hover: none) and (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
