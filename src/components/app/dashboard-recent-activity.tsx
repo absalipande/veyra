@@ -324,64 +324,64 @@ export function DashboardRecentActivity() {
 
   return (
     <section className="space-y-4 pb-24 md:space-y-6 md:pb-0">
-      <Card className="rounded-[1.5rem] border-[#c9e1d8]/80 bg-[linear-gradient(165deg,rgba(236,248,243,0.95),rgba(246,252,249,0.92))] shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-[#2b4b44] dark:bg-[linear-gradient(165deg,rgba(23,41,38,0.95),rgba(21,34,32,0.92))] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
+      <Card className="rounded-[1.5rem] border-white/10 bg-[linear-gradient(135deg,#13373a_0%,#1d474a_52%,#25595b_100%)] text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
         <CardContent className="space-y-4 p-4 sm:p-5 md:space-y-5 md:p-6 lg:p-7">
           <div className="flex items-start justify-between gap-3">
-            <p className="text-[0.88rem] font-medium text-muted-foreground md:text-[0.9rem]">
+            <p className="text-[0.88rem] font-medium text-white/75 md:text-[0.9rem]">
               Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
             </p>
-            <Button asChild variant="outline" size="sm" className="h-8 rounded-full px-3 text-[0.78rem] font-medium md:h-9 md:px-3.5 md:text-[0.8rem]">
+            <Button asChild variant="outline" size="sm" className="h-8 rounded-full border-white/30 bg-white/10 px-3 text-[0.78rem] font-medium text-white hover:bg-white/15 hover:text-white md:h-9 md:px-3.5 md:text-[0.8rem]">
               <Link href="/transactions">View details</Link>
             </Button>
           </div>
 
           <div className="grid gap-3.5 border-border/70 md:min-h-[7.8rem] md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,0.92fr)] md:gap-0">
             <div className="space-y-2 md:space-y-3 md:pr-6">
-              <h2 className="text-[1rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.2rem] lg:text-[1.3rem]">
+              <h2 className="text-[1rem] font-semibold tracking-tight text-white md:text-[1.1rem] lg:text-[1.2rem]">
                 Money posture
               </h2>
-              <div className={`flex items-center gap-2 text-[1.06rem] font-semibold leading-none tracking-tight md:text-[1.55rem] lg:text-[1.75rem] ${postureCopy.tone}`}>
+              <div className="flex items-center gap-2 text-[1.06rem] font-semibold leading-none tracking-tight text-white md:text-[1.35rem] lg:text-[1.5rem]">
                 <span className={`size-2.5 rounded-full ${postureCopy.dot} md:size-3`} />
                 {postureCopy.title}
               </div>
-              <p className="max-w-[26ch] text-[0.92rem] leading-8 text-muted-foreground md:max-w-[38ch] md:text-[0.94rem] md:leading-7">{postureCopy.body}</p>
+              <p className="max-w-[26ch] text-[0.92rem] leading-8 text-white/75 md:max-w-[38ch] md:text-[0.94rem] md:leading-7">{postureCopy.body}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-0 border-t border-border/70 pt-3.5 md:border-0 md:border-l md:border-border/70 md:pl-6 md:pt-0">
+            <div className="grid grid-cols-2 gap-0 border-t border-white/15 pt-3.5 md:border-0 md:border-l md:border-white/15 md:pl-6 md:pt-0">
               <div className="space-y-2 pr-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[0.84rem] text-muted-foreground md:text-[0.9rem]">Assets</p>
+                  <p className="text-[0.84rem] text-white/75 md:text-[0.9rem]">Assets</p>
                   <span className="flex size-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 md:size-10">
                     <Landmark className="size-3.5 md:size-4" />
                   </span>
                 </div>
-                <p className="text-[0.95rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.5rem] lg:text-[1.65rem]">
+                <p className="text-[0.95rem] font-semibold tracking-tight text-white md:text-[1.25rem] lg:text-[1.35rem]">
                   {formatPrimaryTotal(assetsTotals)}
                 </p>
               </div>
 
-              <div className="space-y-2 border-l border-border/70 pl-3">
+              <div className="space-y-2 border-l border-white/15 pl-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[0.84rem] text-muted-foreground md:text-[0.9rem]">Liabilities</p>
+                  <p className="text-[0.84rem] text-white/75 md:text-[0.9rem]">Liabilities</p>
                   <span className="flex size-9 items-center justify-center rounded-full bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200 md:size-10">
                     <CreditCard className="size-3.5 md:size-4" />
                   </span>
                 </div>
-                <p className="text-[0.95rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.5rem] lg:text-[1.65rem]">
+                <p className="text-[0.95rem] font-semibold tracking-tight text-white md:text-[1.25rem] lg:text-[1.35rem]">
                   {formatPrimaryTotal(liabilitiesTotals)}
                 </p>
               </div>
             </div>
 
-            <div className="hidden space-y-2 border-t border-border/70 pt-4 md:block md:border-0 md:border-l md:border-border/70 md:pl-6 md:pt-0">
-              <div className="flex items-center gap-2 text-[0.86rem] text-muted-foreground">
+            <div className="hidden space-y-2 border-t border-white/15 pt-4 md:block md:border-0 md:border-l md:border-white/15 md:pl-6 md:pt-0">
+              <div className="flex items-center gap-2 text-[0.86rem] text-white/75">
                 <Clock3 className="size-4" />
                 Latest activity
               </div>
-              <p className="line-clamp-1 text-[1rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground lg:text-[1.08rem]">
+              <p className="line-clamp-1 text-[0.95rem] font-semibold tracking-tight text-white lg:text-[1rem]">
                 {latestEvent?.description ?? "No activity yet"}
               </p>
-              <p className="text-[0.86rem] text-muted-foreground">
+              <p className="text-[0.86rem] text-white/75">
                 {latestEvent
                   ? formatDateWithPreferences(latestEvent.occurredAt, datePreferences, "date")
                   : "Record your first event in transactions"}
