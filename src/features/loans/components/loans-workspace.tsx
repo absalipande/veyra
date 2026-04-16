@@ -1532,7 +1532,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
           }
         }}
       >
-        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/96 p-0 sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.75rem]">
+        <DialogContent
+          mobileBehavior="modal"
+          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/96 p-0 sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.75rem]"
+        >
           <DialogHeader className="border-b border-border/60 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-4 sm:pt-7 sm:pr-16">
             <DialogTitle className="text-[1.12rem] tracking-tight sm:text-[1.45rem]">Delete loan?</DialogTitle>
             <DialogDescription className="pt-1 text-[0.82rem] leading-6 sm:text-[0.93rem] sm:leading-7">

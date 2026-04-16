@@ -708,7 +708,10 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
           }
         }}
       >
-        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.6rem]">
+        <DialogContent
+          mobileBehavior="modal"
+          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.6rem]"
+        >
           <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-lg border border-destructive/15 bg-destructive/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-destructive sm:rounded-full sm:px-3 sm:text-[0.68rem] sm:tracking-[0.22em]">
               Confirm delete

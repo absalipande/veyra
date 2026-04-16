@@ -1077,7 +1077,10 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
         open={Boolean(deleteTarget)}
         onOpenChange={(nextOpen) => (!nextOpen ? setDeleteTarget(null) : null)}
       >
-        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/96 p-0 sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.75rem]">
+        <DialogContent
+          mobileBehavior="modal"
+          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/96 p-0 sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.75rem]"
+        >
           <div className="px-4 py-4 sm:px-7 sm:py-7">
             <DialogHeader className="space-y-3">
               <DialogTitle className="text-[1.15rem] font-semibold tracking-tight sm:text-3xl">

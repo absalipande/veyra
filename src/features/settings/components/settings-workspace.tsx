@@ -372,6 +372,7 @@ export function SettingsWorkspace() {
         }}
       >
         <DialogContent
+          mobileBehavior="modal"
           className="
     w-[min(92vw,30rem)]
     rounded-[1.5rem]

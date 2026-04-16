@@ -51,17 +51,23 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  mobileBehavior = "drawer",
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  mobileBehavior?: "drawer" | "modal"
 }) {
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        data-mobile-behavior={mobileBehavior}
         className={cn(
-          "fixed left-1/2 top-[50svh] z-50 flex max-h-[calc(100svh-1.5rem)] w-full max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-h-[calc(100svh-2rem)] sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          "fixed z-50 flex flex-col bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none",
+          mobileBehavior === "drawer"
+            ? "inset-y-0 right-0 h-[100dvh] w-screen max-w-none rounded-none translate-x-0 translate-y-0 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-right-10 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-right-10 md:inset-y-auto md:left-1/2 md:right-auto md:top-[50svh] md:h-auto md:w-auto md:translate-x-[-50%] md:translate-y-[-50%] md:data-open:slide-in-from-right-0 md:data-closed:slide-out-to-right-0 md:data-open:zoom-in-95 md:data-closed:zoom-out-95"
+            : "left-1/2 top-[50svh] max-h-[calc(100svh-1.5rem)] w-full max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-h-[calc(100svh-2rem)] sm:max-w-sm",
           className
         )}
         {...props}

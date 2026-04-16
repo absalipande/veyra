@@ -60,9 +60,9 @@ function getInitialState(defaultCurrency: CreateState["currency"] = "PHP"): Crea
 }
 
 const accountFieldClassName =
-  "h-9 w-full rounded-lg border-border/80 bg-background px-3 text-[0.94rem] shadow-none dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/30 sm:h-10 sm:rounded-xl sm:px-4 sm:text-[0.95rem]";
+  "h-8 w-full rounded-lg border-border/80 bg-background px-3 text-[0.9rem] shadow-none dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/30 sm:h-9 sm:rounded-xl sm:px-3.5 sm:text-[0.92rem] lg:h-8 lg:px-3 lg:text-[0.9rem]";
 
-const accountFieldLabelClassName = "text-[0.92rem] font-semibold text-foreground sm:text-[1.02rem]";
+const accountFieldLabelClassName = "mb-2.5 block text-[0.9rem] font-semibold text-foreground sm:text-[0.96rem]";
 
 type AccountSortOption =
   | "newest"
@@ -953,115 +953,30 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                 </DialogHeader>
 
                 <div className="min-h-0 overflow-x-hidden overflow-y-visible px-4 py-3 sm:overflow-y-auto sm:px-8 sm:py-6">
-                  <div className="space-y-3 sm:space-y-5">
-                  <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
-                    <label className={accountFieldLabelClassName}>Account name</label>
-                    <Input
-                      value={form.name}
-                      onChange={(event) =>
-                        setForm((current) => ({ ...current, name: event.target.value }))
-                      }
-                      placeholder="e.g. Emergency fund"
-                      className={accountFieldClassName}
-                    />
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)] sm:items-start sm:gap-4">
-                    <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
-                      <label className={accountFieldLabelClassName}>Account type</label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {accountTypeOptions.map((option) => (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => setForm((current) => ({ ...current, type: option.value }))}
-                            className={`min-h-9 rounded-lg border px-3.5 py-1.5 text-[0.9rem] transition sm:min-h-10 sm:rounded-xl sm:px-4 sm:py-2 sm:text-[0.94rem] ${
-                              form.type === option.value
-                                ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                                : "border-border/80 bg-background text-foreground hover:bg-muted/70"
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
-                      <label className={accountFieldLabelClassName}>Currency</label>
-                      <Select
-                        value={form.currency}
-                        onValueChange={(value) =>
-                          setForm((current) => ({
-                            ...current,
-                            currency: value as CreateState["currency"],
-                          }))
-                        }
-                      >
-                        <SelectTrigger className={accountFieldClassName}>
-                          <SelectValue placeholder="Select currency" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {supportedCurrencies.map((currency) => (
-                            <SelectItem key={currency} value={currency}>
-                              {currency} · {getCurrencyLabel(currency)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {form.type !== "credit" ? (
-                    <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
-                      <label className={accountFieldLabelClassName}>
-                        {form.type === "loan" ? "Current loan balance" : "Opening balance"}
-                      </label>
+                  <div className="space-y-3 md:space-y-4">
+                    <div className="space-y-0 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-1.5 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-3 lg:space-y-5">
+                      <label className={`${accountFieldLabelClassName} mb-1.5 md:mb-2.5`}>Account name</label>
                       <Input
-                        type="number"
-                        inputMode="decimal"
-                        value={form.balance}
+                        value={form.name}
                         onChange={(event) =>
-                          setForm((current) => ({ ...current, balance: event.target.value }))
+                          setForm((current) => ({ ...current, name: event.target.value }))
                         }
-                        placeholder="0.00"
+                        placeholder="e.g. Emergency fund"
                         className={accountFieldClassName}
                       />
                     </div>
-                  ) : null}
 
-                  {form.type === "credit" ? (
-                    <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-                      <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
-                        <label className={accountFieldLabelClassName}>Credit limit</label>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          value={form.creditLimit}
-                          onChange={(event) => setCreditLimitValue(event.target.value)}
-                          placeholder="0.00"
-                          className={accountFieldClassName}
-                        />
-                      </div>
-
-                      <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
-                        <label className={accountFieldLabelClassName}>Input mode</label>
-                        <div className="grid grid-cols-2 gap-3">
-                          {[
-                            { label: "I know balance", value: "balance" as const },
-                            { label: "I know available", value: "available" as const },
-                          ].map((option) => (
+                    <div className="grid gap-3 md:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)] md:items-start md:gap-3.5">
+                      <div className="space-y-0 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-1.5 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-3 lg:space-y-5">
+                        <label className={accountFieldLabelClassName}>Account type</label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {accountTypeOptions.map((option) => (
                             <button
                               key={option.value}
                               type="button"
-                              onClick={() =>
-                                setForm((current) => ({
-                                  ...current,
-                                  creditInputMode: option.value,
-                                }))
-                              }
-                              className={`min-h-9 rounded-lg border px-3.5 py-1.5 text-[0.84rem] transition sm:min-h-10 sm:rounded-xl sm:px-4 sm:py-2 sm:text-[0.87rem] ${
-                                form.creditInputMode === option.value
+                              onClick={() => setForm((current) => ({ ...current, type: option.value }))}
+                              className={`h-7.5 rounded-lg border px-2.5 py-0.5 text-[0.82rem] transition md:h-8 md:rounded-lg md:px-3 md:py-1 md:text-[0.86rem] lg:h-7 lg:px-2.5 lg:text-[0.8rem] ${
+                                form.type === option.value
                                   ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
                                   : "border-border/80 bg-background text-foreground hover:bg-muted/70"
                               }`}
@@ -1072,59 +987,144 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         </div>
                       </div>
 
-                      <div className="space-y-2 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2.5 sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
-                        <label className={accountFieldLabelClassName}>
-                          {form.creditInputMode === "available"
-                            ? "Available credit"
-                            : "Current balance"}
+                      <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-3 lg:space-y-5">
+                        <label className={accountFieldLabelClassName}>Currency</label>
+                        <Select
+                          value={form.currency}
+                          onValueChange={(value) =>
+                            setForm((current) => ({
+                              ...current,
+                              currency: value as CreateState["currency"],
+                            }))
+                          }
+                        >
+                          <SelectTrigger className={accountFieldClassName}>
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {supportedCurrencies.map((currency) => (
+                              <SelectItem key={currency} value={currency}>
+                                {currency} · {getCurrencyLabel(currency)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {form.type !== "credit" ? (
+                      <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-3 lg:space-y-5">
+                        <label className={`${accountFieldLabelClassName} mb-1.5 md:mb-2.5`}>
+                          {form.type === "loan" ? "Current loan balance" : "Opening balance"}
                         </label>
                         <Input
                           type="number"
                           inputMode="decimal"
-                          value={form.creditInputMode === "available" ? form.availableCredit : form.balance}
+                          value={form.balance}
                           onChange={(event) =>
-                            form.creditInputMode === "available"
-                              ? setAvailableCreditValue(event.target.value)
-                              : setCreditBalanceValue(event.target.value)
+                            setForm((current) => ({ ...current, balance: event.target.value }))
                           }
                           placeholder="0.00"
                           className={accountFieldClassName}
                         />
                       </div>
+                    ) : null}
 
-                      <div className="space-y-2 rounded-lg border border-dashed border-border/70 bg-[#fbfaf6] px-3 py-2.5 dark:bg-[#162022] sm:space-y-2.5 sm:rounded-xl sm:px-4 sm:py-3.5">
-                        <label className={accountFieldLabelClassName}>
-                          {form.creditInputMode === "available"
-                            ? "Computed current balance"
-                            : "Computed available credit"}
-                        </label>
-                        <div className="flex min-h-9 items-center rounded-lg border border-border/80 bg-background px-3 text-[0.94rem] text-muted-foreground sm:min-h-10 sm:rounded-xl sm:px-4 sm:text-[0.95rem]">
-                          {form.creditInputMode === "available"
-                            ? formatCurrencyMiliunits(parsedBalance, form.currency)
-                            : formatCurrencyMiliunits(parsedAvailableCredit, form.currency)}
+                    {form.type === "credit" ? (
+                      <div className="grid gap-3 md:grid-cols-2 md:gap-4">
+                        <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
+                          <label className={accountFieldLabelClassName}>Credit limit</label>
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            value={form.creditLimit}
+                            onChange={(event) => setCreditLimitValue(event.target.value)}
+                            placeholder="0.00"
+                            className={accountFieldClassName}
+                          />
+                        </div>
+
+                        <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
+                          <label className={accountFieldLabelClassName}>Input mode</label>
+                          <div className="grid grid-cols-2 gap-2.5 md:gap-2">
+                            {[
+                              { label: "I know balance", value: "balance" as const },
+                              { label: "I know available", value: "available" as const },
+                            ].map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  setForm((current) => ({
+                                    ...current,
+                                    creditInputMode: option.value,
+                                  }))
+                                }
+                                className={`h-7.5 rounded-lg border px-2.5 py-0.5 text-[0.76rem] transition md:h-8 md:rounded-lg md:px-3 md:py-1 md:text-[0.8rem] lg:h-7 lg:px-2.5 lg:text-[0.74rem] ${
+                                  form.creditInputMode === option.value
+                                    ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                                    : "border-border/80 bg-background text-foreground hover:bg-muted/70"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
+                          <label className={accountFieldLabelClassName}>
+                            {form.creditInputMode === "available"
+                              ? "Available credit"
+                              : "Current balance"}
+                          </label>
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            value={form.creditInputMode === "available" ? form.availableCredit : form.balance}
+                            onChange={(event) =>
+                              form.creditInputMode === "available"
+                                ? setAvailableCreditValue(event.target.value)
+                                : setCreditBalanceValue(event.target.value)
+                            }
+                            placeholder="0.00"
+                            className={accountFieldClassName}
+                          />
+                        </div>
+
+                        <div className="space-y-2.5 rounded-lg border border-dashed border-border/70 bg-[#fbfaf6] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
+                          <label className={accountFieldLabelClassName}>
+                            {form.creditInputMode === "available"
+                              ? "Computed current balance"
+                              : "Computed available credit"}
+                          </label>
+                          <div className="flex min-h-9 items-center rounded-lg border border-border/80 bg-background px-3 text-[0.94rem] text-muted-foreground sm:min-h-10 sm:rounded-xl sm:px-4 sm:text-[0.95rem]">
+                            {form.creditInputMode === "available"
+                              ? formatCurrencyMiliunits(parsedBalance, form.currency)
+                              : formatCurrencyMiliunits(parsedAvailableCredit, form.currency)}
+                          </div>
                         </div>
                       </div>
+                    ) : null}
+
+                    <div className="hidden rounded-xl border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 dark:bg-[#162022] sm:block">
+                      <p className="text-[0.9rem] leading-6 text-muted-foreground">
+                        {form.type === "credit"
+                          ? "For credit cards, credit limit stays fixed while current balance tracks what you owe. If you only know the available credit from your banking app, Veyra can derive the balance for you."
+                          : "Balances are stored in each account's native currency. Cross-currency rollups can be layered on later."}
+                      </p>
                     </div>
-                  ) : null}
 
-                  <div className="hidden rounded-xl border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 dark:bg-[#162022] sm:block">
-                    <p className="text-[0.9rem] leading-6 text-muted-foreground">
-                      {form.type === "credit"
-                        ? "For credit cards, credit limit stays fixed while current balance tracks what you owe. If you only know the available credit from your banking app, Veyra can derive the balance for you."
-                        : "Balances are stored in each account's native currency. Cross-currency rollups can be layered on later."}
-                    </p>
-                  </div>
-
-                  {(createAccount.error || updateAccount.error) && (
-                    <p className="rounded-[1rem] border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                      {createAccount.error?.message ?? updateAccount.error?.message}
-                    </p>
-                  )}
+                    {(createAccount.error || updateAccount.error) && (
+                      <p className="rounded-[1rem] border border-destructive/20 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                        {createAccount.error?.message ?? updateAccount.error?.message}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                  <div className="shrink-0 border-t border-border/70 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-8 sm:py-4">
-                    <div className="flex items-center justify-end">
+                <div className="shrink-0 border-t border-border/70 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-8 sm:py-4">
+                  <div className="flex items-center justify-end">
                     <Button
                       onClick={onSubmit}
                       disabled={!form.name.trim() || isSubmitting}
@@ -1138,8 +1138,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           ? "Save changes"
                           : "Create account"}
                     </Button>
-                    </div>
                   </div>
+                </div>
               </DialogContent>
             </Dialog>
           </CardHeader>
@@ -1154,7 +1154,10 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           }
         }}
       >
-        <DialogContent className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-lg sm:rounded-[1.6rem]">
+        <DialogContent
+          mobileBehavior="modal"
+          className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-lg sm:rounded-[1.6rem]"
+        >
           <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
               Confirm delete

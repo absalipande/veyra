@@ -798,6 +798,8 @@ Lists and cards:
 Modal and sheet behavior:
 - retain modal dialogs on desktop
 - use drawer-style sheets on mobile (similar to Mynt) for consistency during UI polish work
+- mobile drawers should slide in from the right edge
+- mobile drawers should use full-screen coverage by default for create/edit forms
 - mobile drawers must always have a reachable close control
 - use a fixed header, scrollable body, and clear footer action when forms are long
 - never let a mobile drawer trap the user below the fold without scroll
@@ -809,7 +811,7 @@ Modal and sheet behavior:
   does not collide with the dynamic island or home indicator
 - guard against horizontal overflow in custom dialogs; avoid footer layouts that introduce
   negative horizontal margins
-- reduce mobile drawer height by hiding non-critical support copy and desktop-only explanatory cards
+- keep mobile drawer content focused by hiding non-critical support copy and desktop-only explanatory cards
 - when using shared dialog primitives with opinionated footer spacing, explicitly override
   those styles in feature modals if they create clipping or overflow
 - desktop modal footers should keep actions inside container bounds; avoid fixed button min-width
@@ -820,8 +822,9 @@ Modal and sheet behavior:
 UI-QA dialog baseline (April 2026):
 - close icon must never hug modal borders; keep explicit inset offsets on custom dialogs
 - prefer mobile drawer shells that use:
-  - `max-h-[calc(86dvh-env(safe-area-inset-top))]` on mobile
-  - `w-[calc(100vw-1rem)]` on mobile
+  - `h-[100dvh]` on mobile
+  - `w-screen` on mobile
+  - `right-0 inset-y-0` for right-edge entry
   - `overflow-x-hidden overflow-y-auto`
 - use safe-area-aware paddings on long-form dialogs:
   - header top padding with `env(safe-area-inset-top)`
@@ -859,10 +862,10 @@ Current mobile precedents in Veyra:
 - categories summary cards use a mobile carousel
 - categories mobile uses segmented type filters and a tighter single-column list
 - global search mobile uses segmented `All/Accounts/Transactions` sections (not a carousel)
-- transactions composer modal uses compact mobile typography, restrained input radii, and non-fullscreen height
-- budgets setup modal uses compact controls, overflow-safe single-column mobile grids, and inline action footers
-- loans setup modal follows the same compact mobile modal spec and side-by-side footer actions
-- categories setup modal follows the same compact mobile modal spec and side-by-side footer actions
+- transactions composer uses a right-side full-screen mobile drawer with compact typography and restrained input radii
+- budgets setup uses a right-side full-screen mobile drawer with compact controls and overflow-safe single-column mobile grids
+- loans setup uses a right-side full-screen mobile drawer with compact controls and side-by-side footer actions
+- categories setup uses a right-side full-screen mobile drawer with compact controls and side-by-side footer actions
 - quick capture mobile dialog uses safe-area-aware sizing and overflow controls with compact footer actions
 - settings destructive modal uses compact copy, two-column action footer, and explicit containment-safe spacing
 

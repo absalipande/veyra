@@ -118,9 +118,15 @@ input[type="date"]::-webkit-date-and-time-value {
   text-align: left;
 }
 
-/* Sonner: neutral white surfaces, status indicated by icon color only */
+/* Sonner: neutral surfaces across themes, status indicated by icon color only */
 [data-sonner-toast] {
-  background: #ffffff !important;
+  background: var(--color-card) !important;
+  color: var(--color-card-foreground) !important;
+  border-color: color-mix(in oklab, var(--color-border) 85%, transparent) !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  color: color-mix(in oklab, var(--color-muted-foreground) 82%, var(--color-foreground) 18%) !important;
 }
 
 [data-sonner-toast][data-type="success"] [data-icon] {
@@ -129,4 +135,60 @@ input[type="date"]::-webkit-date-and-time-value {
 
 [data-sonner-toast][data-type="error"] [data-icon] {
   color: #dc2626 !important;
+}
+
+/* Mobile drawer form rhythm */
+@media (max-width: 767px) {
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] {
+    inset: 0 !important;
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] label {
+    display: block;
+  }
+
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] label + * {
+    margin-top: 0.55rem;
+  }
+
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] [data-slot="input"],
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] [data-slot="select-trigger"] {
+    height: 2.25rem;
+    border-radius: 0.7rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 0.92rem;
+    line-height: 1.2rem;
+  }
+
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] [data-slot="input"]:focus-visible,
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] [data-slot="select-trigger"]:focus-visible {
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-ring) 45%, transparent);
+  }
+}
+
+/* Desktop modal rhythm for drawer-backed dialogs */
+@media (min-width: 768px) {
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] label {
+    display: block;
+  }
+
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] label + * {
+    margin-top: 0.6rem;
+  }
+
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] [data-slot="input"],
+  [data-slot="dialog-content"][data-mobile-behavior="drawer"] [data-slot="select-trigger"] {
+    height: 2.15rem;
+    border-radius: 0.7rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 0.92rem;
+    line-height: 1.2rem;
+  }
 }

@@ -17,11 +17,11 @@ function VeyraToaster() {
       toastOptions={{
         classNames: {
           toast:
-            "border border-border/70 bg-white text-foreground shadow-[0_18px_60px_-36px_rgba(10,31,34,0.35)] dark:bg-white dark:text-foreground",
+            "border border-border/70 bg-card text-card-foreground shadow-[0_18px_60px_-36px_rgba(10,31,34,0.35)]",
           title: "text-sm font-semibold",
           description: "text-sm text-muted-foreground",
-          success: "!bg-white !text-foreground",
-          error: "!bg-white !text-foreground",
+          success: "!bg-card !text-card-foreground",
+          error: "!bg-card !text-card-foreground",
         },
       }}
     />
