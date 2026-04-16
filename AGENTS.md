@@ -698,12 +698,49 @@ When implementing or reviewing dark mode:
 3. patch page-level feature surfaces
 4. do a contrast/readability pass
 
+
 ### Brand Direction
 
 - Use Veyra branding only.
 - Never leak `mynt` naming into the Veyra UI.
 - Use lowercase `veyra` for visual brand treatments where appropriate.
 - Keep the favicon/logo treatment simple and high-contrast.
+
+### Institution Logos / Bank Icons
+
+Veyra should not depend on fragile or incomplete logo sets for financial institutions.
+
+Guidelines:
+- logos are helpful, but not required for clarity
+- the UI must remain clean and understandable even without official bank logos
+- avoid blocking product progress because of missing assets
+
+Recommended approach:
+- use a fallback system:
+  - first: official logo (if available)
+  - second: generated initials badge (e.g. `BDO`, `RCBC`, `G`)
+  - third: neutral icon (bank, wallet, credit card)
+- keep logo containers consistent in size, shape, and padding
+- avoid stretching or distorting unofficial logo assets
+- prefer circular or soft-rounded containers with subtle background tint
+
+Suggested libraries / sources (use with caution):
+- `simple-icons` (https://simpleicons.org)
+  - good for widely known brands
+  - not complete for local PH banks
+- `react-icons`
+  - fallback iconography only (not bank-specific logos)
+- `logo.dev` or `clearbit logos API`
+  - may work for some institutions but not guaranteed
+
+Product rule:
+- logos should enhance recognition, not define the UI
+- never let missing logos degrade layout quality
+- always design rows to work perfectly with text + fallback avatar
+
+Future option:
+- maintain a small curated local asset set for PH banks if needed
+- store them in `src/assets/institutions/` and map via `institutions.ts`
 
 ### UI Tone
 
@@ -739,6 +776,110 @@ Current dashboard decision:
 - wait until more key features are implemented before expanding it again
 - avoid ticker-style or market-terminal energy
 - prefer a calm finance briefing over a dense widget wall
+
+## Dashboard Design Contract
+
+The dashboard is a calm financial briefing, not a full workspace.
+
+It should help the user answer:
+- where their money posture stands today
+- which accounts matter right now
+- what recent movement deserves attention
+- whether any planning surface such as budgets needs action
+
+It should not try to replace:
+- the Accounts workspace
+- the Transactions workspace
+- the Budgets workspace
+- future reporting or analytics modules
+
+### Dashboard Role
+
+The dashboard should:
+- orient the user quickly
+- surface only the most decision-useful signals
+- provide quiet entry points into real modules
+- feel lighter than feature pages
+
+The dashboard should not:
+- become a dense widget wall
+- duplicate full feature layouts
+- introduce decorative analytics just because space is available
+- feel like a trading terminal, BI console, or admin template
+
+### Mobile Dashboard Rules
+
+Mobile dashboard should feel like a short personal briefing.
+
+Preferred mobile section order:
+1. money posture
+2. important accounts
+3. recent movement
+4. budget posture
+
+Mobile rules:
+- keep the hero compact and utility-first
+- prefer a money posture summary over a large score or oversized net-worth slab
+- limit mobile dashboard to around 4 primary sections
+- show only a curated subset of important accounts, not a full account dump
+- prioritize recent real activity over synthetic insight cards
+- use a compact posture card for budgets instead of an alarm-style banner
+- keep quick actions clear and reachable without turning the screen into an action grid
+- avoid tall stacked promo surfaces that push real information below the fold
+
+### Desktop Dashboard Rules
+
+Desktop dashboard should remain calm and breathable even with more horizontal space.
+
+Preferred desktop structure:
+- one restrained top summary surface
+- one important accounts block
+- one recent movement block
+- one compact supporting posture block
+
+Desktop rules:
+- use width to improve breathing room, not to justify more widgets
+- avoid filling every column with a separate metric card
+- prefer a few strong groups over many small dashboard tiles
+- include charts only when they represent trusted, meaningful product value
+- keep budget presence compact unless the budgets module has earned a larger dashboard role
+
+### Dashboard Content Rules
+
+Good dashboard content:
+- current money posture
+- restrained assets and liabilities context
+- important accounts
+- recent transaction activity
+- one compact planning or posture signal
+
+Avoid on the dashboard unless clearly earned:
+- deep report-like analytics
+- dense score breakdowns
+- duplicate budget workspace structures
+- multiple competing alert banners
+- placeholder modules added only to make the page feel fuller
+
+### Dashboard Copy Tone
+
+Dashboard copy should feel:
+- calm
+- brief
+- supportive
+- product-like
+
+Prefer:
+- `Money posture`
+- `Stable this week`
+- `Important accounts`
+- `Recent movement`
+- `Budget posture`
+- `No active budgets yet`
+
+Avoid:
+- alarmist warnings when a calmer posture statement will do
+- heavy fintech-gamification language
+- loud diagnostic copy that turns the dashboard into a scoring surface
 
 ## Layout Guidelines
 
@@ -1336,6 +1477,148 @@ When migrating code from legacy locations:
 4. Add the page in `src/app/(app)/...`.
 5. Add shared UI only if it is truly reusable across features.
 6. Keep the first slice simple but production-shaped.
+
+
+## Veyra UI v2
+
+Veyra UI v2 is a presentation-layer reset.
+
+Scope:
+- keep the existing architecture
+- keep the existing feature boundaries
+- keep the existing routers, services, schemas, and database model
+- keep the existing product workflows unless a UI issue clearly requires a small UX adjustment
+- rebuild the visual system, interaction patterns, and responsive layouts for consistency
+
+UI v2 should be treated as:
+- a design-system and workspace refresh
+- a screen migration effort
+- a consistency pass across desktop and mobile
+
+UI v2 should not be treated as:
+- a domain rewrite
+- a router/service rewrite
+- a database redesign
+- a reason to collapse feature ownership back into shared UI folders
+
+### UI v2 Objective
+
+UI v2 should move Veyra closer to:
+- a calmer premium finance product feel
+- stronger cross-screen consistency
+- cleaner responsive behavior
+- tighter visual hierarchy
+- more polished data-entry and search flows
+
+The goal is not to make every page look dramatic.
+The goal is to make the whole product feel coherent, deliberate, and trustworthy.
+
+### UI v2 Non-Negotiables
+
+When implementing UI v2:
+- preserve the current architecture
+- preserve feature ownership
+- preserve transport/business/data separation
+- do not redesign server boundaries to accommodate UI convenience
+- do not duplicate business logic in UI components
+- do not let visual migration break working finance flows
+
+### UI v2 Foundation First
+
+Do not redesign screen-by-screen without a shared foundation first.
+
+UI v2 should begin with a shared system for:
+- spacing
+- typography
+- radii
+- surface depth
+- border treatment
+- input heights
+- dialog/sheet structure
+- card variants
+- section spacing
+- desktop/mobile breakpoints
+
+Before broad screen migration, establish or normalize:
+- shared page shell rhythm
+- summary card patterns
+- workspace section headers
+- modal and drawer footers
+- list row density
+- empty state structure
+- support copy tone
+
+### UI v2 Current Designed Surfaces
+
+The following surfaces already have UI v2 direction and should be treated as references for future implementation:
+- Dashboard desktop view
+- Dashboard mobile view
+- Global Search desktop view
+- Global Search mobile view
+- Quick Capture desktop view
+- Quick Capture mobile view
+
+These should be used as alignment references for:
+- spacing rhythm
+- modal sizing
+- typography scale
+- search/result hierarchy
+- quick-action layout
+- calm premium tone
+
+When implementing adjacent surfaces, prefer matching these references rather than improvising a new visual pattern.
+
+### UI v2 Rollout Order
+
+Recommended rollout order:
+
+1. Foundation
+- shared tokens in globals/theme
+- shared layout primitives
+- shared card/dialog/input/button rhythm
+
+2. Shell and high-frequency entrypoints
+- app shell
+- dashboard
+- global search
+- quick capture
+
+3. Core feature workspaces
+- accounts
+- transactions
+- budgets
+
+4. Supporting workspaces
+- categories
+- loans
+- settings and destructive flows
+
+5. Final polish
+- dark mode consistency
+- empty states
+- skeleton/loading states
+- responsive edge cases
+- institution/logo fallback consistency
+
+### UI v2 Implementation Rules
+
+- prefer replacing an old visual pattern fully within a surface instead of mixing old and new patterns in the same workspace
+- avoid one-off spacing or typography patches unless they are part of the shared system
+- desktop and mobile should feel like the same product, not two unrelated layouts
+- use width to improve breathing room, not to justify more widgets
+- keep premium quality through restraint, not through decorative effects
+- use support copy sparingly; utility should lead
+- when a UI v2 reference exists, align to it before inventing a new pattern
+
+### UI v2 Success Standard
+
+A UI v2 surface is successful when:
+- it feels visibly more consistent with the rest of Veyra
+- hierarchy is clearer at a glance
+- actions are easier to find
+- forms feel tighter and more deliberate
+- mobile and desktop both feel intentional
+- the result looks cleaner without losing real finance utility
 
 ## Immediate Priorities
 
