@@ -17,7 +17,10 @@ import Link from "next/link";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
 import { getInstitutionDisplay } from "@/features/accounts/lib/institutions";
-import { formatDateWithPreferences, resolveDatePreferences } from "@/features/settings/lib/date-format";
+import {
+  formatDateWithPreferences,
+  resolveDatePreferences,
+} from "@/features/settings/lib/date-format";
 import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,13 +69,18 @@ function getAccountTypeTone(type: AccountType) {
   };
 }
 
-function getMovementTypeLabel(type: "income" | "expense" | "transfer" | "credit_payment" | "loan_disbursement") {
+function getMovementTypeLabel(
+  type: "income" | "expense" | "transfer" | "credit_payment" | "loan_disbursement",
+) {
   if (type === "credit_payment") return "Payment";
   if (type === "loan_disbursement") return "Loan";
   return type[0]?.toUpperCase() + type.slice(1).replace("_", " ");
 }
 
-function getMovementSignedAmount(type: "income" | "expense" | "transfer" | "credit_payment" | "loan_disbursement", amount: number) {
+function getMovementSignedAmount(
+  type: "income" | "expense" | "transfer" | "credit_payment" | "loan_disbursement",
+  amount: number,
+) {
   if (type === "income" || type === "loan_disbursement") return amount;
   return -amount;
 }
@@ -173,12 +181,17 @@ export function DashboardRecentActivity() {
       .slice(0, 4);
 
     const largestLiquid = [...liquidAccounts].sort((a, b) => b.balance - a.balance)[0] ?? null;
-    const largestLiability = [...liabilityAccounts].sort((a, b) => b.balance - a.balance)[0] ?? null;
-    const dailyUse = [...liquidAccounts]
-      .filter((account) => account.id !== largestLiquid?.id)
-      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))[0] ?? null;
+    const largestLiability =
+      [...liabilityAccounts].sort((a, b) => b.balance - a.balance)[0] ?? null;
+    const dailyUse =
+      [...liquidAccounts]
+        .filter((account) => account.id !== largestLiquid?.id)
+        .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))[0] ?? null;
 
-    const totalLiability = liabilityAccounts.reduce((sum, account) => sum + Math.abs(account.balance), 0);
+    const totalLiability = liabilityAccounts.reduce(
+      (sum, account) => sum + Math.abs(account.balance),
+      0,
+    );
 
     return top.map((account) => {
       const typeTone = getAccountTypeTone(account.type);
@@ -194,7 +207,8 @@ export function DashboardRecentActivity() {
       if (account.id === largestLiquid?.id) {
         note = "Main account";
         noteTone = "text-emerald-700 dark:text-emerald-300";
-        noteBadgeClass = "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200";
+        noteBadgeClass =
+          "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200";
         amountMeta = "Highest balance";
         amountMetaTone = "text-emerald-700 dark:text-emerald-300";
         amountMetaDot = "bg-emerald-500";
@@ -202,7 +216,8 @@ export function DashboardRecentActivity() {
         note = "Highest debt";
         noteTone = "text-rose-700 dark:text-rose-300";
         noteBadgeClass = "bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-200";
-        const share = totalLiability > 0 ? Math.round((Math.abs(account.balance) / totalLiability) * 100) : 0;
+        const share =
+          totalLiability > 0 ? Math.round((Math.abs(account.balance) / totalLiability) * 100) : 0;
         amountMeta = `${share}% of total debt`;
         amountMetaTone = "text-rose-700 dark:text-rose-300";
         amountMetaDot = "bg-rose-500";
@@ -239,11 +254,20 @@ export function DashboardRecentActivity() {
   const latestEvent = transactions[0] ?? null;
 
   const assetsTotals = useMemo(
-    () => sumByCurrency(liquidAccounts.map((account) => ({ balance: account.balance, currency: account.currency }))),
+    () =>
+      sumByCurrency(
+        liquidAccounts.map((account) => ({ balance: account.balance, currency: account.currency })),
+      ),
     [liquidAccounts],
   );
   const liabilitiesTotals = useMemo(
-    () => sumByCurrency(liabilityAccounts.map((account) => ({ balance: account.balance, currency: account.currency }))),
+    () =>
+      sumByCurrency(
+        liabilityAccounts.map((account) => ({
+          balance: account.balance,
+          currency: account.currency,
+        })),
+      ),
     [liabilityAccounts],
   );
 
@@ -325,13 +349,18 @@ export function DashboardRecentActivity() {
 
   return (
     <section className="space-y-5 pb-24 md:space-y-6 md:pb-0">
-      <Card className="rounded-[1.5rem] border-white/10 bg-[linear-gradient(135deg,#123538_0%,#1b4447_50%,#25585a_100%)] text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
+      <Card className="rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))]  text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
         <CardContent className="space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
           <div className="flex items-start justify-between gap-4">
             <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
               Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
             </p>
-            <Button asChild variant="outline" size="sm" className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
+            >
               <Link href="/transactions">View details</Link>
             </Button>
           </div>
@@ -345,7 +374,9 @@ export function DashboardRecentActivity() {
                 <span className={`size-2.5 rounded-full ${postureCopy.dot} md:size-3`} />
                 {postureCopy.title}
               </div>
-              <p className="max-w-[30ch] text-[0.9rem] leading-6 text-white/74 md:max-w-[34ch] md:text-[0.93rem] md:leading-7">{postureCopy.body}</p>
+              <p className="max-w-[30ch] text-[0.9rem] leading-6 text-white/74 md:max-w-[34ch] md:text-[0.93rem] md:leading-7">
+                {postureCopy.body}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-0 border-t border-white/15 pt-3.5 md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
@@ -396,8 +427,15 @@ export function DashboardRecentActivity() {
         <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
           <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
             <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
-              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">Important accounts</h3>
-              <Button asChild variant="outline" size="sm" className="h-9 rounded-full px-3.5 text-[0.8rem] font-medium shadow-none md:h-8 md:px-3.5 md:text-[0.79rem]">
+              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
+                Important accounts
+              </h3>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-full bg-[#17393c] px-3.5 text-[0.8rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
+              >
                 <Link href="/accounts">View all</Link>
               </Button>
             </div>
@@ -405,12 +443,17 @@ export function DashboardRecentActivity() {
             <div className="overflow-hidden rounded-[1.05rem] border border-border/70 md:rounded-[1.15rem]">
               <div className="divide-y divide-border/70">
                 {importantAccounts.length === 0 ? (
-                  <div className="px-4 py-7 text-sm text-muted-foreground">No accounts yet. Add your first bank or wallet account.</div>
+                  <div className="px-4 py-7 text-sm text-muted-foreground">
+                    No accounts yet. Add your first bank or wallet account.
+                  </div>
                 ) : (
                   importantAccounts.map((account) => {
                     const institution = getInstitutionDisplay(account.institution || account.name);
                     return (
-                      <div key={account.id} className="flex items-center gap-3 px-4 py-3 md:gap-3 md:px-5 md:py-3.5">
+                      <div
+                        key={account.id}
+                        className="flex items-center gap-3 px-4 py-3 md:gap-3 md:px-5 md:py-3.5"
+                      >
                         <div
                           className={`flex size-10 shrink-0 items-center justify-center rounded-full md:size-10 ${
                             institution.logoPath
@@ -431,10 +474,14 @@ export function DashboardRecentActivity() {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">{account.name}</p>
+                          <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
+                            {account.name}
+                          </p>
                           <div className="mt-1 flex items-center gap-2 text-[0.77rem] leading-none md:text-[0.82rem]">
                             {account.note !== "Active" ? (
-                              <span className={`inline-flex rounded-full px-2 py-1 font-medium ${account.noteBadgeClass}`}>
+                              <span
+                                className={`inline-flex rounded-full px-2 py-1 font-medium ${account.noteBadgeClass}`}
+                              >
                                 {account.note}
                               </span>
                             ) : null}
@@ -445,7 +492,9 @@ export function DashboardRecentActivity() {
                           <p className="text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.94rem]">
                             {formatCurrencyMiliunits(account.balance, account.currency)}
                           </p>
-                          <div className={`mt-1 flex items-center justify-end gap-1.5 text-[0.74rem] ${account.amountMetaTone} md:text-[0.76rem]`}>
+                          <div
+                            className={`mt-1 flex items-center justify-end gap-1.5 text-[0.74rem] ${account.amountMetaTone} md:text-[0.76rem]`}
+                          >
                             <span className={`size-1.5 rounded-full ${account.amountMetaDot}`} />
                             <span>{account.amountMeta}</span>
                           </div>
@@ -456,15 +505,21 @@ export function DashboardRecentActivity() {
                 )}
               </div>
             </div>
-
           </CardContent>
         </Card>
 
         <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
           <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
             <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
-              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">Recent movement</h3>
-              <Button asChild variant="outline" size="sm" className="h-9 rounded-full px-3.5 text-[0.8rem] font-medium shadow-none md:h-8 md:px-3.5 md:text-[0.79rem]">
+              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
+                Recent movement
+              </h3>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-full bg-[#17393c] px-3.5 text-[0.8rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
+              >
                 <Link href="/transactions">View all</Link>
               </Button>
             </div>
@@ -472,7 +527,9 @@ export function DashboardRecentActivity() {
             <div className="overflow-hidden rounded-[1.05rem] border border-border/70 md:rounded-[1.15rem]">
               <div className="divide-y divide-border/70">
                 {transactions.slice(0, 5).length === 0 ? (
-                  <div className="px-4 py-7 text-sm text-muted-foreground">No movement yet. Record an income or expense event.</div>
+                  <div className="px-4 py-7 text-sm text-muted-foreground">
+                    No movement yet. Record an income or expense event.
+                  </div>
                 ) : (
                   transactions.slice(0, 5).map((event) => {
                     const signedAmount = getMovementSignedAmount(event.type, event.amount);
@@ -482,8 +539,13 @@ export function DashboardRecentActivity() {
                       : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200";
 
                     return (
-                      <div key={event.id} className="flex items-center gap-3 px-4 py-3 md:gap-3 md:px-5 md:py-3.5">
-                        <div className={`flex size-10 shrink-0 items-center justify-center rounded-full ${iconTone} md:size-10`}>
+                      <div
+                        key={event.id}
+                        className="flex items-center gap-3 px-4 py-3 md:gap-3 md:px-5 md:py-3.5"
+                      >
+                        <div
+                          className={`flex size-10 shrink-0 items-center justify-center rounded-full ${iconTone} md:size-10`}
+                        >
                           {event.type === "transfer" ? (
                             <ArrowRightLeft className="size-4" />
                           ) : amountPositive ? (
@@ -496,10 +558,14 @@ export function DashboardRecentActivity() {
                           <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
                             {event.description}
                           </p>
-                          <p className="mt-0.5 text-[0.78rem] text-muted-foreground md:text-[0.78rem]">{getMovementTypeLabel(event.type)}</p>
+                          <p className="mt-0.5 text-[0.78rem] text-muted-foreground md:text-[0.78rem]">
+                            {getMovementTypeLabel(event.type)}
+                          </p>
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className={`text-[0.98rem] font-semibold tracking-tight ${amountPositive ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"} md:text-[0.96rem]`}>
+                          <p
+                            className={`text-[0.98rem] font-semibold tracking-tight ${amountPositive ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"} md:text-[0.96rem]`}
+                          >
                             {amountPositive ? "+" : "-"}
                             {formatCurrencyMiliunits(Math.abs(signedAmount), event.currency)}
                           </p>
@@ -513,7 +579,6 @@ export function DashboardRecentActivity() {
                 )}
               </div>
             </div>
-
           </CardContent>
         </Card>
       </div>
@@ -521,8 +586,15 @@ export function DashboardRecentActivity() {
       <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
         <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
           <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
-            <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">Budget posture</h3>
-            <Button asChild variant="outline" size="sm" className="h-9 rounded-full px-3.5 text-[0.8rem] font-medium shadow-none md:h-8 md:px-3.5 md:text-[0.79rem]">
+            <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
+              Budget posture
+            </h3>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-full bg-[#17393c] px-3.5 text-[0.8rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
+            >
               <Link href="/budgets">{budgetPosture.action}</Link>
             </Button>
           </div>
@@ -533,8 +605,12 @@ export function DashboardRecentActivity() {
                 <PiggyBank className="size-6 md:size-6" />
               </div>
               <div>
-                <p className="text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">{budgetPosture.title}</p>
-                <p className="mt-1 text-[0.88rem] leading-6 text-muted-foreground md:text-[0.86rem]">{budgetPosture.body}</p>
+                <p className="text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
+                  {budgetPosture.title}
+                </p>
+                <p className="mt-1 text-[0.88rem] leading-6 text-muted-foreground md:text-[0.86rem]">
+                  {budgetPosture.body}
+                </p>
               </div>
             </div>
           </div>
@@ -543,19 +619,31 @@ export function DashboardRecentActivity() {
 
       <div className="fixed inset-x-4 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 md:hidden">
         <div className="grid grid-cols-3 gap-2 rounded-[1.75rem] border border-border/70 bg-white/94 p-2 shadow-[0_24px_50px_-38px_rgba(10,31,34,0.48)] backdrop-blur dark:bg-[#182123]/96">
-          <Button asChild variant="ghost" className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none">
+          <Button
+            asChild
+            variant="ghost"
+            className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none"
+          >
             <Link href="/transactions">
               <Plus className="size-4" />
               Add transaction
             </Link>
           </Button>
-          <Button asChild variant="ghost" className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none">
+          <Button
+            asChild
+            variant="ghost"
+            className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none"
+          >
             <Link href="/transactions">
               <ArrowRightLeft className="size-4" />
               Transfer
             </Link>
           </Button>
-          <Button asChild variant="ghost" className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none">
+          <Button
+            asChild
+            variant="ghost"
+            className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none"
+          >
             <Link href="/budgets">
               <Wallet className="size-4" />
               Create budget
