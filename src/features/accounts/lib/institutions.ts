@@ -194,6 +194,14 @@ export const institutionOptions: InstitutionOption[] = [
     logoDomain: "tonikbank.com",
   },
   {
+    id: "atome",
+    label: "Atome",
+    initials: "AT",
+    tone: "bg-lime-100 text-lime-800 dark:bg-lime-500/20 dark:text-lime-100",
+    aliases: ["Atome SG", "Atome PH"],
+    logoDomain: "atome.sg",
+  },
+  {
     id: "komo",
     label: "KOMO",
     initials: "KO",
