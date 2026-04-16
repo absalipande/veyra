@@ -153,7 +153,7 @@ export const institutionOptions: InstitutionOption[] = [
     initials: "MY",
     tone: "bg-teal-100 text-teal-800 dark:bg-teal-500/20 dark:text-teal-100",
     aliases: ["Maya Bank", "PayMaya"],
-    logoDomain: "maya.ph",
+    logoDomain: "mayabank.ph",
   },
   {
     id: "gcash",
@@ -175,6 +175,7 @@ export const institutionOptions: InstitutionOption[] = [
     id: "seabank",
     label: "SeaBank",
     initials: "SB",
+    aliases: ["MariBank, SeaBank"],
     tone: "bg-lime-100 text-lime-800 dark:bg-lime-500/20 dark:text-lime-100",
     logoDomain: "seabank.ph",
   },
@@ -533,8 +534,6 @@ const fallbackTonePalette = [
   "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-100",
 ] as const;
 
-
-
 function normalizeInstitutionValue(value: string) {
   return value
     .trim()
@@ -581,11 +580,9 @@ export function findInstitutionOption(value?: string | null) {
 
   const exactMatch =
     institutionOptions.find((option) => {
-      const optionValues = [
-        option.id,
-        option.label,
-        ...(option.aliases ?? []),
-      ].map(normalizeInstitutionValue);
+      const optionValues = [option.id, option.label, ...(option.aliases ?? [])].map(
+        normalizeInstitutionValue,
+      );
 
       return optionValues.includes(normalized);
     }) ?? null;
@@ -603,7 +600,8 @@ export function findInstitutionOption(value?: string | null) {
 
       return optionValues.some(
         (candidate) =>
-          candidate.length > 1 && (normalized.includes(candidate) || candidate.includes(normalized))
+          candidate.length > 1 &&
+          (normalized.includes(candidate) || candidate.includes(normalized)),
       );
     }) ?? null
   );

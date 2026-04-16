@@ -1642,6 +1642,7 @@ Current implementation status from the active UI v2 pass:
 - Desktop top bar has been refined through the shell, global search trigger, and quick capture trigger updates.
 - Global Search desktop modal has completed its current UI v2 creation pass and should now be treated as the active desktop search baseline, while still remaining open to later polish.
 - Quick Capture desktop modal has completed its current UI v2 creation pass and should now be treated as the active desktop quick-capture baseline, while still remaining open to later polish.
+- accounts v2: active implementation in progress; hero, list structure, and institution-logo integration have landed, while modal polish is still in progress
 
 These should be used as alignment references for:
 - spacing rhythm
@@ -1711,8 +1712,9 @@ Current UI v2 implementation notes from the active pass:
 - Global Search should favor a reliable composed search-bar structure over fragile icon-overlay compositions.
 - Quick Capture should follow a premium fast-entry approach rather than a verbose assistant-like approach.
 - Example copy and placeholders in shared entry flows should stay general-user friendly and avoid overly personal or user-specific wording.
-- Accounts UI v2 should move beyond the current page structure and be treated as a more deliberate redesign pass rather than a light restyling pass.
-- Accounts hero should become more operational and less banner-like; it should feel like a high-value workspace summary rather than a generic page introduction.
+- Accounts UI v2 is now in active implementation and should be treated as a workspace redesign plus consistency pass, not as a server or schema rewrite.
+- Accounts hero should stay compact, operational, and calmer than the dashboard hero, using restrained trajectory-style motion/atmosphere instead of a promo-style banner treatment.
+- Accounts add/edit modal is still not final; keep refining it toward a tighter, more minimalist setup flow with cleaner hierarchy and fewer competing surfaces.
 - Accounts and credit/liability lists should use the shared institution display system, including Logo.dev-backed logos where available and initials/tone fallbacks when not.
 
 ### UI v2 Success Standard
@@ -1761,14 +1763,13 @@ Desktop Accounts should move toward this structure:
 - optional secondary utility action only if clearly useful
 
 2. accounts workspace summary surface
-- replace the current bland accounts hero with a more useful operational summary
-- this surface may include:
-  - total value across accounts
-  - counts by type
+- the current direction is a compact operational hero with restrained trajectory-style motion on desktop
+- prioritize:
+  - tracked accounts count
   - liquid accounts count
-  - credit / loan count
-  - currencies in use
-- this surface should feel like an accounts control deck, not a marketing banner
+  - liabilities count
+- avoid turning the hero into a giant total-net-worth slab unless the aggregate is truly meaningful and trustworthy
+- the hero should feel like an accounts control deck, not a marketing banner or dashboard clone
 
 3. compact account-type summary cards
 - use small supporting cards for category-level totals or counts when useful
@@ -1816,7 +1817,8 @@ Mobile rules:
 #### Accounts UI v2 List Rules
 
 For both desktop and mobile account lists:
-- use institution logos where available
+- use the shared institution display system as the source of truth for account avatars/logos
+- use Logo.dev-backed institution avatars where available, with initials/tone fallback when logos are unavailable or inconsistent
 - keep avatar size and shape consistent
 - prefer circular logo treatment
 - balances should remain strong but not oversized
@@ -1826,34 +1828,34 @@ For both desktop and mobile account lists:
 
 #### Accounts UI v2 Hero Rules
 
-The current accounts hero should not be treated as final.
+The current accounts hero direction is established but still open to polish.
 
 Accounts hero guidance:
+- keep the current compact, premium, trajectory-style direction rather than reverting to a generic KPI slab
 - reduce generic banner energy
 - increase operational usefulness
 - make the surface feel specific to account management
 - keep it calmer than the dashboard hero, but more useful than a static page intro
-- if a supporting illustration or visual object is used, it must remain restrained and secondary to the summary data
+- use motion or visual atmosphere only as a restrained secondary accent
 
 #### Accounts UI v2 Implementation Priority
 
 Implement Accounts UI v2 in this order:
-1. desktop page heading + top workspace summary
-2. desktop account management strip
-3. desktop bank/wallet and credit/loan lists
-4. mobile hero and summary flow
-5. mobile account lists
-6. final logo/fallback consistency pass
+1. continue polishing the desktop add/edit modal hierarchy and compactness
+2. keep tightening desktop bank/wallet and credit/loan lists
+3. refine mobile accounts summary flow and mobile list density
+4. finish final institution-logo/fallback consistency pass
+5. do a final cross-screen polish pass for spacing, divider usage, and action rhythm
 
 ## Immediate Priorities
 
 The current architecture direction should continue like this:
 
-1. Implement Accounts UI v2 using the documented Accounts UI v2 contract.
-2. Keep the accounts feature stable under `src/features/accounts` while the UI changes land.
-3. Move any remaining accounts source-of-truth logic out of legacy `src/components/accounts`.
+1. Continue polishing Accounts UI v2, especially the add/edit modal hierarchy and compactness.
+2. Keep the accounts feature stable under `src/features/accounts` while the remaining UI polish lands.
+3. Keep the shared institution display system as the source of truth for account avatars/logos.
 4. Apply the same feature-first pattern to transactions next.
-5. Keep tightening copy and visual restraint as new screens are added.
+5. Keep tightening copy, divider usage, and visual restraint as new screens are added.
 
 ## Final Standard
 
