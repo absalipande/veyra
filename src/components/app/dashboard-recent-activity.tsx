@@ -348,7 +348,7 @@ export function DashboardRecentActivity() {
             </div>
 
             <div className="grid grid-cols-2 gap-0 border-t border-white/15 pt-3.5 md:border-0 md:border-l md:border-white/15 md:pl-6 md:pt-0">
-              <div className="space-y-2 pr-3">
+              <div className="space-y-2 pr-4 md:pr-5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[0.84rem] text-white/75 md:text-[0.9rem]">Assets</p>
                   <span className="flex size-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 md:size-10">
@@ -360,7 +360,7 @@ export function DashboardRecentActivity() {
                 </p>
               </div>
 
-              <div className="space-y-2 border-l border-white/15 pl-3">
+              <div className="space-y-2 border-l border-white/15 pl-3 pr-4 md:pr-5">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[0.84rem] text-white/75 md:text-[0.9rem]">Liabilities</p>
                   <span className="flex size-9 items-center justify-center rounded-full bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200 md:size-10">
