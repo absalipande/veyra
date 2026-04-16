@@ -837,6 +837,10 @@ UI-QA dialog baseline (April 2026):
   - use compact heights (`h-9`/`h-10`)
   - restrained radii (`rounded-lg`/`rounded-xl`)
   - tighter inner padding
+- for mobile form field containers (input/select/pill groups) inside dialogs/sheets:
+  - keep top spacing tight and add slightly more bottom inset for optical balance
+  - prefer asymmetric vertical padding on parent field wrappers (`pt` < `pb`) instead of centered `py`
+  - apply this consistently across single-input and pill-group sections to avoid border-hugging controls
 - trim excessive desktop footer whitespace; avoid oversized bottom padding
 - use responsive field grids with `md`/`xl` breakpoints instead of fixed narrow columns
 - for transaction composer hierarchy:
