@@ -32,25 +32,36 @@ export function AppShell({ children }: AppShellProps) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 border-b border-border/70 bg-background/72 backdrop-blur-xl dark:bg-[#11191b]/82">
-            <div className="flex items-center gap-4 px-4 py-4 sm:px-6 lg:px-8">
-              <div className="xl:hidden">
-                <MobileAppNavigation />
+            <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:gap-4 lg:py-4 lg:px-8">
+              <div className="flex items-center gap-3 lg:gap-4">
+                <div className="xl:hidden">
+                  <MobileAppNavigation />
+                </div>
+
+                <div className="xl:hidden">
+                  <VeyraWordmark
+                    iconClassName="size-7 dark:brightness-0 dark:invert"
+                    textClassName="text-[1.65rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
+                  />
+                </div>
               </div>
 
-              <div className="xl:hidden">
-                <VeyraWordmark
-                  iconClassName="size-9 dark:brightness-0 dark:invert"
-                  textClassName="text-[1.6rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
-                />
+              <div className="hidden min-w-0 flex-1 lg:flex">
+                <GlobalSearch />
               </div>
 
-              <GlobalSearch />
+              <div className="flex items-center gap-2 lg:gap-3">
+                <div className="lg:hidden">
+                  <GlobalSearch />
+                </div>
 
-              <GlobalQuickCapture />
+                <GlobalQuickCapture />
 
-              <div className="ml-auto flex items-center gap-3">
-                <ThemeToggle />
-                <div className="rounded-full border border-border/70 bg-white/90 p-1.5 shadow-[0_18px_40px_-35px_rgba(10,31,34,0.28)] dark:bg-[#182123] dark:shadow-[0_18px_40px_-35px_rgba(0,0,0,0.45)]">
+                <div className="hidden lg:block">
+                  <ThemeToggle />
+                </div>
+
+                <div className="rounded-full border border-border/70 bg-white/92 p-1.5 shadow-[0_18px_40px_-35px_rgba(10,31,34,0.28)] dark:bg-[#182123] dark:shadow-[0_18px_40px_-35px_rgba(0,0,0,0.45)]">
                   <UserButton />
                 </div>
               </div>

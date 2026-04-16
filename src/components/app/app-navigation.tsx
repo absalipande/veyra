@@ -136,7 +136,7 @@ export function MobileAppNavigation() {
         <Button
           variant="outline"
           size="icon"
-          className="rounded-2xl bg-white/90 dark:bg-[#182123]"
+          className="size-10 rounded-full border-border/70 bg-white/92 dark:bg-[#182123]"
         >
           <Menu className="size-5" />
           <span className="sr-only">Open navigation</span>

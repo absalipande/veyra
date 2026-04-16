@@ -165,7 +165,7 @@ export function GlobalSearch() {
         type="button"
         variant="outline"
         size="icon"
-        className="lg:hidden"
+        className="size-10 rounded-full border-border/70 bg-white/92 lg:hidden dark:bg-[#182123]"
         onClick={() => setOpen(true)}
       >
         <Search className="size-4" />
