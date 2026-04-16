@@ -2,6 +2,7 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Landmark, Search, Wallet, X } from "lucide-react";
 
@@ -10,6 +11,7 @@ import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { getInstitutionDisplay } from "@/features/accounts/lib/institutions";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
@@ -293,9 +295,31 @@ export function GlobalSearch() {
                       }`}
                     >
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-[0.76rem] font-semibold text-foreground">
-                          {account.name.slice(0, 2).toUpperCase()}
-                        </div>
+                        {(() => {
+                          const institution = getInstitutionDisplay(account.institution || account.name);
+
+                          return (
+                            <div
+                              className={`flex size-9 shrink-0 items-center justify-center rounded-full overflow-hidden ${
+                                institution.logoPath
+                                  ? "border border-border/70 bg-white/90 p-0 dark:border-white/10 dark:bg-[#141d1f]"
+                                  : `text-[0.76rem] font-semibold ${institution.tone}`
+                              }`}
+                            >
+                              {institution.logoPath ? (
+                                <Image
+                                  src={institution.logoPath}
+                                  alt={`${institution.label} logo`}
+                                  width={36}
+                                  height={36}
+                                  className="size-full rounded-full object-cover"
+                                />
+                              ) : (
+                                institution.initials
+                              )}
+                            </div>
+                          );
+                        })()}
                         <div className="min-w-0">
                           <p className="truncate text-[0.92rem] font-medium text-[#10292B] dark:text-foreground">
                             {account.name}

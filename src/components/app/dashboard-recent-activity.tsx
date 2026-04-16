@@ -455,9 +455,9 @@ export function DashboardRecentActivity() {
                         className="flex items-center gap-3 px-4 py-3 md:gap-3 md:px-5 md:py-3.5"
                       >
                         <div
-                          className={`flex size-10 shrink-0 items-center justify-center rounded-full md:size-10 ${
+                          className={`flex size-10 shrink-0 items-center justify-center rounded-full overflow-hidden md:size-10 ${
                             institution.logoPath
-                              ? "border border-border/70 bg-white/90 p-1.5 dark:border-white/10 dark:bg-[#141d1f]"
+                              ? "border border-border/70 bg-white/90 p-0 dark:border-white/10 dark:bg-[#141d1f]"
                               : `text-[0.76rem] font-semibold md:text-[0.75rem] ${institution.tone}`
                           }`}
                         >
@@ -467,7 +467,7 @@ export function DashboardRecentActivity() {
                               alt={`${institution.label} logo`}
                               width={30}
                               height={30}
-                              className="size-full object-contain"
+                              className="size-full rounded-full object-cover"
                             />
                           ) : (
                             institution.initials
