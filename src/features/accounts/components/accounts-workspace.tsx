@@ -62,7 +62,7 @@ function getInitialState(defaultCurrency: CreateState["currency"] = "PHP"): Crea
 const accountFieldClassName =
   "h-8 w-full rounded-lg border-border/80 bg-background px-3 text-[0.9rem] shadow-none dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/30 sm:h-9 sm:rounded-xl sm:px-3.5 sm:text-[0.92rem] lg:h-8 lg:px-3 lg:text-[0.9rem]";
 
-const accountFieldLabelClassName = "mb-2.5 block text-[0.9rem] font-semibold text-foreground sm:text-[0.96rem]";
+const accountFieldLabelClassName = "block text-[0.9rem] font-semibold leading-none text-foreground sm:text-[0.96rem] sm:leading-none";
 
 type AccountSortOption =
   | "newest"
@@ -954,8 +954,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
 
                 <div className="min-h-0 overflow-x-hidden overflow-y-visible px-4 py-3 sm:overflow-y-auto sm:px-8 sm:py-6">
                   <div className="space-y-3 md:space-y-4">
-                    <div className="space-y-0 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-1.5 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-3 lg:space-y-5">
-                      <label className={`${accountFieldLabelClassName} mb-1.5 md:mb-2.5`}>Account name</label>
+                    <div className="space-y-1.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-2.5 md:rounded-xl md:px-4 md:py-3 lg:space-y-3">
+                      <label className={accountFieldLabelClassName}>Account name</label>
                       <Input
                         value={form.name}
                         onChange={(event) =>
@@ -967,7 +967,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-[minmax(0,1.15fr)_minmax(240px,0.85fr)] md:items-start md:gap-3.5">
-                      <div className="space-y-0 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-1.5 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-3 lg:space-y-5">
+                      <div className="space-y-1.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-2.5 md:rounded-xl md:px-4 md:py-3 lg:space-y-3">
                         <label className={accountFieldLabelClassName}>Account type</label>
                         <div className="grid grid-cols-2 gap-2.5">
                           {accountTypeOptions.map((option) => (
@@ -987,7 +987,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         </div>
                       </div>
 
-                      <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-3 lg:space-y-5">
+                      <div className="space-y-1.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-2.5 md:rounded-xl md:px-4 md:py-3 lg:space-y-3">
                         <label className={accountFieldLabelClassName}>Currency</label>
                         <Select
                           value={form.currency}
@@ -1013,8 +1013,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     </div>
 
                     {form.type !== "credit" ? (
-                      <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-3 lg:space-y-5">
-                        <label className={`${accountFieldLabelClassName} mb-1.5 md:mb-2.5`}>
+                      <div className="space-y-1.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-2.5 md:rounded-xl md:px-4 md:py-3 lg:space-y-3">
+                        <label className={accountFieldLabelClassName}>
                           {form.type === "loan" ? "Current loan balance" : "Opening balance"}
                         </label>
                         <Input
@@ -1032,7 +1032,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
 
                     {form.type === "credit" ? (
                       <div className="grid gap-3 md:grid-cols-2 md:gap-4">
-                        <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
+                        <div className="space-y-1.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
                           <label className={accountFieldLabelClassName}>Credit limit</label>
                           <Input
                             type="number"
@@ -1044,7 +1044,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           />
                         </div>
 
-                        <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
+                        <div className="space-y-1.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
                           <label className={accountFieldLabelClassName}>Input mode</label>
                           <div className="grid grid-cols-2 gap-2.5 md:gap-2">
                             {[
@@ -1072,7 +1072,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           </div>
                         </div>
 
-                        <div className="space-y-2.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
+                        <div className="space-y-1.5 rounded-lg border border-border/70 bg-[#fcfbf7] px-3 py-2 md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
                           <label className={accountFieldLabelClassName}>
                             {form.creditInputMode === "available"
                               ? "Available credit"
@@ -1092,7 +1092,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           />
                         </div>
 
-                        <div className="space-y-2.5 rounded-lg border border-dashed border-border/70 bg-[#fbfaf6] px-3 py-2 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
+                        <div className="space-y-1.5 rounded-lg border border-dashed border-border/70 bg-[#fbfaf6] px-3 py-3 dark:bg-[#162022] md:space-y-4 md:rounded-xl md:px-4 md:py-2.5">
                           <label className={accountFieldLabelClassName}>
                             {form.creditInputMode === "available"
                               ? "Computed current balance"
