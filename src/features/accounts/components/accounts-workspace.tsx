@@ -413,7 +413,6 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const accountsQuery = trpc.accounts.list.useQuery();
   const summaryQuery = trpc.accounts.summary.useQuery();
   const settingsQuery = trpc.settings.get.useQuery();
-  const summaryScrollerRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [form, setForm] = useState<CreateState>(getInitialState());
@@ -423,7 +422,6 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const [liquidSort, setLiquidSort] = useState<AccountSortOption>("newest");
   const [liabilitySort, setLiabilitySort] = useState<AccountSortOption>("newest");
   const [sortsRestored, setSortsRestored] = useState(false);
-  const [activeSummaryIndex, setActiveSummaryIndex] = useState(0);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -452,38 +450,6 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     window.localStorage.setItem(LIABILITY_SORT_STORAGE_KEY, liabilitySort);
   }, [liabilitySort, sortsRestored]);
 
-  useEffect(() => {
-    if (!summaryScrollerRef.current) return;
-
-    function handleScroll() {
-      const node = summaryScrollerRef.current;
-      if (!node) return;
-
-      const cards = Array.from(node.querySelectorAll<HTMLElement>("[data-summary-slide]"));
-      if (cards.length === 0) return;
-
-      const scrollerCenter = node.scrollLeft + node.clientWidth / 2;
-      let closestIndex = 0;
-      let closestDistance = Number.POSITIVE_INFINITY;
-
-      cards.forEach((card, index) => {
-        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-        const distance = Math.abs(cardCenter - scrollerCenter);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = index;
-        }
-      });
-
-      setActiveSummaryIndex(closestIndex);
-    }
-
-    handleScroll();
-    const node = summaryScrollerRef.current;
-    if (!node) return;
-    node.addEventListener("scroll", handleScroll, { passive: true });
-    return () => node.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const refreshAccounts = async () => {
     await Promise.all([utils.accounts.list.invalidate(), utils.accounts.summary.invalidate()]);
@@ -720,241 +686,215 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     deleteAccount.mutate({ id: deleteTarget.id });
   };
 
-  const summaryCards = summaryQuery.data
-    ? [
-        {
-          label: "Accounts tracked",
-          value: String(summaryQuery.data.totalAccounts),
-          detail: "Live accounts currently connected to Veyra",
-          icon: Landmark,
-        },
-        {
-          label: "Liquid accounts",
-          value: String(summaryQuery.data.liquidAccounts),
-          detail: `${formatCount(accountGroups.liquid.length, "account")} across cash and wallet balances`,
-          icon: Wallet,
-        },
-        {
-          label: "Liabilities",
-          value: String(summaryQuery.data.liabilityAccounts),
-          detail: `${summaryQuery.data.creditAccounts} credit · ${summaryQuery.data.loanAccounts} loan`,
-          icon: CreditCard,
-        },
-        {
-          label: "Active currencies",
-          value: String(summaryQuery.data.activeCurrencies),
-          detail: "Balances stay native to each account currency",
-          icon: Globe2,
-        },
-      ]
-    : [];
 
-  const mobileHeroStats = summaryQuery.data
-    ? [
-        {
-          label: "Liquid accounts",
-          value: formatCount(accountGroups.liquid.length, "account"),
-        },
-        {
-          label: "Currencies in use",
-          value: String(summaryQuery.data.activeCurrencies),
-        },
-      ]
-    : [];
 
-  function scrollSummaryCards(index: number) {
-    const node = summaryScrollerRef.current;
-    if (!node) return;
-
-    const nextIndex = Math.max(0, Math.min(index, summaryCards.length - 1));
-    const cards = Array.from(node.querySelectorAll<HTMLElement>("[data-summary-slide]"));
-    const nextCard = cards[nextIndex];
-    if (!nextCard) return;
-
-    nextCard.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center",
-    });
-    setActiveSummaryIndex(nextIndex);
-  }
 
   return (
     <div className="space-y-6 lg:space-y-7">
-      <section className="overflow-hidden rounded-[1.8rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_28px_95px_-72px_rgba(10,31,34,0.82)]">
-        <div className="grid gap-4 px-4 py-4 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
-          <div className="max-w-3xl">
-            <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[0.64rem] font-medium uppercase tracking-[0.22em] text-white/78">
-              Accounts workspace
-            </div>
-            <h1 className="mt-2.5 max-w-[20ch] text-[1.55rem] font-semibold leading-[1.08] tracking-tight text-white sm:mt-3 sm:text-[2.2rem] sm:leading-[1.02]">
-              Manage balances without losing the shape of each account.
-            </h1>
-            <p className="mt-2 max-w-[34rem] text-[0.9rem] leading-6 text-white/72 sm:mt-2.5 sm:text-[0.95rem] sm:leading-7">
-              Keep liquid accounts, liabilities, and currencies visible without turning the page into a ledger wall.
-            </p>
+      <section>
+        <Card className="relative overflow-hidden rounded-[1.75rem] border-white/10 bg-[linear-gradient(145deg,#0D2F31,#123E40_52%,#1B5A57)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_90px_-60px_rgba(10,31,34,0.85)]">
+          <div className="pointer-events-none absolute inset-0 opacity-70">
+            <div className="absolute inset-y-0 left-0 w-[58%] bg-[radial-gradient(circle_at_20%_26%,rgba(6,17,18,0.28),transparent_42%)]" />
+            <div className="absolute inset-y-0 right-0 hidden w-[44%] bg-[radial-gradient(circle_at_72%_28%,rgba(80,255,214,0.13),transparent_30%),radial-gradient(circle_at_84%_72%,rgba(80,255,214,0.08),transparent_22%)] lg:block" />
           </div>
 
-          <div className="hidden space-y-2.5 xl:block">
-            <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
-              <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
-                Bank and wallet accounts
-              </p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight">
-                {formatCount(accountGroups.liquid.length, "account")}
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
-              <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
-                Currencies in use
-              </p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight">
-                {summaryQuery.data?.activeCurrencies ?? 0}
-              </p>
-            </div>
+          <div className="pointer-events-none absolute inset-y-0 right-[7%] hidden w-[42%] opacity-30 lg:block">
+            <svg viewBox="0 0 560 320" className="h-full w-full">
+              <path d="M30 240 C120 240, 150 250, 205 210 S320 118, 395 112 S470 76, 535 38" fill="none" stroke="rgba(115,255,217,0.52)" strokeWidth="4" strokeLinecap="round" />
+              <path d="M92 278 C170 252, 230 198, 305 162 S414 122, 500 84" fill="none" stroke="rgba(115,255,217,0.12)" strokeWidth="2" strokeLinecap="round" />
+              <path d="M126 204 C176 170, 232 138, 302 116 S412 88, 498 74" fill="none" stroke="rgba(115,255,217,0.08)" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="205" cy="210" r="7" fill="rgba(115,255,217,0.78)" />
+              <circle cx="395" cy="112" r="7" fill="rgba(115,255,217,0.82)" />
+              <circle cx="535" cy="38" r="8" fill="rgba(115,255,217,0.95)" />
+            </svg>
           </div>
-        </div>
 
-        <div className="px-4 pb-4 xl:hidden sm:px-6 sm:pb-5">
-          <div className="grid grid-cols-2 gap-2">
-            {mobileHeroStats.map((item) => (
-              <div
-                key={item.label}
-                className="rounded-[1.05rem] border border-white/12 bg-white/10 px-3 py-2.5 backdrop-blur"
-              >
-                <p className="text-[0.6rem] font-medium uppercase tracking-[0.2em] text-white/58">
-                  {item.label}
-                </p>
-                <p className="mt-1 text-[1.1rem] font-semibold tracking-tight text-white">
-                  {item.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <>
-        <section className="space-y-3 md:hidden">
-          {summaryQuery.isLoading ? (
-            <div className="h-36 animate-pulse rounded-[1.8rem] border border-white/75 bg-white/75 dark:border-white/8 dark:bg-[#182123]" />
-          ) : (
-            <>
-              <div
-                ref={(node) => {
-                  summaryScrollerRef.current = node;
-                }}
-                className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                {summaryCards.map((card) => {
-                  const Icon = card.icon;
-
-                  return (
-                    <div
-                      key={card.label}
-                      data-summary-slide
-                      className="min-w-0 shrink-0 basis-full snap-center"
-                    >
-                      <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]">
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                                {card.label}
-                              </p>
-                              <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                                {card.value}
-                              </p>
-                              <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.detail}</p>
-                            </div>
-                            <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
-                              <Icon className="size-4.5" />
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {summaryCards.map((card, index) => (
-                    <button
-                      key={card.label}
-                      type="button"
-                      aria-label={`Show ${card.label}`}
-                      onClick={() => scrollSummaryCards(index)}
-                      className={[
-                        "h-2.5 rounded-full transition-all",
-                        index === activeSummaryIndex ? "w-6 bg-primary" : "w-2.5 bg-border",
-                      ].join(" ")}
-                    />
-                  ))}
+          <CardContent className="relative p-5 sm:p-6 lg:p-7">
+            <div className="hidden gap-8 lg:grid lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] lg:items-start">
+              <div className="space-y-5 pt-1">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#123E40]/85 px-3 py-1.5 text-[0.74rem] font-semibold uppercase tracking-[0.18em] text-[#9CF5D7] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm">
+                  <span className="size-2 rounded-full bg-[#49D399]" />
+                  Accounts workspace
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    aria-label="Previous account summary"
-                    onClick={() => scrollSummaryCards(activeSummaryIndex - 1)}
-                    className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-foreground shadow-sm dark:bg-[#182123]"
-                  >
-                    <span className="text-lg leading-none">‹</span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Next account summary"
-                    onClick={() => scrollSummaryCards(activeSummaryIndex + 1)}
-                    className="flex size-9 items-center justify-center rounded-full border border-border bg-white text-foreground shadow-sm dark:bg-[#182123]"
-                  >
-                    <span className="text-lg leading-none">›</span>
-                  </button>
+                <div className="space-y-3">
+                  <h1 className="max-w-[13ch] text-[2.15rem] font-semibold leading-[1.02] tracking-tight text-white xl:text-[2.4rem]">
+                    See every balance in one clear shape.
+                  </h1>
+                  <p className="max-w-[34rem] text-[1rem] leading-7 text-white/76">
+                    Track liquid cash, credit exposure, and account currencies without losing the identity of each institution.
+                  </p>
                 </div>
-              </div>
-            </>
-          )}
-        </section>
 
-        <section className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
-          {summaryQuery.isLoading &&
-            Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-36 animate-pulse rounded-[1.8rem] border border-white/75 bg-white/75 dark:border-white/8 dark:bg-[#182123]"
-              />
-            ))}
-
-          {summaryCards.map((card) => {
-            const Icon = card.icon;
-
-            return (
-              <Card
-                key={card.label}
-                className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                        {card.label}
-                      </p>
-                      <p className="mt-3 text-[2rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                        {card.value}
-                      </p>
-                      <p className="mt-2 text-sm leading-7 text-muted-foreground">{card.detail}</p>
-                    </div>
-                    <div className="flex size-10 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
-                      <Icon className="size-4.5" />
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <div className="inline-flex items-center gap-3 rounded-[1.15rem] border border-white/10 bg-white/[0.06] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
+                    <span className="flex size-10 items-center justify-center rounded-full bg-[#CFF4E7] text-[#175C46]">
+                      <Landmark className="size-4.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[1.6rem] font-semibold leading-none tracking-tight text-white">
+                          {summaryQuery.data?.totalAccounts ?? 0}
+                        </span>
+                        <span className="text-[0.9rem] leading-5 text-white/72">Tracked</span>
+                      </div>
+                      <p className="text-[0.84rem] leading-5 text-white/68">accounts</p>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </section>
-      </>
+
+                  <div className="inline-flex items-center gap-3 rounded-[1.15rem] border border-white/10 bg-white/[0.06] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
+                    <span className="flex size-10 items-center justify-center rounded-full bg-[#163F40] text-[#49D399] ring-1 ring-inset ring-white/6">
+                      <Wallet className="size-4.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[1.6rem] font-semibold leading-none tracking-tight text-white">
+                          {accountGroups.liquid.length}
+                        </span>
+                        <span className="text-[0.9rem] leading-5 text-white/72">Liquid</span>
+                      </div>
+                      <p className="text-[0.84rem] leading-5 text-white/68">accounts</p>
+                    </div>
+                  </div>
+
+                  <div className="inline-flex items-center gap-3 rounded-[1.15rem] border border-white/10 bg-white/[0.06] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
+                    <span className="flex size-10 items-center justify-center rounded-full bg-[#203A52] text-[#7DD3FC] ring-1 ring-inset ring-white/6">
+                      <CreditCard className="size-4.5" />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-[1.6rem] font-semibold leading-none tracking-tight text-white">
+                          {accountGroups.liabilities.length}
+                        </span>
+                        <span className="text-[0.9rem] leading-5 text-white/72">Liabilities</span>
+                      </div>
+                      <p className="text-[0.84rem] leading-5 text-white/68">accounts</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(20,64,64,0.72),rgba(15,53,54,0.62))] p-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm">
+                <div className="overflow-hidden rounded-[1.1rem] border border-white/8 bg-[linear-gradient(180deg,rgba(10,40,42,0.25),rgba(10,40,42,0.14))]">
+                  <div className="grid grid-cols-[72px_minmax(0,1fr)_90px] items-center gap-4 border-b border-white/8 px-4 py-4">
+                    <span className="flex size-12 items-center justify-center rounded-full bg-[#173B3B] text-[#49D399] ring-1 ring-inset ring-white/5">
+                      <Wallet className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[0.74rem] font-semibold uppercase tracking-[0.18em] text-[#8FE9D0]">Liquid accounts</p>
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-[2rem] font-semibold leading-none tracking-tight text-white">
+                          {accountGroups.liquid.length}
+                        </span>
+                        <span className="text-[0.92rem] text-white/72">accounts</span>
+                      </div>
+                    </div>
+                    <div className="justify-self-end">
+                      <svg viewBox="0 0 80 32" className="h-9 w-20">
+                        <path d="M4 24 C18 24, 20 10, 34 10 S52 26, 76 8" fill="none" stroke="#49D399" strokeWidth="2.6" strokeLinecap="round" />
+                        <circle cx="76" cy="8" r="3" fill="#7DF3C7" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-[72px_minmax(0,1fr)_90px] items-center gap-4 border-b border-white/8 px-4 py-4">
+                    <span className="flex size-12 items-center justify-center rounded-full bg-[#3F3128] text-[#F59E0B] ring-1 ring-inset ring-white/5">
+                      <CreditCard className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[0.74rem] font-semibold uppercase tracking-[0.18em] text-[#F6B350]">Liabilities</p>
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-[2rem] font-semibold leading-none tracking-tight text-white">
+                          {accountGroups.liabilities.length}
+                        </span>
+                        <span className="text-[0.92rem] text-white/72">accounts</span>
+                      </div>
+                    </div>
+                    <div className="justify-self-end">
+                      <svg viewBox="0 0 80 32" className="h-9 w-20">
+                        <path d="M4 24 C18 24, 20 10, 34 10 S52 26, 76 8" fill="none" stroke="#F59E0B" strokeWidth="2.6" strokeLinecap="round" />
+                        <circle cx="76" cy="8" r="3" fill="#FDBA74" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-[72px_minmax(0,1fr)_90px] items-center gap-4 px-4 py-4">
+                    <span className="flex size-12 items-center justify-center rounded-full bg-[#17334A] text-[#7DD3FC] ring-1 ring-inset ring-white/5">
+                      <Globe2 className="size-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[0.74rem] font-semibold uppercase tracking-[0.18em] text-[#7DD3FC]">Currencies in use</p>
+                      <div className="mt-1 flex items-baseline gap-2">
+                        <span className="text-[2rem] font-semibold leading-none tracking-tight text-white">
+                          {summaryQuery.data?.activeCurrencies ?? 0}
+                        </span>
+                        <span className="text-[0.92rem] text-white/72">currency</span>
+                      </div>
+                    </div>
+                    <div className="justify-self-end flex items-center">
+                      <span className="-mr-2 flex size-10 items-center justify-center rounded-full bg-[#3D77AF] text-[1rem] font-semibold text-white/95 ring-1 ring-white/8">
+                        P
+                      </span>
+                      <span className="-mr-2 flex size-10 items-center justify-center rounded-full bg-[#4B89BD]/85 ring-1 ring-white/8" />
+                      <span className="flex size-10 items-center justify-center rounded-full bg-[#5E99C7]/70 ring-1 ring-white/8" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3 lg:hidden">
+              <div className="grid grid-cols-3 gap-2 rounded-[1.1rem] border border-white/10 bg-white/[0.05] p-3 backdrop-blur-sm">
+                <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.04] px-3 py-3 text-center">
+                  <p className="text-[1.25rem] font-semibold leading-none tracking-tight text-white">
+                    {summaryQuery.data?.totalAccounts ?? 0}
+                  </p>
+                  <p className="mt-1.5 text-[0.72rem] leading-5 text-white/68">Tracked</p>
+                </div>
+                <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.04] px-3 py-3 text-center">
+                  <p className="text-[1.25rem] font-semibold leading-none tracking-tight text-white">
+                    {accountGroups.liquid.length}
+                  </p>
+                  <p className="mt-1.5 text-[0.72rem] leading-5 text-white/68">Liquid</p>
+                </div>
+                <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.04] px-3 py-3 text-center">
+                  <p className="text-[1.25rem] font-semibold leading-none tracking-tight text-white">
+                    {accountGroups.liabilities.length}
+                  </p>
+                  <p className="mt-1.5 text-[0.72rem] leading-5 text-white/68">Liabilities</p>
+                </div>
+              </div>
+
+              <div className="rounded-[1.1rem] border border-white/10 bg-white/[0.05] p-3 backdrop-blur-sm">
+                <div className="flex items-center justify-between gap-3 rounded-[0.95rem] border border-white/8 bg-white/[0.04] px-3 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-10 items-center justify-center rounded-full bg-[#17334A] text-[#7DD3FC] ring-1 ring-inset ring-white/5">
+                      <Globe2 className="size-4.5" />
+                    </span>
+                    <div>
+                      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[#7DD3FC]">
+                        Currency in use
+                      </p>
+                      <p className="mt-1 text-[1.2rem] font-semibold leading-none tracking-tight text-white">
+                        {summaryQuery.data?.activeCurrencies ?? 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center">
+                    <span className="-mr-2 flex size-8 items-center justify-center rounded-full bg-[#3D77AF] text-[0.9rem] font-semibold text-white/95 ring-1 ring-white/8">
+                      P
+                    </span>
+                    <span className="-mr-2 flex size-8 items-center justify-center rounded-full bg-[#4B89BD]/85 ring-1 ring-white/8" />
+                    <span className="flex size-8 items-center justify-center rounded-full bg-[#5E99C7]/70 ring-1 ring-white/8" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
 
       <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
