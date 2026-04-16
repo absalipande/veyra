@@ -665,6 +665,83 @@ Veyra uses a calm premium visual system.
 - Use typography, spacing, and composition to create quality.
 - Prefer softer contrast and warm light surfaces over stark white + neon accents.
 
+### Current Theme Baseline (April 2026)
+
+This is the current source-of-truth visual baseline for Veyra UI v2. Align to these tokens and patterns before introducing new visual treatments.
+
+Reference assets:
+- `public/v2/desktop_v2.png` (`1536x1024`)
+- `public/v2/global_search_and_quick_capture_v2.png` (`1558x1009`)
+
+Typography system:
+- primary UI font:
+  - `Geist` via `next/font/google` in `src/app/layout.tsx`
+  - mapped to both `--font-heading` and `--font-sans` in `src/app/globals.css`
+- mono/supportive technical text:
+  - `Geist Mono` via `next/font/google`
+  - mapped to `--font-mono`
+- type character:
+  - tight tracking on headings (`tracking-tight`) for premium density
+  - restrained body sizes around `0.9rem` to `1rem` for utility copy
+  - avoid decorative display fonts and avoid mixing additional font families into the app shell
+
+Color system (global tokens in `src/app/globals.css`):
+- light mode:
+  - background: `oklch(0.985 0.01 95)`
+  - foreground: `oklch(0.22 0.03 210)`
+  - card/popover: `oklch(0.995 0.004 95)`
+  - primary (brand action teal): `oklch(0.39 0.07 196)`
+  - secondary: `oklch(0.95 0.02 168)`
+  - accent: `oklch(0.92 0.03 160)`
+  - border/input: `oklch(0.9 0.01 210)`
+  - ring: `oklch(0.55 0.08 196)`
+- dark mode:
+  - background: `oklch(0.17 0.015 205)`
+  - foreground: `oklch(0.95 0.01 95)`
+  - card/popover: `oklch(0.205 0.018 205)`
+  - primary: `oklch(0.82 0.05 168)`
+  - secondary: `oklch(0.24 0.018 205)`
+  - accent: `oklch(0.28 0.03 175)`
+  - border/input: `oklch(0.3 0.015 205)`
+  - ring: `oklch(0.68 0.05 168)`
+
+Surface and depth language:
+- base radius token:
+  - `--radius: 1rem`
+  - derived radii:
+    - `--radius-sm`: `0.65x`
+    - `--radius-md`: `0.85x`
+    - `--radius-lg`: `1x`
+    - `--radius-xl`: `1.25x`
+- shell atmosphere:
+  - light: subtle warm linear gradient
+  - dark: muted teal-charcoal linear gradient
+- cards and raised surfaces:
+  - soft translucent light cards (`bg-white/..`) with restrained blur/shadow
+  - dark cards in deep teal-charcoal (`#151d1f`, `#182123`, `#141d1f` family)
+  - avoid harsh black panels or bright white cards in dark mode
+
+Status/accent usage:
+- semantic tones should remain utility-first and familiar:
+  - positive: emerald
+  - neutral/info: sky/teal
+  - caution: amber
+  - negative: rose/red
+- status colors should support finance meaning, not become decorative theme accents
+
+Layout and width contract (desktop):
+- keep desktop non-full-screen:
+  - app shell container max width: `1600px`
+  - main workspace max width: `max-w-7xl`
+  - desktop sidebar width: `292px` and sticky
+- use available width for breathing room, not widget count inflation
+
+Control rhythm:
+- input/select heights are compact and deliberate:
+  - mobile drawer context: `h-9` baseline
+  - desktop drawer-backed dialogs: ~`h-[2.15rem]` baseline
+- avoid oversized controls and avoid inconsistent one-off control heights across workspaces
+
 ### Dark Mode Rules
 
 Dark mode should feel:
@@ -1558,6 +1635,14 @@ The following surfaces already have UI v2 direction and should be treated as ref
 - Quick Capture desktop view
 - Quick Capture mobile view
 
+Current implementation status from the active UI v2 pass:
+- Desktop app shell has been refined and should now be treated as part of the locked UI v2 baseline.
+- Desktop dashboard has received a first refinement pass and a second hero-card polish pass.
+- Desktop navigation has been tightened to better match the shell and dashboard tone.
+- Desktop top bar has been refined through the shell, global search trigger, and quick capture trigger updates.
+- Global Search desktop modal has been rebuilt toward the current UI v2 reference and should be treated as the current desktop baseline.
+- Quick Capture desktop modal has been reworked toward a cleaner fast-entry flow and should be treated as the current desktop baseline.
+
 These should be used as alignment references for:
 - spacing rhythm
 - modal sizing
@@ -1582,6 +1667,14 @@ Recommended rollout order:
 - dashboard
 - global search
 - quick capture
+
+Current status:
+- desktop app shell: in active UI v2 baseline
+- desktop dashboard: in active UI v2 baseline
+- desktop navigation: in active UI v2 baseline
+- desktop top bar: in active UI v2 baseline
+- desktop global search: in active UI v2 baseline
+- desktop quick capture: in active UI v2 baseline
 
 3. Core feature workspaces
 - accounts
@@ -1610,6 +1703,14 @@ Recommended rollout order:
 - use support copy sparingly; utility should lead
 - when a UI v2 reference exists, align to it before inventing a new pattern
 
+Current UI v2 implementation notes from the active pass:
+- Desktop app shell should keep the sidebar as the dominant framed structure while the header remains calmer and less card-like.
+- Desktop dashboard should keep its current overall layout structure; improvements should stay focused on hierarchy, spacing, hero-card polish, and card density rather than reinvention.
+- Desktop navigation should stay visually tighter than before, with calmer inactive states and a more anchored active state.
+- Global Search should favor a reliable composed search-bar structure over fragile icon-overlay compositions.
+- Quick Capture should follow a premium fast-entry approach rather than a verbose assistant-like approach.
+- Example copy and placeholders in shared entry flows should stay general-user friendly and avoid overly personal or user-specific wording.
+
 ### UI v2 Success Standard
 
 A UI v2 surface is successful when:
@@ -1619,6 +1720,8 @@ A UI v2 surface is successful when:
 - forms feel tighter and more deliberate
 - mobile and desktop both feel intentional
 - the result looks cleaner without losing real finance utility
+
+For the current phase, the desktop shell, dashboard, navigation, top bar, global search, and quick capture should be treated as the most current visible reference for the evolving UI v2 baseline.
 
 ## Immediate Priorities
 

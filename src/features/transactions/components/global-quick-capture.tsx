@@ -25,6 +25,7 @@ type CategoryItem = RouterOutputs["categories"]["list"][number];
 type QuickCaptureIntent = "expense" | "income" | "transfer" | null;
 type SupportedEventType = RouterOutputs["transactions"]["list"]["items"][number]["type"];
 
+
 type ParsedQuickCapture = {
   amountMiliunits: number | null;
   categoryId: string | null;
@@ -39,8 +40,8 @@ type ParsedQuickCapture = {
 
 const examplePrompts = [
   "spent 360 on lunch today",
-  "received 2500 from freelance payout yesterday",
-  "transferred 5000 from bdo payroll to maya wallet",
+  "received 2500 from client payment yesterday",
+  "transferred 5000 from checking to wallet",
 ] as const;
 
 function normalizeValue(value: string) {
@@ -362,7 +363,7 @@ export function GlobalQuickCapture() {
       <Button
         type="button"
         variant="outline"
-        className="rounded-full border-border/70 bg-white/82 px-3.5 text-[0.92rem] shadow-[0_18px_40px_-35px_rgba(10,31,34,0.25)] hover:bg-white dark:bg-[#182123] dark:hover:bg-[#1d2729] lg:px-4"
+        className="rounded-full border-border/70 bg-white/84 px-3.5 text-[0.9rem] shadow-[0_18px_40px_-35px_rgba(10,31,34,0.22)] hover:bg-white dark:bg-[#182123] dark:hover:bg-[#1d2729] lg:px-4"
         onClick={() => setOpen(true)}
       >
         <Plus className="size-4" />
@@ -381,95 +382,123 @@ export function GlobalQuickCapture() {
       >
         <DialogContent
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[min(92vw,42rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[92vh] sm:w-auto sm:max-w-[42rem] sm:rounded-[2rem]"
+          className="max-h-[calc(88dvh-env(safe-area-inset-top))] w-[min(92vw,36rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.985),rgba(251,250,246,0.955))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.985),rgba(18,27,29,0.985))] sm:max-h-[92vh] sm:w-auto sm:max-w-[35rem] sm:rounded-[2rem]"
         >
-          <DialogHeader className="border-b border-border/70 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-6 sm:pt-7 sm:pr-16">
+          <DialogHeader className="border-b border-border/70 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pb-5 sm:pt-5.5 sm:pr-16">
             <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+              <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                 Quick capture
               </div>
-              <div className="hidden rounded-full border border-border/70 px-2.5 py-1 text-[0.7rem] font-medium text-muted-foreground sm:inline-flex">
-                Cmd/Ctrl + Shift + K
+              <div className="hidden rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
+                ⌘/Ctrl ⇧ K
               </div>
             </div>
-            <DialogTitle className="pt-2 text-[1.45rem] tracking-tight sm:pt-3 sm:text-[2rem]">
+            <DialogTitle className="pt-2 text-[1.22rem] tracking-tight sm:pt-2.5 sm:text-[1.62rem]">
               Record money in one line
             </DialogTitle>
-            <DialogDescription className="max-w-xl text-[0.93rem] leading-7">
-              Start with a plain sentence and let Veyra shape it into a draft before anything is saved.
+            <DialogDescription className="max-w-xl text-[0.88rem] leading-6 sm:text-[0.9rem]">
+              Type one sentence and Veyra will turn it into a draft before anything is saved.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-7 sm:py-6">
-            <div className="space-y-3 rounded-[1.5rem] border border-border/70 bg-background/78 px-4 py-4 dark:bg-[#162022]">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="space-y-4 px-4 py-4 sm:space-y-4.5 sm:px-6 sm:py-5">
+            <div className="space-y-3">
+              <div className="flex h-12 items-center rounded-[1rem] border-2 border-[#7fb9b6]/85 bg-background px-4 dark:bg-[#141d1f]">
+                <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
                 <Input
                   autoFocus
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Try: spent 360 on lunch today"
+                  placeholder="Describe a transaction in one sentence"
                   disabled={isSubmitting}
-                  className="h-12 rounded-[1.35rem] border-border/80 bg-background pl-11 text-[0.95rem] dark:bg-[#141d1f]"
+                  className="h-auto border-0 bg-transparent px-0 py-0 text-[0.95rem] leading-[1.25] shadow-none placeholder:text-muted-foreground/90 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent"
                 />
-              </div>
-              <p className="hidden text-[0.85rem] leading-6 text-muted-foreground sm:block">
-                Use one sentence with amount + action + context. If something is missing, Veyra only asks for the missing field.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {examplePrompts.map((prompt) => (
-                  <Button
-                    key={prompt}
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="rounded-full text-[0.82rem]"
-                    onClick={() => setInput(prompt)}
-                    disabled={isSubmitting}
-                  >
-                    {prompt}
-                  </Button>
-                ))}
               </div>
             </div>
 
             {input.trim() ? (
               <div className="space-y-4">
-                <div className="rounded-[1.55rem] border border-border/70 bg-background/78 px-4 py-4 dark:bg-[#162022]">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-border/70 px-3 py-1 text-[0.72rem] uppercase tracking-[0.18em] text-muted-foreground">
-                      Parsed draft
-                    </span>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-border/70 px-3 py-1 text-[0.78rem] font-medium">
-                      <IntentIcon className="size-3.5" />
-                      {intentMeta.label}
-                    </span>
-                    {parsed.amountMiliunits ? (
-                      <span className="rounded-full border border-border/70 px-3 py-1 text-[0.78rem] font-medium">
-                        {formatCurrencyMiliunits(parsed.amountMiliunits, "PHP")}
-                      </span>
-                    ) : null}
-                    <span className="rounded-full border border-border/70 px-3 py-1 text-[0.78rem] text-muted-foreground">
-                      {parsed.dateLabel}
-                    </span>
-                    <span className="rounded-full border border-border/70 px-3 py-1 text-[0.78rem] text-muted-foreground">
-                      {parsed.missing.length === 0 ? "Ready to record" : `${parsed.missing.length} field${parsed.missing.length === 1 ? "" : "s"} missing`}
-                    </span>
+                <div className="rounded-[1.25rem] border border-border/70 bg-background/78 px-4 py-4 dark:bg-[#162022]">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex size-10 items-center justify-center rounded-full ${
+                        parsed.intent === "income"
+                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+                          : parsed.intent === "expense"
+                            ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200"
+                            : parsed.intent === "transfer"
+                              ? "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200"
+                              : "bg-muted text-muted-foreground"
+                      }`}>
+                        <IntentIcon className="size-4" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 text-[0.82rem] text-muted-foreground">
+                          <span className="font-medium text-foreground">{intentMeta.label}</span>
+                          <span>{parsed.dateLabel}</span>
+                          {parsed.missing.length === 0 ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[0.72rem] font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
+                              Looks good
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-[1.55rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                          {parsed.amountMiliunits ? formatCurrencyMiliunits(parsed.amountMiliunits, "PHP") : "Amount needed"}
+                        </p>
+                        <p className="mt-1 text-[0.88rem] leading-6 text-muted-foreground">
+                          {parsed.description ?? "Add a clearer description so the draft can be prepared."}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="mt-3 text-[1.02rem] font-semibold tracking-tight">
-                    {parsed.description ?? "We need a bit more detail"}
-                  </p>
-                  <p className="mt-1 text-[0.9rem] leading-6 text-muted-foreground">
-                    {parsed.intent === "transfer"
-                      ? "Transfers need both the source and destination account before they can be recorded."
-                      : "If the account is unclear, pick it below before saving."}
-                  </p>
+
+                  <div className="mt-4 space-y-0 border-t border-border/70">
+                    {parsed.intent === "transfer" ? (
+                      <>
+                        <div className="flex items-center justify-between gap-3 py-3 text-[0.84rem]">
+                          <span className="text-muted-foreground">From</span>
+                          <span className="font-medium text-foreground">
+                            {accounts.find((account) => account.id === selectedSourceAccountId)?.name ?? "Choose source account"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 border-t border-border/70 py-3 text-[0.84rem]">
+                          <span className="text-muted-foreground">To</span>
+                          <span className="font-medium text-foreground">
+                            {accounts.find((account) => account.id === selectedDestinationAccountId)?.name ?? "Choose destination account"}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between gap-3 py-3 text-[0.84rem]">
+                          <span className="text-muted-foreground">Account</span>
+                          <span className="font-medium text-foreground">
+                            {accounts.find((account) => account.id === selectedAccountId)?.name ?? "Choose account"}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 border-t border-border/70 py-3 text-[0.84rem]">
+                          <span className="text-muted-foreground">Category</span>
+                          <span className="font-medium text-foreground">
+                            {categories.find((category) => category.id === selectedCategoryId)?.name ?? "No category yet"}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                    <div className="flex items-center justify-between gap-3 border-t border-border/70 py-3 text-[0.84rem]">
+                      <span className="text-muted-foreground">Status</span>
+                      <span className="font-medium text-foreground">
+                        {parsed.missing.length === 0
+                          ? "Ready to record"
+                          : `${parsed.missing.length} field${parsed.missing.length === 1 ? "" : "s"} missing`}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {(parsed.intent === "expense" || parsed.intent === "income") && (
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-3 rounded-[1.45rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
-                      <div className="flex items-center gap-2 text-[0.92rem] font-medium text-foreground">
+                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                      <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
                         <Landmark className="size-4 text-primary" />
                         Which account did you use?
                       </div>
@@ -489,7 +518,7 @@ export function GlobalQuickCapture() {
                         ))}
                       </div>
                       <Select value={selectedAccountId} onValueChange={setSelectedAccountId} disabled={isSubmitting}>
-                        <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
+                        <SelectTrigger className="h-11 rounded-[1rem] border-border/80 bg-background px-4">
                           <SelectValue placeholder="Choose account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -502,8 +531,8 @@ export function GlobalQuickCapture() {
                       </Select>
                     </div>
 
-                    <div className="space-y-3 rounded-[1.45rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
-                      <div className="flex items-center gap-2 text-[0.92rem] font-medium text-foreground">
+                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                      <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
                         <Wallet className="size-4 text-primary" />
                         Category
                       </div>
@@ -523,7 +552,7 @@ export function GlobalQuickCapture() {
                         ))}
                       </div>
                       <Select value={selectedCategoryId || "none"} onValueChange={(value) => setSelectedCategoryId(value === "none" ? "" : value)} disabled={isSubmitting}>
-                        <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
+                        <SelectTrigger className="h-11 rounded-[1rem] border-border/80 bg-background px-4">
                           <SelectValue placeholder="No category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -541,13 +570,13 @@ export function GlobalQuickCapture() {
 
                 {parsed.intent === "transfer" && (
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-3 rounded-[1.45rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
-                      <div className="flex items-center gap-2 text-[0.92rem] font-medium text-foreground">
+                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                      <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
                         <Wallet className="size-4 text-primary" />
                         From
                       </div>
                       <Select value={selectedSourceAccountId} onValueChange={setSelectedSourceAccountId} disabled={isSubmitting}>
-                        <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
+                        <SelectTrigger className="h-11 rounded-[1rem] border-border/80 bg-background px-4">
                           <SelectValue placeholder="Source account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -559,13 +588,13 @@ export function GlobalQuickCapture() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-3 rounded-[1.45rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
-                      <div className="flex items-center gap-2 text-[0.92rem] font-medium text-foreground">
+                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                      <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
                         <ArrowRightLeft className="size-4 text-primary" />
                         To
                       </div>
                       <Select value={selectedDestinationAccountId} onValueChange={setSelectedDestinationAccountId} disabled={isSubmitting}>
-                        <SelectTrigger className="h-11 rounded-[1.2rem] border-border/80 bg-background px-4">
+                        <SelectTrigger className="h-11 rounded-[1rem] border-border/80 bg-background px-4">
                           <SelectValue placeholder="Destination account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -581,38 +610,41 @@ export function GlobalQuickCapture() {
                 )}
 
                 {!parsed.intent ? (
-                  <div className="rounded-[1.4rem] border border-dashed border-border/70 bg-background/76 px-4 py-4 text-[0.9rem] leading-6 text-muted-foreground dark:bg-[#162022]">
+                  <div className="rounded-[1.1rem] border border-dashed border-border/70 bg-background/76 px-4 py-4 text-[0.86rem] leading-6 text-muted-foreground dark:bg-[#162022]">
                     Start with an action like <span className="font-medium text-foreground">spent</span>, <span className="font-medium text-foreground">received</span>, or <span className="font-medium text-foreground">transferred</span>.
                   </div>
                 ) : null}
               </div>
             ) : (
-              <div className="hidden gap-3 sm:grid sm:grid-cols-3">
-                <div className="rounded-[1.35rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
-                  <p className="text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground">Expense</p>
-                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">spent 360 on lunch today</p>
-                  <p className="mt-1 text-[0.84rem] leading-6 text-muted-foreground">Creates an expense draft and asks for the account if it is still unclear.</p>
-                </div>
-                <div className="rounded-[1.35rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
-                  <p className="text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground">Income</p>
-                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">received 2500 from freelance payout yesterday</p>
-                  <p className="mt-1 text-[0.84rem] leading-6 text-muted-foreground">Keeps the capture fast and only asks where the money landed.</p>
-                </div>
-                <div className="rounded-[1.35rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
-                  <p className="text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground">Transfer</p>
-                  <p className="mt-2 text-[0.96rem] font-semibold tracking-tight">transferred 5000 from bdo payroll to maya wallet</p>
-                  <p className="mt-1 text-[0.84rem] leading-6 text-muted-foreground">Matches both sides of the movement, then asks only if one account is missing.</p>
+              <div className="rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                <p className="text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                  Example entries
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {examplePrompts.map((prompt) => (
+                    <Button
+                      key={`empty-${prompt}`}
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full border-border/70 bg-background px-3 text-[0.8rem] font-normal shadow-none"
+                      onClick={() => setInput(prompt)}
+                      disabled={isSubmitting}
+                    >
+                      {prompt}
+                    </Button>
+                  ))}
                 </div>
               </div>
             )}
           </div>
 
-          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 bg-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-7 sm:py-5">
+          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 bg-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:py-4">
             <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 w-full rounded-full px-6 sm:min-w-[10rem] sm:w-auto"
+                className="h-10.5 w-full rounded-full px-6 sm:min-w-[9rem] sm:w-auto"
                 onClick={() => setOpen(false)}
                 disabled={isSubmitting}
               >
@@ -620,7 +652,7 @@ export function GlobalQuickCapture() {
               </Button>
               <Button
                 type="button"
-                className="h-11 w-full rounded-full bg-[#17393c] px-6 text-[0.96rem] text-white hover:bg-[#1d4a4d] hover:text-white disabled:opacity-65 disabled:text-white/85 sm:min-w-[13rem] sm:w-auto"
+                className="h-10.5 w-full rounded-full bg-[#17393c] px-6 text-[0.94rem] text-white hover:bg-[#1d4a4d] hover:text-white disabled:opacity-65 disabled:text-white/85 sm:min-w-[12.5rem] sm:w-auto"
                 onClick={submit}
                 disabled={!canSubmit || isSubmitting}
               >

@@ -338,6 +338,27 @@ const fallbackTonePalette = [
   "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-100",
 ] as const;
 
+const institutionLogoById: Partial<Record<InstitutionOption["id"], string>> = {
+  bdo: "/bdo/bdo.jpg",
+  bpi: "/bpi/bpi.png",
+  unionbank: "/unionbank/unionbank.jpg",
+  metrobank: "/metrobank/metrobank.jpg",
+  landbank: "/landbank/landbank.png",
+  rcbc: "/rcbc/rcbc.png",
+  "security-bank": "/security-bank/security-bank.png",
+  chinabank: "/chinabank/chinabank.png",
+  eastwest: "/eastwest/eastwest.jpg",
+  pnb: "/pnb/pnb.png",
+  maya: "/digital-banks/maya.png",
+  gcash: "/wallets-bnpl/gcash.jpg",
+  gotyme: "/digital-banks/gotyme.png",
+  seabank: "/digital-banks/seabank.png",
+  cimb: "/digital-banks/cimb.png",
+  tonik: "/digital-banks/tonik.png",
+  hsbc: "/hsbc/hsbc.png",
+  "american-express": "/amex/amex.svg",
+};
+
 function normalizeInstitutionValue(value: string) {
   return value
     .trim()
@@ -411,6 +432,7 @@ export function getInstitutionDisplay(value?: string | null) {
     return {
       label: matched.label,
       initials: matched.initials,
+      logoPath: institutionLogoById[matched.id] ?? null,
       tone: matched.tone,
     };
   }
@@ -421,6 +443,7 @@ export function getInstitutionDisplay(value?: string | null) {
   return {
     label: fallback,
     initials: initials || "VA",
+    logoPath: null,
     tone: resolveFallbackTone(fallback),
   };
 }

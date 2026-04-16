@@ -71,7 +71,7 @@ function NavigationList({ onNavigate }: NavigationListProps) {
   const pathname = usePathname();
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       {items.map((item) => {
         const Icon = item.icon;
         const isActive =
@@ -82,15 +82,15 @@ function NavigationList({ onNavigate }: NavigationListProps) {
           return (
             <div
               key={item.label}
-              className="flex items-center justify-between rounded-2xl border border-transparent px-3 py-3 text-sm text-muted-foreground"
+              className="flex items-center justify-between rounded-[1.1rem] border border-transparent px-3 py-2.5 text-[0.95rem] text-muted-foreground"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-xl bg-muted/70 text-muted-foreground">
-                  <Icon className="size-4" />
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-8.5 items-center justify-center rounded-[0.95rem] bg-muted/65 text-muted-foreground">
+                  <Icon className="size-[0.95rem]" />
                 </div>
                 <span>{item.label}</span>
               </div>
-              <span className="rounded-full border border-border/70 px-2 py-0.5 text-[11px] uppercase tracking-[0.18em]">
+              <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]">
                 Soon
               </span>
             </div>
@@ -102,20 +102,20 @@ function NavigationList({ onNavigate }: NavigationListProps) {
             key={item.label}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm transition ${
+            className={`flex items-center gap-2.5 rounded-[1.1rem] px-3 py-2.5 text-[0.95rem] font-medium transition-colors ${
               isActive
-                ? "bg-[#17393c] text-white shadow-[0_18px_40px_-28px_rgba(23,57,60,0.9)] dark:bg-[#20474a]"
-                : "text-foreground hover:bg-muted/70"
+                ? "bg-[#17393c] text-white shadow-[0_16px_36px_-30px_rgba(23,57,60,0.82)] dark:bg-[#20474a]"
+                : "text-foreground hover:bg-muted/65"
             }`}
           >
             <div
-              className={`flex size-9 items-center justify-center rounded-xl ${
-                isActive ? "bg-white/12 text-white" : "bg-primary/10 text-primary"
+              className={`flex size-8.5 items-center justify-center rounded-[0.95rem] ${
+                isActive ? "bg-white/12 text-white" : "bg-foreground/[0.045] text-muted-foreground"
               }`}
             >
-              <Icon className="size-4" />
+              <Icon className="size-[0.95rem]" />
             </div>
-            <span>{item.label}</span>
+            <span className="tracking-[-0.01em]">{item.label}</span>
           </Link>
         );
       })}
@@ -136,7 +136,7 @@ export function MobileAppNavigation() {
         <Button
           variant="outline"
           size="icon"
-          className="size-10 rounded-full border-border/70 bg-white/92 dark:bg-[#182123]"
+          className="size-10 rounded-full border-border/70 bg-white/92 shadow-[0_16px_36px_-30px_rgba(10,31,34,0.22)] dark:bg-[#182123] dark:shadow-[0_16px_36px_-30px_rgba(0,0,0,0.34)]"
         >
           <Menu className="size-5" />
           <span className="sr-only">Open navigation</span>
@@ -147,14 +147,14 @@ export function MobileAppNavigation() {
         className="w-[86vw] max-w-sm border-r border-border/70 bg-background/95 p-0 dark:bg-[#11191b]/95"
       >
         <div className="flex h-full flex-col">
-          <div className="border-b border-border/70 px-6 py-6">
+          <div className="border-b border-border/70 px-6 py-5.5">
             <VeyraWordmark
               iconClassName="size-10 dark:brightness-0 dark:invert"
-              textClassName="text-[1.55rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
+              textClassName="text-[1.5rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
             />
-            <p className="mt-2 text-sm text-muted-foreground">Protected workspace</p>
+            <p className="mt-2 text-[0.92rem] text-muted-foreground">Protected workspace</p>
           </div>
-          <div className="flex-1 px-4 py-5">
+          <div className="flex-1 px-4 py-4.5">
             <NavigationList onNavigate={() => setOpen(false)} />
           </div>
         </div>
