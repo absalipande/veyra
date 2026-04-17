@@ -1635,7 +1635,6 @@ The following surfaces already have UI v2 direction and should be treated as ref
 - Quick Capture desktop view
 - Quick Capture mobile view
 
-Current implementation status from the active UI v2 pass:
 - Desktop app shell has been refined and should now be treated as part of the locked UI v2 baseline.
 - Desktop dashboard has completed its current UI v2 creation pass and should now be treated as the active desktop dashboard baseline, while still remaining open to later polish.
 - Desktop navigation has been tightened to better match the shell and dashboard tone.
@@ -1643,6 +1642,7 @@ Current implementation status from the active UI v2 pass:
 - Global Search desktop modal has completed its current UI v2 creation pass and should now be treated as the active desktop search baseline, while still remaining open to later polish.
 - Quick Capture desktop modal has completed its current UI v2 creation pass and should now be treated as the active desktop quick-capture baseline, while still remaining open to later polish.
 - accounts v2: active implementation in progress; hero, list structure, and institution-logo integration have landed, while modal polish is still in progress
+- transactions v2: active implementation largely in place; desktop hero, quick-action surface, ledger table direction, help modal, and event-composer modal refinements have landed, with only optional polish remaining
 
 These should be used as alignment references for:
 - spacing rhythm
@@ -1676,7 +1676,8 @@ Current status:
 - desktop top bar: in active UI v2 baseline
 - desktop global search: current UI v2 creation pass completed
 - desktop quick capture: current UI v2 creation pass completed
-- accounts v2: documented next and ready for implementation
+- accounts v2: active implementation in progress and nearing visual polish completion
+- transactions v2: active implementation in progress and now functionally aligned with the current UI v2 direction
 
 3. Core feature workspaces
 - accounts
@@ -1713,6 +1714,8 @@ Current UI v2 implementation notes from the active pass:
 - Quick Capture should follow a premium fast-entry approach rather than a verbose assistant-like approach.
 - Example copy and placeholders in shared entry flows should stay general-user friendly and avoid overly personal or user-specific wording.
 - Accounts UI v2 is now in active implementation and should be treated as a workspace redesign plus consistency pass, not as a server or schema rewrite.
+- Transactions UI v2 is now in active implementation and should be treated as a workspace redesign plus consistency pass, not as a server or schema rewrite.
+- Transactions hero, ledger toolbar, ledger table density, help flows, and composer modal structure should now be treated as the active baseline, while remaining open to small polish passes.
 - Accounts hero should stay compact, operational, and calmer than the dashboard hero, using restrained trajectory-style motion/atmosphere instead of a promo-style banner treatment.
 - Accounts add/edit modal is still not final; keep refining it toward a tighter, more minimalist setup flow with cleaner hierarchy and fewer competing surfaces.
 - Accounts and credit/liability lists should use the shared institution display system, including Logo.dev-backed logos where available and initials/tone fallbacks when not.
@@ -1851,10 +1854,10 @@ Implement Accounts UI v2 in this order:
 
 The current architecture direction should continue like this:
 
-1. Continue polishing Accounts UI v2, especially the add/edit modal hierarchy and compactness.
-2. Keep the accounts feature stable under `src/features/accounts` while the remaining UI polish lands.
+1. Finish the remaining Accounts UI v2 polish, especially the add/edit modal hierarchy and compactness.
+2. Treat Transactions UI v2 as functionally established and limit further work there to targeted polish only.
 3. Keep the shared institution display system as the source of truth for account avatars/logos.
-4. Apply the same feature-first pattern to transactions next.
+4. Continue applying the same feature-first UI v2 pattern to budgets, categories, loans, and settings.
 5. Keep tightening copy, divider usage, and visual restraint as new screens are added.
 
 ## Final Standard

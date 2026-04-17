@@ -4,11 +4,13 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import {
   ArrowRightLeft,
+  Clock3,
   CreditCard,
   HandCoins,
   Landmark,
   Pencil,
   Search,
+  SlidersHorizontal,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -17,7 +19,10 @@ import {
 import { toast } from "sonner";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
-import { formatDateWithPreferences, resolveDatePreferences } from "@/features/settings/lib/date-format";
+import {
+  formatDateWithPreferences,
+  resolveDatePreferences,
+} from "@/features/settings/lib/date-format";
 import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -155,6 +160,23 @@ function getEventTypeLabel(type: TransactionEventType) {
   return eventTypeOptions.find((option) => option.value === type)?.label ?? type;
 }
 
+function getDefaultDescriptionForType(type: TransactionEventType) {
+  switch (type) {
+    case "income":
+      return "Income";
+    case "expense":
+      return "Expense";
+    case "transfer":
+      return "Transfer";
+    case "credit_payment":
+      return "Credit card payment";
+    case "loan_disbursement":
+      return "Loan disbursement";
+    default:
+      return "";
+  }
+}
+
 function withIndefiniteArticle(label: string) {
   const normalized = label.trim().toLowerCase();
   if (!normalized) return "";
@@ -204,11 +226,11 @@ function getPrimaryAmount(event: TransactionEventItem) {
       return Math.abs(event.entries.find((entry) => entry.role === "source")?.amountDelta ?? 0);
     case "credit_payment":
       return Math.abs(
-        event.entries.find((entry) => entry.role === "payment_account")?.amountDelta ?? 0
+        event.entries.find((entry) => entry.role === "payment_account")?.amountDelta ?? 0,
       );
     case "loan_disbursement":
       return Math.abs(
-        event.entries.find((entry) => entry.role === "disbursement_account")?.amountDelta ?? 0
+        event.entries.find((entry) => entry.role === "disbursement_account")?.amountDelta ?? 0,
       );
     default:
       return 0;
@@ -232,7 +254,7 @@ function getEventAccountsSummary(event: TransactionEventItem) {
       return event.feeAmount > 0
         ? `${source.name} → ${destination.name} · Fee ${formatCurrencyMiliunits(
             event.feeAmount,
-            event.currency
+            event.currency,
           )}`
         : `${source.name} → ${destination.name}`;
     }
@@ -246,13 +268,15 @@ function getEventAccountsSummary(event: TransactionEventItem) {
       return event.feeAmount > 0
         ? `${source.name} → ${credit.name} · Fee ${formatCurrencyMiliunits(
             event.feeAmount,
-            event.currency
+            event.currency,
           )}`
         : `${source.name} → ${credit.name}`;
     }
     case "loan_disbursement": {
       const loan = event.entries.find((entry) => entry.role === "loan_account")?.account;
-      const destination = event.entries.find((entry) => entry.role === "disbursement_account")?.account;
+      const destination = event.entries.find(
+        (entry) => entry.role === "disbursement_account",
+      )?.account;
       return loan && destination
         ? `${loan.name} → ${destination.name}`
         : "Disbursement accounts missing";
@@ -277,7 +301,7 @@ function EventTypeButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.25 text-[0.8rem] transition sm:gap-2 sm:px-3 sm:py-1.5 sm:text-[0.9rem] ${
+      className={`flex items-center gap-1.5 rounded-xl border px-2.5 py-1.25 text-[0.8rem] transition sm:gap-2 sm:px-3.25 sm:py-1.6 sm:text-[0.9rem] ${
         isActive
           ? "border-[#17393c]/35 bg-[#17393c]/12 text-[#17393c] dark:border-primary/35 dark:bg-primary/12 dark:text-primary"
           : "border-border/70 bg-[#fbfaf6]/90 text-foreground/85 hover:bg-muted/50 dark:bg-[#162022]/90 dark:text-foreground/90"
@@ -302,11 +326,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const settingsQuery = trpc.settings.get.useQuery();
 
   const [open, setOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [search, setSearch] = useState(initialQuery);
   const [typeFilter, setTypeFilter] = useState<"all" | TransactionEventType>("all");
   const [page, setPage] = useState(1);
   const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false,
   );
   const [draft, setDraft] = useState<EventDraft>(initialDraft);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -383,26 +408,30 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   });
 
   const liquidAccounts = useMemo(
-    () => (accountsQuery.data ?? []).filter((account) => account.type === "cash" || account.type === "wallet"),
-    [accountsQuery.data]
+    () =>
+      (accountsQuery.data ?? []).filter(
+        (account) => account.type === "cash" || account.type === "wallet",
+      ),
+    [accountsQuery.data],
   );
 
   const creditAccounts = useMemo(
     () => (accountsQuery.data ?? []).filter((account) => account.type === "credit"),
-    [accountsQuery.data]
+    [accountsQuery.data],
   );
 
   const spendableAccounts = useMemo(
     () =>
       (accountsQuery.data ?? []).filter(
-        (account) => account.type === "cash" || account.type === "wallet" || account.type === "credit"
+        (account) =>
+          account.type === "cash" || account.type === "wallet" || account.type === "credit",
       ),
-    [accountsQuery.data]
+    [accountsQuery.data],
   );
 
   const loanAccounts = useMemo(
     () => (accountsQuery.data ?? []).filter((account) => account.type === "loan"),
-    [accountsQuery.data]
+    [accountsQuery.data],
   );
 
   const activeBudgetOptions = useMemo(
@@ -410,7 +439,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       (budgetsQuery.data ?? [])
         .filter((budget) => budget.isActive)
         .sort((a: BudgetItem, b: BudgetItem) => a.name.localeCompare(b.name)),
-    [budgetsQuery.data]
+    [budgetsQuery.data],
   );
 
   const categoryOptions = useMemo(
@@ -418,7 +447,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       (categoriesQuery.data ?? [])
         .filter((category) => category.kind === draft.type)
         .sort((a: CategoryItem, b: CategoryItem) => a.name.localeCompare(b.name)),
-    [categoriesQuery.data, draft.type]
+    [categoriesQuery.data, draft.type],
   );
 
   const visibleEvents = useMemo(() => eventsQuery.data?.items ?? [], [eventsQuery.data]);
@@ -431,32 +460,20 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
         {
           label: "Events logged",
           value: String(summaryQuery.data.totalEvents),
-          detail: "All recorded money movements in your workspace",
+          detail: "All recorded money movements",
           icon: Landmark,
         },
         {
-          label: "Income and expense",
+          label: "Income vs expense",
           value: String(summaryQuery.data.incomeEvents + summaryQuery.data.expenseEvents),
           detail: `${summaryQuery.data.incomeEvents} income · ${summaryQuery.data.expenseEvents} expense`,
-          icon: Wallet,
+          icon: TrendingUp,
         },
         {
-          label: "Internal movement",
+          label: "Transfers & payments",
           value: String(summaryQuery.data.transferEvents + summaryQuery.data.creditPaymentEvents),
-          detail: `${summaryQuery.data.transferEvents} transfer · ${summaryQuery.data.creditPaymentEvents} credit payment`,
+          detail: "Internal transfers and credit payments",
           icon: ArrowRightLeft,
-        },
-        {
-          label: "Loan activity",
-          value: String(summaryQuery.data.loanDisbursementEvents),
-          detail: "Loan disbursements recorded so far",
-          icon: HandCoins,
-        },
-        {
-          label: "Fees tracked",
-          value: formatCurrencyMiliunits(summaryQuery.data.totalTransferFees, "PHP"),
-          detail: "Transfer and credit payment fees recorded so far",
-          icon: CreditCard,
         },
       ]
     : [];
@@ -567,7 +584,8 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
         categoryId: draft.categoryId !== "none" ? draft.categoryId : undefined,
         date: draft.date,
         description: normalizedDescription,
-        budgetId: draft.type === "expense" && draft.budgetId !== "none" ? draft.budgetId : undefined,
+        budgetId:
+          draft.type === "expense" && draft.budgetId !== "none" ? draft.budgetId : undefined,
         notes: draft.notes,
       };
 
@@ -647,16 +665,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     setDraft({
       ...initialDraft,
       type,
-      description:
-        type === "income"
-          ? "Income"
-          : type === "expense"
-            ? "Expense"
-            : type === "transfer"
-              ? "Transfer"
-              : type === "credit_payment"
-                ? "Credit card payment"
-                : "Loan disbursement",
+      description: getDefaultDescriptionForType(type),
     });
     setOpen(true);
   };
@@ -673,220 +682,308 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
   return (
     <div className="space-y-6 lg:space-y-7">
-      <section className="overflow-hidden rounded-[1.8rem] border border-white/80 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_28px_95px_-72px_rgba(10,31,34,0.82)]">
-        <div className="grid gap-4 px-4 py-4 sm:px-6 sm:py-5 xl:grid-cols-[minmax(0,1fr)_300px] xl:items-center">
-          <div className="max-w-3xl">
-            <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[0.64rem] font-medium uppercase tracking-[0.22em] text-white/78">
-              Transactions workspace
-            </div>
-            <h1 className="mt-2.5 max-w-[21ch] text-[1.55rem] font-semibold leading-[1.08] tracking-tight text-white sm:mt-3 sm:text-[2.2rem] sm:leading-[1.02]">
-              A cleaner ledger for income, spending, transfers, and debt movement.
-            </h1>
-            <p className="mt-2 max-w-[34rem] text-[0.9rem] leading-6 text-white/72 sm:mt-2.5 sm:text-[0.95rem] sm:leading-7">
-              Track real money events without turning the workspace into a ledger wall.
-            </p>
-          </div>
-
-          <div className="hidden space-y-2.5 xl:block">
-            <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
-              <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
-                Total events
-              </p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight">
-                {summaryQuery.data?.totalEvents ?? 0}
-              </p>
-            </div>
-            <div className="rounded-[1.25rem] border border-white/12 bg-white/10 px-4 py-3 backdrop-blur">
-              <p className="text-[0.68rem] font-medium uppercase tracking-[0.24em] text-white/60">
-                Transfers and payments
-              </p>
-              <p className="mt-2 text-2xl font-semibold tracking-tight">
-                {heroTransferAndPaymentCount}
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 xl:hidden">
-            <div className="rounded-[1.1rem] border border-white/12 bg-white/10 px-3 py-2.5 backdrop-blur">
-              <p className="text-[0.56rem] font-medium uppercase tracking-[0.16em] leading-tight text-white/60">
-                Total events
-              </p>
-              <p className="mt-1 text-[1.35rem] font-semibold leading-none tracking-tight">
-                {summaryQuery.data?.totalEvents ?? 0}
-              </p>
-            </div>
-            <div className="rounded-[1.1rem] border border-white/12 bg-white/10 px-3 py-2.5 backdrop-blur">
-              <p className="text-[0.56rem] font-medium uppercase tracking-[0.16em] leading-tight text-white/60">
-                Transfers and payments
-              </p>
-              <p className="mt-1 text-[1.35rem] font-semibold leading-none tracking-tight">
-                {heroTransferAndPaymentCount}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div
-          ref={summaryScrollerRef}
-          className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        >
-          {summaryCards.map((card) => {
-            const Icon = card.icon;
-
-            return (
-              <div
-                key={card.label}
-                data-summary-slide
-                className="min-w-0 shrink-0 basis-full snap-center"
-              >
-                <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]">
-                  <CardContent className="p-4.5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                          {card.label}
-                        </p>
-                        <p className="mt-2.5 text-[1.75rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                          {card.value}
-                        </p>
-                        <p className="mt-2 text-[0.9rem] leading-6 text-muted-foreground">
-                          {card.detail}
-                        </p>
-                      </div>
-                      <div className="flex size-9 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
-                        <Icon className="size-4.5" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })}
-        </div>
-
-        {summaryCards.length > 1 ? (
-          <div className="flex items-center justify-between md:hidden">
-            <div className="flex items-center gap-2">
-              {summaryCards.map((card, index) => (
-                <button
-                  key={card.label}
-                  type="button"
-                  aria-label={`Go to ${card.label}`}
-                  aria-pressed={activeSummaryIndex === index}
-                  className={`h-2.5 rounded-full transition-all ${
-                    activeSummaryIndex === index ? "w-6 bg-primary" : "w-2.5 bg-border"
-                  }`}
-                  onClick={() => scrollSummaryCards(index)}
-                />
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                className="rounded-full"
-                onClick={() => scrollSummaryCards(Math.max(0, activeSummaryIndex - 1))}
-                disabled={activeSummaryIndex === 0}
-              >
-                <span aria-hidden="true">‹</span>
-                <span className="sr-only">Previous summary card</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-sm"
-                className="rounded-full"
-                onClick={() =>
-                  scrollSummaryCards(Math.min(summaryCards.length - 1, activeSummaryIndex + 1))
-                }
-                disabled={activeSummaryIndex === summaryCards.length - 1}
-              >
-                <span aria-hidden="true">›</span>
-                <span className="sr-only">Next summary card</span>
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
-        <div className="hidden gap-4 md:grid md:grid-cols-2 xl:grid-cols-5">
-          {summaryCards.map((card) => {
-            const Icon = card.icon;
-
-            return (
-              <Card
-                key={card.label}
-                className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_60px_-45px_rgba(0,0,0,0.62)]"
-              >
-                <CardContent className="p-4.5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                        {card.label}
-                      </p>
-                      <p className="mt-2.5 text-[1.75rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                        {card.value}
-                      </p>
-                      <p className="mt-2 text-[0.9rem] leading-6 text-muted-foreground">
-                        {card.detail}
-                      </p>
-                    </div>
-                    <div className="flex size-9 items-center justify-center rounded-2xl border border-border/70 bg-[#fbfaf6] text-[#17393c] dark:bg-[#162022] dark:text-primary">
-                      <Icon className="size-4.5" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
-
       <section>
-        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
-          <CardHeader className="gap-5 px-5 py-5 sm:px-6 sm:py-6">
-            <div className="space-y-1.5">
-              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground">
-                Record a money event
-              </CardTitle>
-              <CardDescription className="max-w-3xl text-[0.96rem] leading-7">
-                Start with the user intent, then let Veyra apply the right account effects underneath.
-              </CardDescription>
+        <Card className="rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
+          <CardContent className="space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
+                Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
+                onClick={() => openComposer("expense")}
+              >
+                Record event
+              </Button>
             </div>
 
-            <div className="flex flex-wrap gap-2.5">
-              {eventTypeOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  type="button"
-                  variant="outline"
-                  className="rounded-full bg-[#fbfaf6] px-3.5 text-[0.92rem] dark:bg-[#162022] sm:px-4 sm:text-sm"
-                  onClick={() => openComposer(option.value)}
-                >
-                  <option.icon className="size-4" />
-                  {option.label}
-                </Button>
-              ))}
+            <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
+              <div className="space-y-2.5 md:space-y-3 md:pr-7">
+                <h2 className="text-[0.98rem] font-semibold tracking-tight text-white/95 md:text-[1.08rem] lg:text-[1.16rem]">
+                  Ledger posture
+                </h2>
+                <div className="flex items-center gap-2 text-[1.06rem] font-semibold leading-none tracking-tight text-white md:text-[1.34rem] lg:text-[1.48rem]">
+                  <span className="size-2.5 rounded-full bg-emerald-400 md:size-3" />
+                  Transaction flow visible
+                </div>
+                <p className="max-w-[30ch] text-[0.9rem] leading-6 text-white/74 md:max-w-[34ch] md:text-[0.93rem] md:leading-7">
+                  Track income, spending, transfers, and credit payments in one cleaner ledger view.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-0 border-t border-white/15 pt-3.5 md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
+                <div className="space-y-2.5 pr-4 md:pr-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[0.82rem] text-white/70 md:text-[0.88rem]">Events logged</p>
+                    <span className="flex size-8.5 items-center justify-center rounded-full bg-emerald-100/95 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 md:size-9">
+                      <Landmark className="size-3.5 md:size-[0.95rem]" />
+                    </span>
+                  </div>
+                  <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
+                    {summaryQuery.data?.totalEvents ?? 0}
+                  </p>
+                  <p className="text-[0.78rem] leading-5.5 text-white/64 md:text-[0.82rem] md:leading-6">
+                    {summaryQuery.data?.incomeEvents ?? 0} income ·{" "}
+                    {summaryQuery.data?.expenseEvents ?? 0} expense
+                  </p>
+                </div>
+
+                <div className="space-y-2.5 border-l border-white/15 pl-4 pr-4 md:pr-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[0.82rem] text-white/70 md:text-[0.88rem]">
+                      Transfers & payments
+                    </p>
+                    <span className="flex size-8.5 items-center justify-center rounded-full bg-sky-100/95 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200 md:size-9">
+                      <ArrowRightLeft className="size-3.5 md:size-[0.95rem]" />
+                    </span>
+                  </div>
+                  <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
+                    {heroTransferAndPaymentCount}
+                  </p>
+                  <p className="text-[0.78rem] leading-5.5 text-white/64 md:text-[0.82rem] md:leading-6">
+                    {summaryQuery.data?.transferEvents ?? 0} transfers ·{" "}
+                    {summaryQuery.data?.creditPaymentEvents ?? 0} payments
+                  </p>
+                </div>
+              </div>
+
+              <div className="hidden space-y-2 border-t border-white/15 pt-4 md:block md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
+                <div className="flex items-center gap-2 text-[0.82rem] text-white/70">
+                  <Clock3 className="size-4" />
+                  Latest activity
+                </div>
+                <p className="line-clamp-2 text-[0.95rem] font-semibold tracking-tight text-white lg:text-[0.99rem]">
+                  {visibleEvents[0]?.description ?? "No activity yet"}
+                </p>
+                <p className="text-[0.82rem] leading-6 text-white/70">
+                  {visibleEvents[0]
+                    ? `${formatEventDate(visibleEvents[0].occurredAt)} · ${getEventTypeLabel(visibleEvents[0].type)}`
+                    : "Record your first event in transactions"}
+                </p>
+              </div>
             </div>
-          </CardHeader>
+          </CardContent>
         </Card>
       </section>
 
       <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader className="gap-4 px-5 py-5 sm:px-6 sm:py-6">
-            <div className="space-y-1.5">
-              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground">
-                Ledger
-              </CardTitle>
-              <CardDescription className="max-w-3xl text-[0.96rem] leading-7">
-                Review the event stream before we layer in calendar, import, and bulk workflows.
-              </CardDescription>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-1.5">
+                <CardTitle className="text-[1.28rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.4rem]">
+                  Record a money event
+                </CardTitle>
+                <CardDescription className="max-w-2xl text-[0.9rem] leading-6 sm:text-[0.94rem] sm:leading-7">
+                  Start with the user intent, then let Veyra apply the right account effects
+                  underneath.
+                </CardDescription>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="hidden rounded-full bg-[#fbfaf6] px-4 text-[0.88rem] dark:bg-[#162022] lg:inline-flex"
+                onClick={() => setIsHelpOpen(true)}
+              >
+                Need help?
+              </Button>
             </div>
 
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_220px]">
+            <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+              {eventTypeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => openComposer(option.value)}
+                  className="flex items-center justify-between rounded-[1rem] border border-border/70 bg-[#fbfaf6] px-4 py-3 text-left transition hover:bg-muted/50 dark:bg-[#162022]"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex size-8.5 items-center justify-center rounded-full bg-white text-[#17393c] dark:bg-[#203032] dark:text-primary">
+                      <option.icon className="size-4" />
+                    </div>
+                    <div>
+                      <p className="text-[0.92rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                        {option.label}
+                      </p>
+                      <p className="mt-0.5 text-[0.76rem] leading-5 text-muted-foreground">
+                        {option.value === "income"
+                          ? "Money coming in"
+                          : option.value === "expense"
+                            ? "Money going out"
+                            : option.value === "transfer"
+                              ? "Move between accounts"
+                              : "Pay a credit account"}
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRightLeft className="size-4 shrink-0 text-muted-foreground opacity-0" />
+                  <span className="text-muted-foreground">›</span>
+                </button>
+              ))}
+            </div>
+          </CardHeader>
+        </Card>
+      </section>
+
+      <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[44rem] rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:rounded-[1.6rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4">
+          <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
+            <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+              Event guide
+            </div>
+            <DialogTitle className="pt-2 text-[1.15rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.7rem]">
+              Which event type should you record?
+            </DialogTitle>
+            <DialogDescription className="max-w-2xl text-[0.84rem] leading-6 text-muted-foreground sm:text-[0.95rem] sm:leading-7">
+              Pick the event that matches what actually happened in real money movement. Veyra then
+              applies the correct account effects underneath.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 px-5 py-4 sm:space-y-4 sm:px-7 sm:py-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="rounded-[1rem] border border-border/70 bg-background/50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
+                    <TrendingUp className="size-4" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                      Income
+                    </p>
+                    <p className="text-[0.82rem] leading-6 text-muted-foreground">
+                      Use this when money comes into one bank or wallet account.
+                    </p>
+                    <p className="text-[0.76rem] leading-5 text-muted-foreground">
+                      Examples: salary, allowance, refunds, reimbursements, incoming payments.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1rem] border border-border/70 bg-background/50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-9 items-center justify-center rounded-full bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                    <TrendingDown className="size-4" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                      Expense
+                    </p>
+                    <p className="text-[0.82rem] leading-6 text-muted-foreground">
+                      Use this when money leaves a bank, wallet, or credit account for spending.
+                    </p>
+                    <p className="text-[0.76rem] leading-5 text-muted-foreground">
+                      Examples: groceries, bills, dining, subscriptions, shopping, cash-out
+                      spending.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1rem] border border-border/70 bg-background/50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-9 items-center justify-center rounded-full bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                    <ArrowRightLeft className="size-4" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                      Transfer
+                    </p>
+                    <p className="text-[0.82rem] leading-6 text-muted-foreground">
+                      Use this when you move money between two of your own liquid accounts.
+                    </p>
+                    <p className="text-[0.76rem] leading-5 text-muted-foreground">
+                      Examples: bank to wallet, wallet to bank, moving cash between institutions.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-[1rem] border border-border/70 bg-background/50 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex size-9 items-center justify-center rounded-full bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                    <CreditCard className="size-4" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                      Credit payment
+                    </p>
+                    <p className="text-[0.82rem] leading-6 text-muted-foreground">
+                      Use this when you pay down a credit card from a bank or wallet account.
+                    </p>
+                    <p className="text-[0.76rem] leading-5 text-muted-foreground">
+                      Examples: paying your credit card bill, partial card payment, settlement from
+                      cash or bank.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-[1rem] border border-dashed border-border/70 bg-background/35 px-4 py-3 text-[0.78rem] leading-6 text-muted-foreground">
+              Rule of thumb: if money stays within your own liquid accounts, it is usually a
+              transfer. If money is used to reduce credit owed, it is a credit payment.
+            </div>
+          </div>
+
+          <DialogFooter className="border-t border-border/60 px-5 py-4 sm:px-7 sm:py-5">
+            <Button type="button" className="rounded-full" onClick={() => setIsHelpOpen(false)}>
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <section>
+        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
+          <CardHeader className="gap-4 px-5 py-5 sm:px-6 sm:py-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-1.5">
+                <CardTitle className="text-[1.28rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.4rem]">
+                  Ledger
+                </CardTitle>
+                <CardDescription className="max-w-3xl text-[0.9rem] leading-6 sm:text-[0.94rem] sm:leading-7">
+                  Review the event stream before we layer in calendar, import, and bulk workflows.
+                </CardDescription>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full bg-[#fbfaf6] px-3.5 text-[0.88rem] dark:bg-[#162022]"
+                >
+                  <SlidersHorizontal className="size-4" />
+                  Filters
+                </Button>
+                <Select
+                  value={typeFilter}
+                  onValueChange={(value) => {
+                    setTypeFilter(value as "all" | TransactionEventType);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10 rounded-full border-border/70 bg-[#fbfaf6] px-3.5 text-[0.88rem] shadow-none dark:bg-[#162022] sm:w-[158px]">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All event types</SelectItem>
+                    {eventTypeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <div className="relative min-w-0">
                 <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -896,28 +993,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     setPage(1);
                   }}
                   placeholder="Search events, accounts, or notes"
-                  className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10 pr-4 text-[0.92rem] dark:bg-[#162022]"
+                  className="h-11 rounded-full border-border/70 bg-[#fbfaf6] pl-10 pr-4 text-[0.9rem] shadow-none dark:bg-[#162022]"
                 />
               </div>
-              <Select
-                value={typeFilter}
-                onValueChange={(value) => {
-                  setTypeFilter(value as "all" | TransactionEventType);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger className="h-12 rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem] dark:bg-[#162022]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All event types</SelectItem>
-                  {eventTypeOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </CardHeader>
 
@@ -945,34 +1023,55 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                   No events yet
                 </p>
-              <p className="mx-auto mt-3 max-w-md text-[0.98rem] leading-8 text-muted-foreground">
-                  Start with one income, expense, transfer, or credit payment
-                  to bring the ledger to life.
-              </p>
+                <p className="mx-auto mt-3 max-w-md text-[0.98rem] leading-8 text-muted-foreground">
+                  Start with one income, expense, transfer, or credit payment to bring the ledger to
+                  life.
+                </p>
               </div>
             ) : (
-                <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8] dark:bg-[#141d1f]">
-                  <div className="divide-y divide-border/70">
-                    {visibleEvents.map((event) => (
+              <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8] dark:bg-[#141d1f]">
+                <div className="hidden md:grid md:grid-cols-[minmax(0,2fr)_130px_minmax(0,1.55fr)_130px_150px_92px] md:items-center md:gap-4 md:border-b md:border-border/70 md:px-6 md:py-3.5">
+                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Event
+                  </p>
+                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Category
+                  </p>
+                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Account / details
+                  </p>
+                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Date
+                  </p>
+                  <p className="text-right text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Amount
+                  </p>
+                  <p className="text-right text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    Actions
+                  </p>
+                </div>
+
+                <div className="divide-y divide-border/70">
+                  {visibleEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="grid gap-3 px-4 py-4 sm:px-5 md:grid-cols-[minmax(0,1.4fr)_140px_120px] md:items-center md:gap-4 md:px-6"
+                      className="px-4 py-4 sm:px-5 md:grid md:grid-cols-[minmax(0,2fr)_130px_minmax(0,1.55fr)_130px_150px_92px] md:items-center md:gap-4 md:px-6 md:py-4"
                     >
-                      <div className="min-w-0 md:min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 md:block">
+                          <p className="truncate text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.97rem]">
                             {event.description}
                           </p>
                           <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-[0.72rem] font-medium ${getEventTypeTone(event.type)}`}
+                            className={`inline-flex rounded-full border px-2.5 py-1 text-[0.72rem] font-medium md:hidden ${getEventTypeTone(event.type)}`}
                           >
                             {getEventTypeLabel(event.type)}
                           </span>
                         </div>
-                        <p className="mt-1 text-[0.82rem] text-muted-foreground">
+                        <p className="mt-1 text-[0.8rem] leading-5.5 text-muted-foreground md:hidden">
                           {getEventAccountsSummary(event)}
                         </p>
-                        <p className="mt-1 text-[0.78rem] text-muted-foreground">
+                        <p className="mt-1 text-[0.76rem] leading-5 text-muted-foreground md:hidden">
                           {formatEventDate(event.occurredAt)}
                           {event.category ? ` · ${event.category.name}` : ""}
                           {event.notes ? ` · ${event.notes}` : ""}
@@ -1011,16 +1110,36 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         </div>
                       </div>
 
-                      <div className="hidden md:block md:text-right">
-                        <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                          Amount
+                      <div className="hidden md:block md:min-w-0">
+                        <span
+                          className={`inline-flex rounded-full border px-2.5 py-1 text-[0.72rem] font-medium ${getEventTypeTone(event.type)}`}
+                        >
+                          {getEventTypeLabel(event.type)}
+                        </span>
+                      </div>
+
+                      <div className="hidden md:block md:min-w-0">
+                        <p className="truncate text-[0.82rem] leading-5.5 text-muted-foreground">
+                          {getEventAccountsSummary(event)}
                         </p>
-                        <p className="mt-1 text-[0.95rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:mt-0">
+                        <p className="mt-1 truncate text-[0.76rem] leading-5 text-muted-foreground">
+                          {event.notes || (event.category ? event.category.name : "No extra notes")}
+                        </p>
+                      </div>
+
+                      <div className="hidden md:block md:min-w-0">
+                        <p className="text-[0.82rem] leading-5.5 text-[#10292B] dark:text-foreground">
+                          {formatEventDate(event.occurredAt)}
+                        </p>
+                      </div>
+
+                      <div className="hidden md:block md:text-right">
+                        <p className="text-[1rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                           {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
                         </p>
                       </div>
 
-                      <div className="hidden md:flex md:justify-end md:gap-2 md:pt-0">
+                      <div className="hidden md:flex md:justify-end md:gap-2">
                         <Button
                           variant="outline"
                           size="icon-sm"
@@ -1051,7 +1170,8 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
             {eventsQuery.data && eventsQuery.data.totalPages > 1 ? (
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-[0.86rem] text-muted-foreground">
-                  Page {eventsQuery.data.page} of {eventsQuery.data.totalPages} · {eventsQuery.data.totalCount} events
+                  Page {eventsQuery.data.page} of {eventsQuery.data.totalPages} ·{" "}
+                  {eventsQuery.data.totalCount} events
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -1068,7 +1188,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     variant="outline"
                     className="rounded-full"
                     onClick={() =>
-                      setPage((current) => Math.min(eventsQuery.data?.totalPages ?? current, current + 1))
+                      setPage((current) =>
+                        Math.min(eventsQuery.data?.totalPages ?? current, current + 1),
+                      )
                     }
                     disabled={eventsQuery.data.page >= eventsQuery.data.totalPages}
                   >
@@ -1092,23 +1214,24 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
         }}
       >
         <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:max-h-[92vh] sm:w-auto sm:max-w-[56rem] sm:rounded-[2rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4">
-          <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-8 sm:pb-6 sm:pt-8 sm:pr-16">
-            <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+          <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-8 sm:pb-5 sm:pt-7 sm:pr-16">
+            {" "}
+            <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
               Event composer
             </div>
-            <DialogTitle className="pt-1.5 text-[1.2rem] tracking-tight sm:pt-3 sm:text-[2rem]">
+            <DialogTitle className="pt-2 text-[1.2rem] tracking-tight sm:pt-3 sm:text-[1.8rem]">
               {editingEventId
                 ? `Edit ${currentTypeMeta.label.toLowerCase()}`
                 : `Record ${withIndefiniteArticle(currentTypeMeta.label)}`}
             </DialogTitle>
-            <DialogDescription className="max-w-xl text-[0.82rem] leading-5.5 sm:text-[0.96rem] sm:leading-7">
+            <DialogDescription className="max-w-xl text-[0.82rem] leading-5.5 sm:text-[0.92rem] sm:leading-6.5">
               {editingEventId
                 ? "Update the event details and Veyra will reapply the account effects underneath."
                 : currentTypeMeta.description}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3.5 px-4 py-3.5 sm:space-y-6 sm:px-8 sm:py-7">
+          <div className="space-y-3.5 px-4 py-3.5 sm:space-y-5 sm:px-8 sm:py-6">
             <div className="flex flex-wrap gap-2.5">
               {eventTypeOptions.map((option) => (
                 <EventTypeButton
@@ -1122,17 +1245,17 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       type: option.value,
                       budgetId: "none",
                       categoryId: "none",
+                      description: getDefaultDescriptionForType(option.value),
                     }))
                   }
                 />
               ))}
             </div>
-
-            <div className="space-y-4 rounded-2xl border border-border/70 bg-background/40 p-3.5 sm:space-y-5 sm:p-5">
-              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-[0.68rem] sm:tracking-[0.2em]">
+            <div className="space-y-4 rounded-[1.4rem] border border-border/70 bg-background/40 p-3.5 sm:space-y-4 sm:p-5">
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-[0.68rem] sm:tracking-[0.22em]">
+                {" "}
                 Primary details
               </p>
-
               <div className="space-y-1.5">
                 <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                   Amount
@@ -1146,21 +1269,22 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     setDraft((current) => ({ ...current, amount: event.target.value }))
                   }
                   placeholder="0.00"
-                  className="h-10 rounded-lg border-border/80 bg-background px-3 text-[1rem] font-semibold tracking-tight sm:h-14 sm:rounded-2xl sm:px-4 sm:text-[1.55rem]"
+                  className="h-10 rounded-[1rem] border-border/80 bg-background px-3 text-[1rem] font-semibold tracking-tight sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[1.22rem]"
                 />
               </div>
-
               {(draft.type === "income" || draft.type === "expense") && (
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div className="min-w-0 space-y-3">
+                <div className="grid gap-5 md:grid-cols-2 md:items-end">
+                  <div className="min-w-0 space-y-2.5">
                     <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                       Account
                     </label>
                     <Select
                       value={draft.accountId}
-                      onValueChange={(value) => setDraft((current) => ({ ...current, accountId: value }))}
+                      onValueChange={(value) =>
+                        setDraft((current) => ({ ...current, accountId: value }))
+                      }
                     >
-                      <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
+                      <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
                         <SelectValue
                           placeholder={
                             draft.type === "expense"
@@ -1170,7 +1294,48 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         />
                       </SelectTrigger>
                       <SelectContent>
-                        {(draft.type === "expense" ? spendableAccounts : liquidAccounts).map((account) => (
+                        {(draft.type === "expense" ? spendableAccounts : liquidAccounts).map(
+                          (account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name} · {getAccountTypeLabel(account.type)}
+                            </SelectItem>
+                          ),
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2.5">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                      Date
+                    </label>
+                    <Input
+                      type="date"
+                      value={draft.date}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, date: event.target.value }))
+                      }
+                      className="h-10 max-w-full min-w-0 rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                    />
+                  </div>
+                </div>
+              )}
+              {draft.type === "transfer" && (
+                <div className="grid gap-5 md:grid-cols-2 md:items-end">
+                  <div className="min-w-0 space-y-2.5">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                      From
+                    </label>
+                    <Select
+                      value={draft.sourceAccountId}
+                      onValueChange={(value) =>
+                        setDraft((current) => ({ ...current, sourceAccountId: value }))
+                      }
+                    >
+                      <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
+                        <SelectValue placeholder="Source account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {liquidAccounts.map((account) => (
                           <SelectItem key={account.id} value={account.id}>
                             {account.name} · {getAccountTypeLabel(account.type)}
                           </SelectItem>
@@ -1178,90 +1343,34 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-3">
+                  <div className="min-w-0 space-y-2.5">
                     <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Date
+                      To
                     </label>
-                    <Input
-                      type="date"
-                      value={draft.date}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, date: event.target.value }))
+                    <Select
+                      value={draft.destinationAccountId}
+                      onValueChange={(value) =>
+                        setDraft((current) => ({ ...current, destinationAccountId: value }))
                       }
-                      className="h-9 max-w-full min-w-0 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
-                    />
+                    >
+                      <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
+                        <SelectValue placeholder="Destination account" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {liquidAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name} · {getAccountTypeLabel(account.type)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               )}
-
-              {draft.type === "transfer" && (
-                <>
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <div className="space-y-3">
-                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        From
-                      </label>
-                      <Select
-                        value={draft.sourceAccountId}
-                        onValueChange={(value) =>
-                          setDraft((current) => ({ ...current, sourceAccountId: value }))
-                        }
-                      >
-                        <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
-                          <SelectValue placeholder="Source account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {liquidAccounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name} · {getAccountTypeLabel(account.type)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-3">
-                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        To
-                      </label>
-                      <Select
-                        value={draft.destinationAccountId}
-                        onValueChange={(value) =>
-                          setDraft((current) => ({ ...current, destinationAccountId: value }))
-                        }
-                      >
-                        <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
-                          <SelectValue placeholder="Destination account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {liquidAccounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name} · {getAccountTypeLabel(account.type)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-3 md:max-w-[17rem]">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Date
-                    </label>
-                    <Input
-                      type="date"
-                      value={draft.date}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, date: event.target.value }))
-                      }
-                      className="h-9 max-w-full min-w-0 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
-                    />
-                  </div>
-                </>
-              )}
-
               {draft.type === "credit_payment" && (
                 <>
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <div className="space-y-3">
+                  <div className="grid gap-5 md:grid-cols-2 md:items-start">
+                    <div className="min-w-0 space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                         Payment account
                       </label>
@@ -1271,7 +1380,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, sourceAccountId: value }))
                         }
                       >
-                        <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
+                        <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
                           <SelectValue placeholder="Bank or wallet account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1283,7 +1392,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-3">
+                    <div className="min-w-0 space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                         Credit account
                       </label>
@@ -1293,7 +1402,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, creditAccountId: value }))
                         }
                       >
-                        <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
+                        <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
                           <SelectValue placeholder="Credit account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1306,7 +1415,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       </Select>
                     </div>
                   </div>
-                  <div className="space-y-3 md:max-w-[17rem]">
+                  <div className="space-y-2.5 md:max-w-[17rem]">
                     <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                       Date
                     </label>
@@ -1316,16 +1425,15 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       onChange={(event) =>
                         setDraft((current) => ({ ...current, date: event.target.value }))
                       }
-                      className="h-9 max-w-full min-w-0 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
+                      className="h-10 max-w-full min-w-0 rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
                     />
                   </div>
                 </>
               )}
-
               {draft.type === "loan_disbursement" && (
                 <>
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <div className="space-y-3">
+                  <div className="grid gap-5 md:grid-cols-2 md:items-start">
+                    <div className="min-w-0 space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                         Loan account
                       </label>
@@ -1335,7 +1443,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, loanAccountId: value }))
                         }
                       >
-                        <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
+                        <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
                           <SelectValue placeholder="Loan account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1347,7 +1455,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-3">
+                    <div className="min-w-0 space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                         Destination account
                       </label>
@@ -1357,7 +1465,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, destinationAccountId: value }))
                         }
                       >
-                        <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
+                        <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
                           <SelectValue placeholder="Bank or wallet account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1370,7 +1478,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       </Select>
                     </div>
                   </div>
-                  <div className="space-y-3 md:max-w-[17rem]">
+                  <div className="space-y-2.5 md:max-w-[17rem]">
                     <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                       Date
                     </label>
@@ -1380,52 +1488,121 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       onChange={(event) =>
                         setDraft((current) => ({ ...current, date: event.target.value }))
                       }
-                      className="h-9 max-w-full min-w-0 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
+                      className="h-10 max-w-full min-w-0 rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
                     />
                   </div>
                 </>
               )}
             </div>
-
-            <div className="space-y-4 rounded-2xl border border-dashed border-border/75 bg-background/20 p-3.5 sm:space-y-5 sm:p-5">
-              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-[0.68rem] sm:tracking-[0.2em]">
+            <div className="space-y-4 rounded-[1.4rem] border border-dashed border-border/75 bg-background/20 p-3.5 sm:space-y-4 sm:p-5">
+              {" "}
+              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-[0.68rem] sm:tracking-[0.22em]">
                 Optional details
               </p>
-
-              {(draft.type === "income" || draft.type === "expense") && (
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div className="min-w-0 space-y-3">
+              {draft.type === "income" && (
+                <>
+                  <div className="space-y-2.5">
                     <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Category
+                      Description
                     </label>
-                    <Select
-                      value={draft.categoryId}
-                      onValueChange={(value) => setDraft((current) => ({ ...current, categoryId: value }))}
-                    >
-                      <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
-                        <SelectValue placeholder="No category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No category</SelectItem>
-                        {categoryOptions.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      value={draft.description}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, description: event.target.value }))
+                      }
+                      placeholder="Optional short label"
+                      className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                    />
+                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                      Short label for this income.
+                    </p>
                   </div>
 
-                  {draft.type === "expense" ? (
-                    <div className="min-w-0 space-y-3">
+                  <div className="grid gap-5 md:grid-cols-2 md:items-end">
+                    <div className="min-w-0 space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Category
+                      </label>
+                      <Select
+                        value={draft.categoryId}
+                        onValueChange={(value) =>
+                          setDraft((current) => ({ ...current, categoryId: value }))
+                        }
+                      >
+                        <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
+                          <SelectValue placeholder="No category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No category</SelectItem>
+                          {categoryOptions.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                        Optional grouping for this income.
+                      </p>
+                    </div>
+
+                    <div className="min-w-0 space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Notes
+                      </label>
+                      <Input
+                        value={draft.notes}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, notes: event.target.value }))
+                        }
+                        placeholder="Optional context"
+                        className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                      />
+                      <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                        Add any extra context about this income.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+              {draft.type === "expense" && (
+                <>
+                  <div className="grid gap-5 md:grid-cols-2 md:items-end">
+                    <div className="min-w-0 space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Category
+                      </label>
+                      <Select
+                        value={draft.categoryId}
+                        onValueChange={(value) =>
+                          setDraft((current) => ({ ...current, categoryId: value }))
+                        }
+                      >
+                        <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
+                          <SelectValue placeholder="No category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No category</SelectItem>
+                          {categoryOptions.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="min-w-0 space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                         Budget
                       </label>
                       <Select
                         value={draft.budgetId}
-                        onValueChange={(value) => setDraft((current) => ({ ...current, budgetId: value }))}
+                        onValueChange={(value) =>
+                          setDraft((current) => ({ ...current, budgetId: value }))
+                        }
                       >
-                        <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base">
+                        <SelectTrigger className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]">
                           <SelectValue placeholder="No budget" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1438,66 +1615,146 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         </SelectContent>
                       </Select>
                     </div>
-                  ) : null}
+                  </div>
+                </>
+              )}
+              {draft.type === "transfer" && (
+                <div className="grid gap-5 md:grid-cols-2 md:items-end">
+                  <div className="min-w-0 space-y-2.5">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                      Transfer fee
+                    </label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      value={draft.feeAmount}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, feeAmount: event.target.value }))
+                      }
+                      placeholder="0.00"
+                      className="h-10 rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                    />
+                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                      Optional. Fee is deducted from the source account.
+                    </p>
+                  </div>
+
+                  <div className="min-w-0 space-y-2.5 self-start">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                      Date
+                    </label>
+                    <Input
+                      type="date"
+                      value={draft.date}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, date: event.target.value }))
+                      }
+                      className="h-10 max-w-full min-w-0 rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                    />
+                  </div>
                 </div>
               )}
+              {draft.type === "credit_payment" && (
+                <>
+                  <div className="space-y-2.5">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                      Description
+                    </label>
+                    <Input
+                      value={draft.description}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, description: event.target.value }))
+                      }
+                      placeholder="Optional short label"
+                      className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                    />
+                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                      Short label for this payment.
+                    </p>
+                  </div>
 
-              {(draft.type === "transfer" || draft.type === "credit_payment") && (
-                <div className="space-y-3 md:max-w-[17rem]">
-                  <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                    {draft.type === "transfer" ? "Transfer fee" : "Payment fee"}
-                  </label>
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    value={draft.feeAmount}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, feeAmount: event.target.value }))
-                    }
-                    placeholder="0.00"
-                    className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
-                  />
-                  <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                    {draft.type === "transfer"
-                      ? "Optional. Fee is deducted from the source account."
-                      : "Optional. Fee is deducted from the payment account."}
-                  </p>
+                  <div className="grid gap-5 md:grid-cols-2 md:items-start">
+                    <div className="min-w-0 space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Payment fee
+                      </label>
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        value={draft.feeAmount}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, feeAmount: event.target.value }))
+                        }
+                        placeholder="0.00"
+                        className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                      />
+                      <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                        Optional. Fee is deducted from the payment account.
+                      </p>
+                    </div>
+
+                    <div className="min-w-0 space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Notes
+                      </label>
+                      <Input
+                        value={draft.notes}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, notes: event.target.value }))
+                        }
+                        placeholder="Optional context"
+                        className="h-10 w-full rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                      />
+                      <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                        Add any extra context about this payment.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
+              {draft.type !== "income" && draft.type !== "credit_payment" && (
+                <div className="grid gap-5 md:grid-cols-2 md:items-end">
+                  <div className="space-y-2.5">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                      Description
+                    </label>
+                    <Input
+                      value={draft.description}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, description: event.target.value }))
+                      }
+                      placeholder="Optional short label"
+                      className="h-10 rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                    />
+                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                      Short label for this for this event.
+                    </p>
+                  </div>
+                  <div className="space-y-2.5">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                      Notes
+                    </label>
+                    <Input
+                      value={draft.notes}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, notes: event.target.value }))
+                      }
+                      placeholder="Optional context"
+                      className="h-10 rounded-[1rem] border-border/80 bg-background px-3 text-sm sm:h-11 sm:rounded-[1rem] sm:px-4 sm:text-[0.98rem]"
+                    />
+                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                      Add any extra context about this event.{" "}
+                    </p>
+                  </div>
                 </div>
               )}
-
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                    Description
-                  </label>
-                  <Input
-                    value={draft.description}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, description: event.target.value }))
-                    }
-                    placeholder="Optional short label"
-                    className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                    Notes
-                  </label>
-                  <Input
-                    value={draft.notes}
-                    onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))}
-                    placeholder="Optional context"
-                    className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-10 sm:rounded-xl sm:px-4 sm:text-base"
-                  />
-                </div>
-              </div>
             </div>
-
-            <DialogFooter className="!mx-0 !mb-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-transparent px-4 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 sm:px-8 sm:pb-4 sm:pt-3 [&>button]:w-auto">
+            <DialogFooter className="!mx-0 !mb-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-transparent px-4 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-2 sm:px-8 sm:pb-3.5 sm:pt-2.5 [&>button]:w-auto">
+              {" "}
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 rounded-lg text-sm sm:h-11 sm:rounded-full sm:text-base"
+                className="h-9 rounded-lg text-sm sm:h-10 sm:rounded-full sm:text-[0.95rem]"
                 onClick={() => setOpen(false)}
                 disabled={createEvent.isPending || updateEvent.isPending}
               >
@@ -1505,7 +1762,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               </Button>
               <Button
                 type="button"
-                className="h-9 rounded-lg bg-[#17393c] text-sm text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:h-11 sm:rounded-full sm:text-base"
+                className="h-9 rounded-lg bg-[#17393c] text-sm text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:h-10 sm:rounded-full sm:text-[0.95rem]"
                 onClick={submitEvent}
                 disabled={createEvent.isPending || updateEvent.isPending}
               >
