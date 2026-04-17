@@ -382,14 +382,22 @@ Current budget UI:
 - workspace:
   - `src/features/budgets/components/budgets-workspace.tsx`
 - the Budgets page should feel like a practical planning workspace, not a promo dashboard
+- current desktop direction is now:
+  - one compact operational hero for budget posture
+  - one compact summary row of KPI cards
+  - one primary `Active budgets` workspace panel
+  - one restrained right rail for guidance + posture support
 - prefer:
   - compact summary cards
-  - active budget list
+  - table-like active budget presentation over oversized stacked cards
   - clear empty state
   - restrained support copy
+  - compact right-rail guidance and posture cards
 - avoid:
   - oversized hero sections
   - explanatory panels that take more space than the actual budget list
+  - duplicated guidance surfaces in both the top row and right rail
+  - fragile desktop row layouts that clip or overflow at common laptop widths
   - cramped modal layouts
 
 Budget implementation guidance:
@@ -414,6 +422,9 @@ Current implemented scope:
   - summary cards
   - searchable active budget list
   - empty state and support panel
+  - desktop hero + KPI row refresh
+  - right-rail guidance / posture structure
+  - budget-row desktop cleanup pass for period/progress/remaining alignment
 - Phase 3:
   - expense form integration
   - `budgetId` can be selected directly during expense capture
@@ -1643,6 +1654,7 @@ The following surfaces already have UI v2 direction and should be treated as ref
 - Quick Capture desktop modal has completed its current UI v2 creation pass and should now be treated as the active desktop quick-capture baseline, while still remaining open to later polish.
 - accounts v2: active implementation in progress; hero, list structure, and institution-logo integration have landed, while modal polish is still in progress
 - transactions v2: active implementation largely in place; desktop hero, quick-action surface, ledger table direction, help modal, and event-composer modal refinements have landed, with only optional polish remaining
+- budgets v2: active implementation in progress; compact posture hero, KPI summary row, table-like active budgets workspace, and right-rail guidance/posture structure have landed, while desktop row density and responsive polish are still in progress
 
 These should be used as alignment references for:
 - spacing rhythm
@@ -1856,9 +1868,10 @@ The current architecture direction should continue like this:
 
 1. Finish the remaining Accounts UI v2 polish, especially the add/edit modal hierarchy and compactness.
 2. Treat Transactions UI v2 as functionally established and limit further work there to targeted polish only.
-3. Keep the shared institution display system as the source of truth for account avatars/logos.
-4. Continue applying the same feature-first UI v2 pattern to budgets, categories, loans, and settings.
-5. Keep tightening copy, divider usage, and visual restraint as new screens are added.
+3. Continue Budgets UI v2 polish, especially desktop row stability, density, and final workspace hierarchy cleanup.
+4. Keep the shared institution display system as the source of truth for account avatars/logos.
+5. Continue applying the same feature-first UI v2 pattern to categories, loans, and settings.
+6. Keep tightening copy, divider usage, and visual restraint as new screens are added.
 
 ## Final Standard
 

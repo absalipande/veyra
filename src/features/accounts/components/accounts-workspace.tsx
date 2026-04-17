@@ -15,7 +15,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 
 import { trpc } from "@/trpc/react";
 import {
@@ -740,167 +739,80 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   return (
     <div className="space-y-6 lg:space-y-7">
       <section>
-        <Card className="relative overflow-hidden rounded-[1.75rem] border-white/10 bg-[linear-gradient(145deg,#0D2F31,#123E40_52%,#1B5A57)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_28px_90px_-60px_rgba(10,31,34,0.85)]">
+        <Card className="relative overflow-hidden rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
           <div className="pointer-events-none absolute inset-0 opacity-70">
             <div className="absolute inset-y-0 left-0 w-[58%] bg-[radial-gradient(circle_at_20%_26%,rgba(6,17,18,0.28),transparent_42%)]" />
             <div className="absolute inset-y-0 right-0 hidden w-[44%] bg-[radial-gradient(circle_at_72%_28%,rgba(80,255,214,0.13),transparent_30%),radial-gradient(circle_at_84%_72%,rgba(80,255,214,0.08),transparent_22%)] lg:block" />
           </div>
 
-          <div className="pointer-events-none absolute inset-y-0 right-[7%] hidden w-[42%] opacity-30 lg:block">
-            <svg viewBox="0 0 560 320" className="h-full w-full">
-              <path
-                d="M30 240 C120 240, 150 250, 205 210 S320 118, 395 112 S470 76, 535 38"
-                fill="none"
-                stroke="rgba(115,255,217,0.52)"
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-              <path
-                d="M92 278 C170 252, 230 198, 305 162 S414 122, 500 84"
-                fill="none"
-                stroke="rgba(115,255,217,0.12)"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-              <path
-                d="M126 204 C176 170, 232 138, 302 116 S412 88, 498 74"
-                fill="none"
-                stroke="rgba(115,255,217,0.08)"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-              <circle cx="205" cy="210" r="7" fill="rgba(115,255,217,0.78)" />
-              <circle cx="395" cy="112" r="7" fill="rgba(115,255,217,0.82)" />
-              <circle cx="535" cy="38" r="8" fill="rgba(115,255,217,0.95)" />
-            </svg>
-          </div>
 
-          <CardContent className="relative p-5 sm:p-6 lg:px-7 lg:py-6">
-            <div className="hidden gap-6 lg:grid lg:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] lg:items-start">
-              <div className="space-y-4 pt-0.5">
-                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#123E40]/85 px-3 py-1.5 text-[0.74rem] font-semibold uppercase tracking-[0.18em] text-[#9CF5D7] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-sm">
-                  <span className="size-2 rounded-full bg-[#49D399]" />
-                  Accounts workspace
-                </div>
-
-                <div className="space-y-2.5">
-                  <h1 className="max-w-[13ch] text-[2rem] font-semibold leading-[1.03] tracking-tight text-white xl:text-[2.24rem]">
-                    See every balance in one clear shape.
-                  </h1>
-                  <p className="max-w-[31rem] text-[0.95rem] leading-6.5 text-white/76">
-                    Track liquid cash, credit exposure, and account currencies without losing each
-                    institution’s identity.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2.5 pt-0.5">
-                  <div className="inline-flex items-center gap-3 rounded-[1.05rem] border border-white/10 bg-white/[0.06] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
-                    <span className="flex size-10 items-center justify-center rounded-full bg-[#CFF4E7] text-[#175C46]">
-                      <Landmark className="size-4.5" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-[1.5rem] font-semibold leading-none tracking-tight text-white">
-                          {summaryQuery.data?.totalAccounts ?? 0}
-                        </span>
-                        <span className="text-[0.86rem] leading-5 text-white/72">Tracked</span>
-                      </div>
-                      <p className="text-[0.8rem] leading-5 text-white/68">accounts</p>
-                    </div>
-                  </div>
-
-                  <div className="inline-flex items-center gap-3 rounded-[1.05rem] border border-white/10 bg-white/[0.06] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
-                    <span className="flex size-10 items-center justify-center rounded-full bg-[#163F40] text-[#49D399] ring-1 ring-inset ring-white/6">
-                      <Wallet className="size-4.5" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-[1.5rem] font-semibold leading-none tracking-tight text-white">
-                          {accountGroups.liquid.length}
-                        </span>
-                        <span className="text-[0.86rem] leading-5 text-white/72">Liquid</span>
-                      </div>
-                      <p className="text-[0.8rem] leading-5 text-white/68">accounts</p>
-                    </div>
-                  </div>
-
-                  <div className="inline-flex items-center gap-3 rounded-[1.05rem] border border-white/10 bg-white/[0.06] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-sm">
-                    <span className="flex size-10 items-center justify-center rounded-full bg-[#203A52] text-[#7DD3FC] ring-1 ring-inset ring-white/6">
-                      <CreditCard className="size-4.5" />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-[1.5rem] font-semibold leading-none tracking-tight text-white">
-                          {accountGroups.liabilities.length}
-                        </span>
-                        <span className="text-[0.86rem] leading-5 text-white/72">Liabilities</span>
-                      </div>
-                      <p className="text-[0.8rem] leading-5 text-white/68">accounts</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="relative hidden min-h-[292px] lg:block">
-                <div className="absolute inset-y-10 left-18 right-6 rounded-full bg-[radial-gradient(circle_at_72%_50%,rgba(80,255,214,0.18),transparent_24%),radial-gradient(circle_at_84%_64%,rgba(80,255,214,0.08),transparent_18%)] blur-3xl" />
-                <div className="absolute inset-x-6 inset-y-2">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_74%_46%,rgba(124,243,199,0.12),transparent_18%)]" />
-                  <div className="absolute inset-0 flex items-center justify-center opacity-46">
-                    <div className="h-[120%] w-[120%] translate-x-[9%] scale-[1.01]">
-                      <DotLottieReact src="/line.json" autoplay loop className="h-full w-full" />
-                    </div>
-                  </div>
-                  <div className="absolute inset-x-10 bottom-0 h-24 bg-[linear-gradient(180deg,transparent,rgba(13,47,49,0.28))] blur-sm" />
-                </div>
-              </div>
+          <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
+                Accounts workspace
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
+                onClick={startCreate}
+              >
+                Add account
+              </Button>
             </div>
 
-            <div className="mt-4 space-y-3 lg:hidden">
-              <div className="grid grid-cols-3 gap-2 rounded-[1.1rem] border border-white/10 bg-white/[0.05] p-3 backdrop-blur-sm">
-                <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.04] px-3 py-3 text-center">
-                  <p className="text-[1.25rem] font-semibold leading-none tracking-tight text-white">
-                    {summaryQuery.data?.totalAccounts ?? 0}
-                  </p>
-                  <p className="mt-1.5 text-[0.72rem] leading-5 text-white/68">Tracked</p>
+            <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
+              <div className="space-y-2.5 md:space-y-3 md:pr-7">
+                <h2 className="text-[0.98rem] font-semibold tracking-tight text-white/95 md:text-[1.08rem] lg:text-[1.16rem]">
+                  Account posture
+                </h2>
+                <div className="flex items-center gap-2 text-[1.06rem] font-semibold leading-none tracking-tight text-white md:text-[1.34rem] lg:text-[1.48rem]">
+                  <span className="size-2.5 rounded-full bg-emerald-400 md:size-3" />
+                  See every balance in one clear shape
                 </div>
-                <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.04] px-3 py-3 text-center">
-                  <p className="text-[1.25rem] font-semibold leading-none tracking-tight text-white">
-                    {accountGroups.liquid.length}
+                <p className="max-w-[30ch] text-[0.9rem] leading-6 text-white/74 md:max-w-[34ch] md:text-[0.93rem] md:leading-7">
+                  Track liquid cash, credit exposure, and account currencies without losing each institution’s identity.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-0 border-t border-white/15 pt-3.5 md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
+                <div className="space-y-2.5 pr-4 md:pr-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[0.82rem] text-white/70 md:text-[0.88rem]">Liquid</p>
+                    <span className="flex size-8.5 items-center justify-center rounded-full bg-emerald-100/95 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 md:size-9">
+                      <Wallet className="size-3.5 md:size-[0.95rem]" />
+                    </span>
+                  </div>
+                  <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
+                    {String(accountGroups.liquid.length)}
                   </p>
-                  <p className="mt-1.5 text-[0.72rem] leading-5 text-white/68">Liquid</p>
                 </div>
-                <div className="rounded-[0.95rem] border border-white/8 bg-white/[0.04] px-3 py-3 text-center">
-                  <p className="text-[1.25rem] font-semibold leading-none tracking-tight text-white">
-                    {accountGroups.liabilities.length}
+
+                <div className="space-y-2.5 border-l border-white/15 pl-4 pr-4 md:pr-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[0.82rem] text-white/70 md:text-[0.88rem]">Liabilities</p>
+                    <span className="flex size-8.5 items-center justify-center rounded-full bg-sky-100/95 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200 md:size-9">
+                      <CreditCard className="size-3.5 md:size-[0.95rem]" />
+                    </span>
+                  </div>
+                  <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
+                    {String(accountGroups.liabilities.length)}
                   </p>
-                  <p className="mt-1.5 text-[0.72rem] leading-5 text-white/68">Liabilities</p>
                 </div>
               </div>
 
-              <div className="rounded-[1.1rem] border border-white/10 bg-white/[0.05] p-3 backdrop-blur-sm">
-                <div className="flex items-center justify-between gap-3 rounded-[0.95rem] border border-white/8 bg-white/[0.04] px-3 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex size-10 items-center justify-center rounded-full bg-[#17334A] text-[#7DD3FC] ring-1 ring-inset ring-white/5">
-                      <Globe2 className="size-4.5" />
-                    </span>
-                    <div>
-                      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[#7DD3FC]">
-                        Currency in use
-                      </p>
-                      <p className="mt-1 text-[1.2rem] font-semibold leading-none tracking-tight text-white">
-                        {summaryQuery.data?.activeCurrencies ?? 0}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center">
-                    <span className="-mr-2 flex size-8 items-center justify-center rounded-full bg-[#3D77AF] text-[0.9rem] font-semibold text-white/95 ring-1 ring-white/8">
-                      P
-                    </span>
-                    <span className="-mr-2 flex size-8 items-center justify-center rounded-full bg-[#4B89BD]/85 ring-1 ring-white/8" />
-                    <span className="flex size-8 items-center justify-center rounded-full bg-[#5E99C7]/70 ring-1 ring-white/8" />
-                  </div>
+              <div className="hidden space-y-2 border-t border-white/15 pt-4 md:block md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
+                <div className="flex items-center gap-2 text-[0.82rem] text-white/70">
+                  <Globe2 className="size-4" />
+                  Currency in use
                 </div>
+                <p className="line-clamp-2 text-[0.95rem] font-semibold tracking-tight text-white lg:text-[0.99rem]">
+                  {summaryQuery.data?.activeCurrencies ?? 0} active {summaryQuery.data?.activeCurrencies === 1 ? "currency" : "currencies"}
+                </p>
+                <p className="text-[0.82rem] leading-6 text-white/70">
+                  {summaryQuery.data?.totalAccounts ?? 0} tracked accounts across your workspace
+                </p>
               </div>
             </div>
           </CardContent>
