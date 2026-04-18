@@ -599,7 +599,7 @@ export function DashboardRecentActivity() {
             </Button>
           </div>
 
-          <div className="rounded-[1.1rem] border border-border/70 bg-background/70 p-4 md:flex md:items-center md:justify-between md:gap-4 md:p-5.5 dark:bg-[#141d1f]">
+          <div className="rounded-[1.1rem] border border-border/70 bg-white p-4 md:flex md:items-center md:justify-between md:gap-4 md:p-5.5 dark:bg-[#141d1f]">
             <div className="flex items-center gap-3.5">
               <div className="flex size-11 items-center justify-center rounded-[0.95rem] bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 md:size-11 md:rounded-[0.95rem]">
                 <PiggyBank className="size-6 md:size-6" />

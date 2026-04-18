@@ -389,7 +389,7 @@ export function GlobalQuickCapture() {
               <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                 Quick capture
               </div>
-              <div className="hidden rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
+              <div className="hidden rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
                 ⌘/Ctrl ⇧ K
               </div>
             </div>
@@ -403,7 +403,7 @@ export function GlobalQuickCapture() {
 
           <div className="space-y-4 px-4 py-4 sm:space-y-4.5 sm:px-6 sm:py-5">
             <div className="space-y-3">
-              <div className="flex h-12 items-center rounded-[1rem] border-2 border-[#7fb9b6]/85 bg-background px-4 dark:bg-[#141d1f]">
+              <div className="flex h-12 items-center rounded-[1rem] border-2 border-[#7fb9b6]/85 bg-white px-4 dark:bg-[#141d1f]">
                 <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
                 <Input
                   autoFocus
@@ -616,7 +616,7 @@ export function GlobalQuickCapture() {
                 ) : null}
               </div>
             ) : (
-              <div className="rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+              <div className="rounded-[1.2rem] border border-border/70 bg-white px-4 py-4 dark:bg-[#162022]">
                 <p className="text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                   Example entries
                 </p>
@@ -627,7 +627,7 @@ export function GlobalQuickCapture() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="rounded-full border-border/70 bg-background px-3 text-[0.8rem] font-normal shadow-none"
+                      className="rounded-full border-border/70 bg-white px-3 text-[0.8rem] font-normal shadow-none"
                       onClick={() => setInput(prompt)}
                       disabled={isSubmitting}
                     >
@@ -639,12 +639,12 @@ export function GlobalQuickCapture() {
             )}
           </div>
 
-          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 bg-transparent px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:py-4">
+          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:py-4">
             <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="h-10.5 w-full rounded-full px-6 sm:min-w-[9rem] sm:w-auto"
+                className="h-10.5 w-full bg-white rounded-full px-6 sm:min-w-[9rem] sm:w-auto"
                 onClick={() => setOpen(false)}
                 disabled={isSubmitting}
               >
