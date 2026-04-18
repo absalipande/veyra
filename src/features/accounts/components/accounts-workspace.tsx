@@ -282,14 +282,14 @@ function AccountSection({
               value={filterValue}
               onChange={(event) => onFilterChange(event.target.value)}
               placeholder="Filter accounts"
-              className="h-11 rounded-[1rem] border-border/70 bg-[#fbfaf6] pl-10 pr-4 text-[0.92rem] shadow-none dark:bg-[#162022]"
+              className="h-11 rounded-[1rem] border-border/70 bg-white pl-10 pr-4 text-[0.92rem] shadow-none dark:bg-[#162022]"
             />
           </div>
           <Select
             value={sortValue}
             onValueChange={(value) => onSortChange(value as AccountSortOption)}
           >
-            <SelectTrigger className="h-11 w-full rounded-[1rem] border-border/70 bg-[#fbfaf6] px-3.5 pr-9 text-[0.9rem] shadow-none dark:bg-[#162022] [&>svg]:right-3 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-muted-foreground">
+            <SelectTrigger className="h-11 w-full rounded-[1rem] border-border/70 bg-white px-3.5 pr-9 text-[0.9rem] shadow-none dark:bg-[#162022] [&>svg]:right-3 [&>svg]:size-4 [&>svg]:shrink-0 [&>svg]:text-muted-foreground">
               <div className="flex min-w-0 items-center gap-1.5 pr-1">
                 <ArrowUpDown className="size-[0.95rem] shrink-0 text-muted-foreground" />
                 <SelectValue placeholder="Sort" />
@@ -317,7 +317,7 @@ function AccountSection({
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-[#fdfcf8] dark:bg-[#141d1f]">
+          <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-white dark:bg-[#141d1f]">
             <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_112px] items-center gap-4 border-b border-border/70 px-6 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
               <p>Account</p>
               <p className="text-right">Balance</p>
