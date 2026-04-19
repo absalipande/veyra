@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
@@ -325,11 +325,66 @@ export async function getAiDashboardInsight(ctx: Pick<TRPCContext, "db" | "userI
   };
 }
 
+export async function getAiDashboardInsightCheckpoint(ctx: Pick<TRPCContext, "db" | "userId">) {
+  const userId = assertUserId(ctx.userId);
+
+  const [txnRow, budgetRow, accountRow] = await Promise.all([
+    ctx.db
+      .select({ value: sql<Date | null>`max(${transactionEvents.updatedAt})` })
+      .from(transactionEvents)
+      .where(eq(transactionEvents.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${budgets.updatedAt})` })
+      .from(budgets)
+      .where(eq(budgets.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${accounts.updatedAt})` })
+      .from(accounts)
+      .where(eq(accounts.clerkUserId, userId)),
+  ]);
+
+  return [
+    `tx:${txnRow[0]?.value?.toISOString() ?? "0"}`,
+    `bg:${budgetRow[0]?.value?.toISOString() ?? "0"}`,
+    `ac:${accountRow[0]?.value?.toISOString() ?? "0"}`,
+  ].join("|");
+}
+
 export async function getAiQuickCaptureDraft(
   ctx: Pick<TRPCContext, "db" | "userId">,
   input: GetQuickCaptureDraftInput
 ) {
   return parseQuickCaptureDraft(ctx, input);
+}
+
+export async function getAiQuickCaptureCheckpoint(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  input: GetQuickCaptureDraftInput
+) {
+  const userId = assertUserId(ctx.userId);
+  const normalizedText = normalizeValue(input.text);
+
+  const [accountRow, budgetRow, categoryRow] = await Promise.all([
+    ctx.db
+      .select({ value: sql<Date | null>`max(${accounts.updatedAt})` })
+      .from(accounts)
+      .where(eq(accounts.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${budgets.updatedAt})` })
+      .from(budgets)
+      .where(eq(budgets.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${categories.updatedAt})` })
+      .from(categories)
+      .where(eq(categories.clerkUserId, userId)),
+  ]);
+
+  return [
+    `q:${normalizedText}`,
+    `ac:${accountRow[0]?.value?.toISOString() ?? "0"}`,
+    `bg:${budgetRow[0]?.value?.toISOString() ?? "0"}`,
+    `cg:${categoryRow[0]?.value?.toISOString() ?? "0"}`,
+  ].join("|");
 }
 
 export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "userId">) {
@@ -444,7 +499,7 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
     headline: "AI transaction intelligence",
     summary:
       topShiftAmount > 0 && topShiftCategory !== "No major shift"
-        ? `${topShiftCategory} is trending higher than the prior week.`
+        ? `You spent ${formatCurrencyMiliunits(topShiftAmount, "PHP")} more on ${topShiftCategory} vs the prior 7 days.`
         : "No strong category spikes versus the prior week.",
     confidence:
       recentExpenseEvents.length >= 8 ? "Medium confidence" : "Initial estimate",
@@ -470,6 +525,27 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
     ],
     recommendations: recommendation.slice(0, 3),
   };
+}
+
+export async function getAiTransactionsInsightCheckpoint(
+  ctx: Pick<TRPCContext, "db" | "userId">
+) {
+  const userId = assertUserId(ctx.userId);
+  const [txnRow, categoryRow] = await Promise.all([
+    ctx.db
+      .select({ value: sql<Date | null>`max(${transactionEvents.updatedAt})` })
+      .from(transactionEvents)
+      .where(eq(transactionEvents.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${categories.updatedAt})` })
+      .from(categories)
+      .where(eq(categories.clerkUserId, userId)),
+  ]);
+
+  return [
+    `tx:${txnRow[0]?.value?.toISOString() ?? "0"}`,
+    `cg:${categoryRow[0]?.value?.toISOString() ?? "0"}`,
+  ].join("|");
 }
 
 export async function getAiBudgetsInsight(ctx: Pick<TRPCContext, "db" | "userId">) {
@@ -535,4 +611,23 @@ export async function getAiBudgetsInsight(ctx: Pick<TRPCContext, "db" | "userId"
       },
     ],
   };
+}
+
+export async function getAiBudgetsInsightCheckpoint(ctx: Pick<TRPCContext, "db" | "userId">) {
+  const userId = assertUserId(ctx.userId);
+  const [txnRow, budgetRow] = await Promise.all([
+    ctx.db
+      .select({ value: sql<Date | null>`max(${transactionEvents.updatedAt})` })
+      .from(transactionEvents)
+      .where(eq(transactionEvents.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${budgets.updatedAt})` })
+      .from(budgets)
+      .where(eq(budgets.clerkUserId, userId)),
+  ]);
+
+  return [
+    `tx:${txnRow[0]?.value?.toISOString() ?? "0"}`,
+    `bg:${budgetRow[0]?.value?.toISOString() ?? "0"}`,
+  ].join("|");
 }
