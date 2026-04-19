@@ -8,6 +8,7 @@ import {
   CreditCard,
   HandCoins,
   Landmark,
+  Loader2,
   Pencil,
   Search,
   Sparkles,
@@ -322,9 +323,21 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const budgetsQuery = trpc.budgets.list.useQuery();
   const categoriesQuery = trpc.categories.list.useQuery();
   const summaryQuery = trpc.transactions.summary.useQuery();
-  const aiInsightQuery = trpc.ai.transactionsInsight.useQuery(undefined, {
-    staleTime: 45_000,
+  const habitInsightQuery = trpc.ai.latestHabitInsight.useQuery();
+  const generateHabitInsight = trpc.ai.generateHabitInsight.useMutation({
+    onSuccess: async () => {
+      await utils.ai.latestHabitInsight.invalidate();
+      toast.success("Insight generated", {
+        description: "Habit coaching was updated from your latest spending history.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Could not generate insight", {
+        description: error.message,
+      });
+    },
   });
+  const isGeneratingInsight = generateHabitInsight.isPending;
   const settingsQuery = trpc.settings.get.useQuery();
 
   const [open, setOpen] = useState(false);
@@ -710,53 +723,136 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   AI insight
                 </p>
                 <h3 className="text-[1.02rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                  {aiInsightQuery.data?.headline ?? "Transaction intelligence"}
+                  Transaction intelligence
                 </h3>
               </div>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit rounded-full"
+              onClick={() => generateHabitInsight.mutate()}
+              disabled={isGeneratingInsight}
+            >
+              {isGeneratingInsight ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Generating insight...
+                </>
+              ) : (
+                "Generate insight"
+              )}
+            </Button>
 
-            <p className="text-[0.9rem] leading-6 text-muted-foreground">
-              {aiInsightQuery.data?.summary ??
-                "Insights are loading. Trends and category shifts will appear here."}
-            </p>
-
-            <div className="grid gap-2.5 md:grid-cols-3">
-              {(aiInsightQuery.data?.metrics ?? []).map((metric) => (
-                <div
-                  key={metric.label}
-                  className="rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f]"
-                >
+            {habitInsightQuery.data ? (
+              <div
+                className={`rounded-xl border border-border/70 bg-background px-3.5 py-3 transition dark:bg-[#141d1f] ${
+                  isGeneratingInsight ? "relative overflow-hidden" : ""
+                }`}
+              >
+                {isGeneratingInsight ? (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/82 backdrop-blur-[1.5px] dark:bg-[#141d1f]/82">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-1.5 text-[0.8rem] font-medium text-foreground shadow-sm dark:bg-[#1b2628]">
+                      <Loader2 className="size-3.5 animate-spin text-[#14656B] dark:text-primary" />
+                      Refreshing monthly insight...
+                    </div>
+                  </div>
+                ) : null}
+                <div className="flex items-center justify-between gap-3">
                   <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    {metric.label}
+                    Monthly coaching insight
                   </p>
-                  <p
-                    className={`mt-1 text-[0.9rem] font-semibold ${
-                      metric.tone === "positive"
-                        ? "text-emerald-700 dark:text-emerald-300"
-                        : metric.tone === "warning"
-                          ? "text-amber-700 dark:text-amber-300"
-                          : "text-foreground"
-                    }`}
-                  >
-                    {metric.value}
+                  <p className="text-[0.72rem] text-muted-foreground">
+                    {new Date(habitInsightQuery.data.generatedAt).toLocaleString()}
                   </p>
                 </div>
-              ))}
-            </div>
 
-            <div className="rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f]">
-              <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
-                Recommended next step
-              </p>
-              <ul className="mt-2 space-y-1.5 text-[0.88rem] text-foreground">
-                {(aiInsightQuery.data?.recommendations ?? ["No recommendation yet."]).map((item) => (
-                  <li key={item}>- {item}</li>
-                ))}
-              </ul>
-              <p className="mt-2 text-[0.76rem] text-muted-foreground">
-                {aiInsightQuery.data?.confidence ?? "Initial estimate"}
-              </p>
-            </div>
+                <p className="mt-2 text-[0.95rem] font-semibold text-foreground">
+                  {habitInsightQuery.data.summary}
+                </p>
+                <p className="mt-1 text-[0.82rem] text-muted-foreground">
+                  {habitInsightQuery.data.periodLabel}
+                </p>
+
+                <div className="mt-3 grid gap-2 md:grid-cols-3">
+                  <div className="rounded-lg border border-[#89bcc3]/30 bg-[#eff6f7] px-3 py-2 dark:border-[#2b4a4f] dark:bg-[#192628]">
+                    <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Top spend this month
+                    </p>
+                    <p className="mt-1 text-[0.88rem] font-semibold text-foreground">
+                      {habitInsightQuery.data.topSpendCategory.name} ·{" "}
+                      {habitInsightQuery.data.topSpendCategory.amountLabel}
+                    </p>
+                    <p className="text-[0.78rem] text-muted-foreground">
+                      {habitInsightQuery.data.topSpendCategory.sharePct}% share
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-white px-3 py-2 dark:bg-[#192325]">
+                    <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Biggest shift
+                    </p>
+                    <p className="mt-1 text-[0.88rem] font-semibold text-foreground">
+                      {habitInsightQuery.data.monthOverMonthShift.category}
+                    </p>
+                    <p
+                      className={`text-[0.78rem] ${
+                        habitInsightQuery.data.monthOverMonthShift.direction === "up"
+                          ? "text-amber-700 dark:text-amber-300"
+                          : habitInsightQuery.data.monthOverMonthShift.direction === "down"
+                            ? "text-emerald-700 dark:text-emerald-300"
+                            : "text-muted-foreground"
+                      }`}
+                    >
+                      {habitInsightQuery.data.monthOverMonthShift.deltaLabel}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-[#b9d8bf]/45 bg-[#edf8ee] px-3 py-2 dark:border-[#2f5a35] dark:bg-[#1b2a20]">
+                    <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Recommended next step
+                    </p>
+                    <p className="mt-1 text-[0.88rem] font-semibold text-[#11424a] dark:text-emerald-100">
+                      {habitInsightQuery.data.advice[0] ?? "No recommendation yet."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-border/70 bg-white/65 px-3 py-2.5 dark:bg-[#1a2527]/80">
+                  <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    What changed
+                  </p>
+                  <ul className="mt-2 space-y-2 text-[0.86rem] text-foreground">
+                    {habitInsightQuery.data.keyFindings.map((item: string) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <span className="mt-1.5 size-1.5 rounded-full bg-[#14656B] dark:bg-primary" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-border/70 bg-white/65 px-3 py-2.5 dark:bg-[#1a2527]/80">
+                  <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Suggested actions
+                  </p>
+                  <ul className="mt-2 space-y-2 text-[0.86rem] text-foreground">
+                    {habitInsightQuery.data.advice.map((item: string) => (
+                      <li key={item} className="flex items-start gap-2">
+                        <span className="mt-1.5 size-1.5 rounded-full bg-emerald-500 dark:bg-emerald-300" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border/80 bg-background px-3.5 py-3 dark:bg-[#141d1f]">
+                <p className="text-[0.9rem] text-foreground">No generated insight yet.</p>
+                <p className="mt-1 text-[0.82rem] text-muted-foreground">
+                  Generate insight to analyze your monthly spending habits and coaching actions.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>

@@ -27,6 +27,13 @@ type ParsedDraft = {
   >;
 };
 
+function checkpointValue(value: Date | string | null | undefined) {
+  if (!value) return "0";
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") return value;
+  return String(value);
+}
+
 function assertUserId(userId: string | null | undefined): string {
   if (!userId) {
     throw new TRPCError({
@@ -344,9 +351,9 @@ export async function getAiDashboardInsightCheckpoint(ctx: Pick<TRPCContext, "db
   ]);
 
   return [
-    `tx:${txnRow[0]?.value?.toISOString() ?? "0"}`,
-    `bg:${budgetRow[0]?.value?.toISOString() ?? "0"}`,
-    `ac:${accountRow[0]?.value?.toISOString() ?? "0"}`,
+    `tx:${checkpointValue(txnRow[0]?.value)}`,
+    `bg:${checkpointValue(budgetRow[0]?.value)}`,
+    `ac:${checkpointValue(accountRow[0]?.value)}`,
   ].join("|");
 }
 
@@ -381,15 +388,16 @@ export async function getAiQuickCaptureCheckpoint(
 
   return [
     `q:${normalizedText}`,
-    `ac:${accountRow[0]?.value?.toISOString() ?? "0"}`,
-    `bg:${budgetRow[0]?.value?.toISOString() ?? "0"}`,
-    `cg:${categoryRow[0]?.value?.toISOString() ?? "0"}`,
+    `ac:${checkpointValue(accountRow[0]?.value)}`,
+    `bg:${checkpointValue(budgetRow[0]?.value)}`,
+    `cg:${checkpointValue(categoryRow[0]?.value)}`,
   ].join("|");
 }
 
 export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "userId">) {
   const userId = assertUserId(ctx.userId);
   const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(now.getDate() - 7);
   const fourteenDaysAgo = new Date(now);
@@ -397,7 +405,8 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
   const fortyFiveDaysAgo = new Date(now);
   fortyFiveDaysAgo.setDate(now.getDate() - 45);
 
-  const [recentEvents, priorEvents, recurringCandidates, categoryRows] = await Promise.all([
+  const [recentEvents, priorEvents, recurringCandidates, monthlyExpenseEvents, categoryRows] =
+    await Promise.all([
     ctx.db.query.transactionEvents.findMany({
       where: and(
         eq(transactionEvents.clerkUserId, userId),
@@ -433,11 +442,22 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
       columns: { description: true, type: true },
       orderBy: [desc(transactionEvents.occurredAt)],
     }),
+    ctx.db.query.transactionEvents.findMany({
+      where: and(
+        eq(transactionEvents.clerkUserId, userId),
+        eq(transactionEvents.type, "expense"),
+        gte(transactionEvents.occurredAt, monthStart)
+      ),
+      columns: {
+        amount: true,
+        categoryId: true,
+      },
+    }),
     ctx.db.query.categories.findMany({
       where: and(eq(categories.clerkUserId, userId), eq(categories.isArchived, false)),
       columns: { id: true, name: true },
     }),
-  ]);
+    ]);
 
   const recentExpenseEvents = recentEvents.filter((event) => event.type === "expense");
   const priorExpenseEvents = priorEvents.filter((event) => event.type === "expense");
@@ -470,6 +490,21 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
     }
   }
 
+  const byCategoryMonth = new Map<string, number>();
+  monthlyExpenseEvents.forEach((event) => {
+    const key = (event.categoryId ? categoryById.get(event.categoryId) : null) ?? "Uncategorized";
+    byCategoryMonth.set(key, (byCategoryMonth.get(key) ?? 0) + event.amount);
+  });
+  const totalMonthlyExpense = monthlyExpenseEvents.reduce((sum, event) => sum + event.amount, 0);
+  const [topMonthlyCategory, topMonthlyAmount] =
+    Array.from(byCategoryMonth.entries()).sort((left, right) => right[1] - left[1])[0] ?? [
+      "No category yet",
+      0,
+    ];
+  const topMonthlySharePct =
+    totalMonthlyExpense > 0 ? Math.round((topMonthlyAmount / totalMonthlyExpense) * 100) : 0;
+  const potentialMonthlySavings = Math.round(topMonthlyAmount * 0.1);
+
   const recurringMap = new Map<string, number>();
   recurringCandidates
     .filter((event) => event.type === "expense")
@@ -482,6 +517,17 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
     Array.from(recurringMap.entries()).find(([, count]) => count >= 3)?.[0] ?? null;
 
   const recommendation: string[] = [];
+  if (topMonthlyAmount > 0 && topMonthlyCategory !== "No category yet") {
+    recommendation.push(
+      `${topMonthlyCategory} is your top spend this month (${topMonthlySharePct}% of expenses).`
+    );
+    recommendation.push(
+      `Try reducing ${topMonthlyCategory} by 10% to save about ${formatCurrencyMiliunits(
+        potentialMonthlySavings,
+        "PHP"
+      )} this month.`
+    );
+  }
   if (topShiftAmount > 0 && topShiftCategory !== "No major shift") {
     recommendation.push(`Review ${topShiftCategory} spending this week.`);
   }
@@ -491,6 +537,14 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
   if (recurringLabel) {
     recommendation.push("Tag recurring payments to improve forecasting.");
   }
+  if (recommendation.length === 0 && topMonthlyAmount > 0) {
+    recommendation.push(
+      `Your largest expense area is ${topMonthlyCategory} at ${formatCurrencyMiliunits(
+        topMonthlyAmount,
+        "PHP"
+      )} this month.`
+    );
+  }
   if (recommendation.length === 0) {
     recommendation.push("Transaction flow is stable; keep categories tidy for cleaner trends.");
   }
@@ -498,9 +552,11 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
   return {
     headline: "AI transaction intelligence",
     summary:
-      topShiftAmount > 0 && topShiftCategory !== "No major shift"
-        ? `You spent ${formatCurrencyMiliunits(topShiftAmount, "PHP")} more on ${topShiftCategory} vs the prior 7 days.`
-        : "No strong category spikes versus the prior week.",
+      topMonthlyAmount > 0 && topMonthlyCategory !== "No category yet"
+        ? `${topMonthlyCategory} is your largest spending category this month (${topMonthlySharePct}% share).`
+        : topShiftAmount > 0 && topShiftCategory !== "No major shift"
+          ? `You spent ${formatCurrencyMiliunits(topShiftAmount, "PHP")} more on ${topShiftCategory} vs the prior 7 days.`
+          : "No strong category spikes versus the prior week.",
     confidence:
       recentExpenseEvents.length >= 8 ? "Medium confidence" : "Initial estimate",
     metrics: [
@@ -510,12 +566,28 @@ export async function getAiTransactionsInsight(ctx: Pick<TRPCContext, "db" | "us
         tone: "neutral" as const,
       },
       {
+        label: "Top category (month)",
+        value:
+          topMonthlyAmount > 0 && topMonthlyCategory !== "No category yet"
+            ? `${topMonthlyCategory} ${topMonthlySharePct}%`
+            : "No data yet",
+        tone: topMonthlyAmount > 0 ? ("warning" as const) : ("neutral" as const),
+      },
+      {
         label: "Largest shift",
         value:
           topShiftCategory === "No major shift"
             ? "No major shift vs prior 7d"
             : `${topShiftCategory} +${formatCurrencyMiliunits(topShiftAmount, "PHP")} vs prior 7d`,
         tone: topShiftAmount > 0 ? ("warning" as const) : ("positive" as const),
+      },
+      {
+        label: "Savings opportunity",
+        value:
+          potentialMonthlySavings > 0
+            ? `${formatCurrencyMiliunits(potentialMonthlySavings, "PHP")} / month`
+            : "No estimate yet",
+        tone: potentialMonthlySavings > 0 ? ("positive" as const) : ("neutral" as const),
       },
       {
         label: "Uncategorized",
@@ -543,9 +615,162 @@ export async function getAiTransactionsInsightCheckpoint(
   ]);
 
   return [
-    `tx:${txnRow[0]?.value?.toISOString() ?? "0"}`,
-    `cg:${categoryRow[0]?.value?.toISOString() ?? "0"}`,
+    `tx:${checkpointValue(txnRow[0]?.value)}`,
+    `cg:${checkpointValue(categoryRow[0]?.value)}`,
   ].join("|");
+}
+
+type HabitCoachingInsight = {
+  generatedAt: string;
+  periodLabel: string;
+  summary: string;
+  topSpendCategory: {
+    name: string;
+    amountLabel: string;
+    sharePct: number;
+  };
+  monthOverMonthShift: {
+    category: string;
+    deltaLabel: string;
+    direction: "up" | "down" | "flat";
+  };
+  keyFindings: string[];
+  advice: string[];
+};
+
+function getMonthDateRange(reference: Date, shiftMonths: number) {
+  const shifted = new Date(reference.getFullYear(), reference.getMonth() + shiftMonths, 1);
+  const start = new Date(shifted.getFullYear(), shifted.getMonth(), 1);
+  const end = new Date(shifted.getFullYear(), shifted.getMonth() + 1, 1);
+  return { start, end };
+}
+
+export async function generateMonthlyHabitCoachingInsight(
+  ctx: Pick<TRPCContext, "db" | "userId">
+): Promise<HabitCoachingInsight> {
+  const userId = assertUserId(ctx.userId);
+  const now = new Date();
+  const current = getMonthDateRange(now, 0);
+  const previous = getMonthDateRange(now, -1);
+
+  const [events, categoryRows] = await Promise.all([
+    ctx.db.query.transactionEvents.findMany({
+      where: and(
+        eq(transactionEvents.clerkUserId, userId),
+        eq(transactionEvents.type, "expense"),
+        gte(transactionEvents.occurredAt, previous.start),
+        lt(transactionEvents.occurredAt, current.end)
+      ),
+      columns: {
+        amount: true,
+        categoryId: true,
+        occurredAt: true,
+      },
+    }),
+    ctx.db.query.categories.findMany({
+      where: and(eq(categories.clerkUserId, userId), eq(categories.isArchived, false)),
+      columns: { id: true, name: true },
+    }),
+  ]);
+
+  const categoryById = new Map(categoryRows.map((category) => [category.id, category.name]));
+  const currentByCategory = new Map<string, number>();
+  const previousByCategory = new Map<string, number>();
+
+  for (const event of events) {
+    const category = (event.categoryId ? categoryById.get(event.categoryId) : null) ?? "Uncategorized";
+    const inCurrentMonth = event.occurredAt >= current.start;
+    const targetMap = inCurrentMonth ? currentByCategory : previousByCategory;
+    targetMap.set(category, (targetMap.get(category) ?? 0) + event.amount);
+  }
+
+  const currentTotal = Array.from(currentByCategory.values()).reduce((sum, value) => sum + value, 0);
+  const previousTotal = Array.from(previousByCategory.values()).reduce((sum, value) => sum + value, 0);
+
+  const [topCategory, topAmount] =
+    Array.from(currentByCategory.entries()).sort((a, b) => b[1] - a[1])[0] ?? ["No category yet", 0];
+  const topSharePct = currentTotal > 0 ? Math.round((topAmount / currentTotal) * 100) : 0;
+
+  let shiftCategory = "No major shift";
+  let shiftAmount = 0;
+  for (const [category, amount] of currentByCategory.entries()) {
+    const previousAmount = previousByCategory.get(category) ?? 0;
+    const delta = amount - previousAmount;
+    if (Math.abs(delta) > Math.abs(shiftAmount)) {
+      shiftAmount = delta;
+      shiftCategory = category;
+    }
+  }
+
+  const direction: "up" | "down" | "flat" =
+    shiftAmount > 0 ? "up" : shiftAmount < 0 ? "down" : "flat";
+  const shiftLabel =
+    direction === "flat"
+      ? "No significant change"
+      : `${direction === "up" ? "+" : "-"}${formatCurrencyMiliunits(Math.abs(shiftAmount), "PHP")} vs last month`;
+
+  const potentialSavings = topAmount > 0 ? Math.round(topAmount * 0.12) : 0;
+  const keyFindings: string[] = [];
+  if (topAmount > 0) {
+    keyFindings.push(
+      `${topCategory} is your biggest spend this month at ${formatCurrencyMiliunits(
+        topAmount,
+        "PHP"
+      )} (${topSharePct}% of expenses).`
+    );
+  }
+  if (direction !== "flat" && shiftCategory !== "No major shift") {
+    keyFindings.push(`${shiftCategory} moved ${shiftLabel}.`);
+  } else {
+    keyFindings.push("Spending distribution stayed relatively stable month-over-month.");
+  }
+  if (currentTotal > 0 && previousTotal > 0) {
+    const totalDelta = currentTotal - previousTotal;
+    const totalDeltaLabel = `${totalDelta >= 0 ? "+" : "-"}${formatCurrencyMiliunits(
+      Math.abs(totalDelta),
+      "PHP"
+    )}`;
+    keyFindings.push(`Overall spending change: ${totalDeltaLabel} vs last month.`);
+  }
+
+  const advice: string[] = [];
+  if (topAmount > 0 && topCategory !== "No category yet") {
+    advice.push(
+      `Set a monthly guardrail for ${topCategory} and review it weekly.`
+    );
+    advice.push(
+      `If you cut ${topCategory} by 12%, you can free up about ${formatCurrencyMiliunits(
+        potentialSavings,
+        "PHP"
+      )} this month.`
+    );
+  } else {
+    advice.push("Record more categorized expenses to unlock stronger coaching insights.");
+  }
+  if (direction === "up" && shiftCategory !== "No major shift") {
+    advice.push(`Check recent ${shiftCategory} transactions and trim non-essential items first.`);
+  }
+
+  return {
+    generatedAt: now.toISOString(),
+    periodLabel: "This month vs last month",
+    summary:
+      topAmount > 0
+        ? `${topCategory} leads your spending this month.`
+        : "Not enough categorized spending yet for coaching insights.",
+    topSpendCategory: {
+      name: topCategory,
+      amountLabel: formatCurrencyMiliunits(topAmount, "PHP"),
+      sharePct: topSharePct,
+    },
+    monthOverMonthShift: {
+      category: shiftCategory,
+      deltaLabel: shiftLabel,
+      direction,
+    },
+    keyFindings,
+    advice,
+  };
 }
 
 export async function getAiBudgetsInsight(ctx: Pick<TRPCContext, "db" | "userId">) {
@@ -627,7 +852,7 @@ export async function getAiBudgetsInsightCheckpoint(ctx: Pick<TRPCContext, "db" 
   ]);
 
   return [
-    `tx:${txnRow[0]?.value?.toISOString() ?? "0"}`,
-    `bg:${budgetRow[0]?.value?.toISOString() ?? "0"}`,
+    `tx:${checkpointValue(txnRow[0]?.value)}`,
+    `bg:${checkpointValue(budgetRow[0]?.value)}`,
   ].join("|");
 }

@@ -12,10 +12,15 @@ import {
   getAiQuickCaptureDraft,
   getAiTransactionsInsightCheckpoint,
   getAiTransactionsInsight,
+  generateMonthlyHabitCoachingInsight,
 } from "@/features/ai/server/service";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 const aiRateLimitedProcedure = protectedProcedure.use(({ ctx, path, next }) => {
+  if (process.env.NODE_ENV !== "production") {
+    return next();
+  }
+
   const limiter = consumeAiRateLimit({
     userId: ctx.userId,
     routeKey: `ai:${path}`,
@@ -41,47 +46,131 @@ const aiRateLimitedProcedure = protectedProcedure.use(({ ctx, path, next }) => {
   return next();
 });
 
+type HabitSnapshot = Awaited<ReturnType<typeof generateMonthlyHabitCoachingInsight>>;
+const habitStoreGlobal = globalThis as typeof globalThis & {
+  __veyraHabitInsightStore?: Map<string, HabitSnapshot>;
+};
+const habitInsightStore =
+  habitStoreGlobal.__veyraHabitInsightStore ??
+  (habitStoreGlobal.__veyraHabitInsightStore = new Map());
+
 export const aiRouter = createTRPCRouter({
   dashboardInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
-    const checkpoint = await getAiDashboardInsightCheckpoint(ctx);
-    return getOrComputeInsight({
-      userId: ctx.userId,
-      surface: "dashboard",
-      checkpoint,
-      cooldownMs: 45_000,
-      compute: () => getAiDashboardInsight(ctx),
-    });
+    try {
+      const checkpoint = await getAiDashboardInsightCheckpoint(ctx);
+      return getOrComputeInsight({
+        userId: ctx.userId,
+        surface: "dashboard",
+        checkpoint,
+        cooldownMs: 45_000,
+        compute: () => getAiDashboardInsight(ctx),
+      });
+    } catch (error) {
+      console.error("[ai.dashboardInsight] failed", error);
+      return {
+        statement: "AI insights are temporarily unavailable.",
+        projectedImpact: "No projection available",
+        confidence: "Initial estimate",
+        window: "Next 7 days",
+        nextActionLabel: "Review budgets",
+        nextActionHref: "/budgets",
+        budgetStatusSummary: "Try again shortly",
+        totalBudgets: 0,
+        atRisk: 0,
+        onTrack: 0,
+        totalRemaining: 0,
+      };
+    }
   }),
   quickCaptureDraft: aiRateLimitedProcedure
     .input(getQuickCaptureDraftSchema)
     .query(async ({ ctx, input }) => {
-      const checkpoint = await getAiQuickCaptureCheckpoint(ctx, input);
-      return getOrComputeInsight({
-        userId: ctx.userId,
-        surface: "quick-capture",
-        checkpoint,
-        cooldownMs: 15_000,
-        compute: () => getAiQuickCaptureDraft(ctx, input),
-      });
+      try {
+        const checkpoint = await getAiQuickCaptureCheckpoint(ctx, input);
+        return getOrComputeInsight({
+          userId: ctx.userId,
+          surface: "quick-capture",
+          checkpoint,
+          cooldownMs: 15_000,
+          compute: () => getAiQuickCaptureDraft(ctx, input),
+        });
+      } catch (error) {
+        console.error("[ai.quickCaptureDraft] failed", error);
+        const fallbackMissing: Array<
+          "amount" | "description" | "intent" | "account" | "sourceAccount" | "destinationAccount"
+        > = ["intent", "amount", "description"];
+        return {
+          intent: null,
+          amountMiliunits: null,
+          description: null,
+          dateValue: new Date().toISOString().slice(0, 10),
+          sourceAccountId: null,
+          destinationAccountId: null,
+          categoryId: null,
+          budgetId: null,
+          confidence: "low" as const,
+          missing: fallbackMissing,
+        };
+      }
     }),
   transactionsInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
-    const checkpoint = await getAiTransactionsInsightCheckpoint(ctx);
-    return getOrComputeInsight({
-      userId: ctx.userId,
-      surface: "transactions",
-      checkpoint,
-      cooldownMs: 45_000,
-      compute: () => getAiTransactionsInsight(ctx),
-    });
+    try {
+      const checkpoint = await getAiTransactionsInsightCheckpoint(ctx);
+      return getOrComputeInsight({
+        userId: ctx.userId,
+        surface: "transactions",
+        checkpoint,
+        cooldownMs: 45_000,
+        compute: () => getAiTransactionsInsight(ctx),
+      });
+    } catch (error) {
+      console.error("[ai.transactionsInsight] failed", error);
+      return {
+        headline: "AI transaction intelligence",
+        summary: "Insights are loading. Trends and category shifts will appear here.",
+        confidence: "Initial estimate",
+        metrics: [],
+        recommendations: ["No recommendation yet."],
+      };
+    }
   }),
   budgetsInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
-    const checkpoint = await getAiBudgetsInsightCheckpoint(ctx);
-    return getOrComputeInsight({
-      userId: ctx.userId,
-      surface: "budgets",
-      checkpoint,
-      cooldownMs: 45_000,
-      compute: () => getAiBudgetsInsight(ctx),
-    });
+    try {
+      const checkpoint = await getAiBudgetsInsightCheckpoint(ctx);
+      return getOrComputeInsight({
+        userId: ctx.userId,
+        surface: "budgets",
+        checkpoint,
+        cooldownMs: 45_000,
+        compute: () => getAiBudgetsInsight(ctx),
+      });
+    } catch (error) {
+      console.error("[ai.budgetsInsight] failed", error);
+      return {
+        headline: "AI budget intelligence",
+        summary: "Cycle pacing and overshoot guidance will appear here.",
+        confidence: "Initial estimate",
+        timeWindow: "Current budget cycle",
+        likelyOvershootDate: null,
+        recommendations: ["No recommendation yet."],
+        metrics: [],
+      };
+    }
+  }),
+  latestHabitInsight: protectedProcedure.query(({ ctx }) => {
+    return habitInsightStore.get(ctx.userId) ?? null;
+  }),
+  generateHabitInsight: aiRateLimitedProcedure.mutation(async ({ ctx }) => {
+    try {
+      const generated = await generateMonthlyHabitCoachingInsight(ctx);
+      habitInsightStore.set(ctx.userId, generated);
+      return generated;
+    } catch (error) {
+      console.error("[ai.generateHabitInsight] failed", error);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Could not generate habit insight right now.",
+      });
+    }
   }),
 });
