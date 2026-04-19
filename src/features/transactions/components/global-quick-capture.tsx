@@ -1,8 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import { ArrowRightLeft, Landmark, Loader2, Plus, Search, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Landmark,
+  Loader2,
+  PiggyBank,
+  Plus,
+  Search,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
@@ -28,6 +38,7 @@ type SupportedEventType = RouterOutputs["transactions"]["list"]["items"][number]
 
 type ParsedQuickCapture = {
   amountMiliunits: number | null;
+  budgetId: string | null;
   categoryId: string | null;
   dateLabel: string;
   dateValue: string;
@@ -43,6 +54,7 @@ const examplePrompts = [
   "received 2500 from client payment yesterday",
   "transferred 5000 from checking to wallet",
 ] as const;
+const QUICK_CAPTURE_DRAFT_KEY = "veyra:quick-capture-draft";
 
 function normalizeValue(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
@@ -200,6 +212,7 @@ function parseQuickCapture(
 
   return {
     amountMiliunits,
+    budgetId: null,
     categoryId,
     dateLabel,
     dateValue,
@@ -231,6 +244,7 @@ function getIntentMeta(intent: QuickCaptureIntent | SupportedEventType) {
 export function GlobalQuickCapture() {
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery(undefined, { enabled: false });
+  const budgetsQuery = trpc.budgets.list.useQuery(undefined, { enabled: false });
   const categoriesQuery = trpc.categories.list.useQuery(undefined, { enabled: false });
   const createEvent = trpc.transactions.create.useMutation({
     onSuccess: async (_, variables) => {
@@ -239,11 +253,18 @@ export function GlobalQuickCapture() {
         utils.transactions.summary.invalidate(),
         utils.accounts.list.invalidate(),
         utils.accounts.summary.invalidate(),
+        utils.budgets.list.invalidate(),
+        utils.budgets.summary.invalidate(),
+        utils.ai.dashboardInsight.invalidate(),
+        utils.ai.transactionsInsight.invalidate(),
+        utils.ai.budgetsInsight.invalidate(),
       ]);
       toast.success(`${getIntentMeta(variables.type).label} recorded.`);
       setOpen(false);
       setInput("");
+      window.localStorage.removeItem(QUICK_CAPTURE_DRAFT_KEY);
       setSelectedAccountId("");
+      setSelectedBudgetId("");
       setSelectedCategoryId("");
       setSelectedSourceAccountId("");
       setSelectedDestinationAccountId("");
@@ -256,9 +277,21 @@ export function GlobalQuickCapture() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedBudgetId, setSelectedBudgetId] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedSourceAccountId, setSelectedSourceAccountId] = useState("");
   const [selectedDestinationAccountId, setSelectedDestinationAccountId] = useState("");
+  const deferredInput = useDeferredValue(input.trim());
+
+  const aiDraftQuery = trpc.ai.quickCaptureDraft.useQuery(
+    { text: deferredInput },
+    {
+      enabled: open && deferredInput.length >= 3,
+      staleTime: 20_000,
+      retry: false,
+    },
+  );
+
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
   const categories = useMemo(() => categoriesQuery.data ?? [], [categoriesQuery.data]);
   const settingsQuery = trpc.settings.get.useQuery();
@@ -266,6 +299,22 @@ export function GlobalQuickCapture() {
     () => resolveDatePreferences(settingsQuery.data),
     [settingsQuery.data]
   );
+
+  useEffect(() => {
+    const storedDraft = window.localStorage.getItem(QUICK_CAPTURE_DRAFT_KEY);
+    if (storedDraft) {
+      setInput(storedDraft);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!input.trim()) {
+      window.localStorage.removeItem(QUICK_CAPTURE_DRAFT_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(QUICK_CAPTURE_DRAFT_KEY, input);
+  }, [input]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -282,8 +331,9 @@ export function GlobalQuickCapture() {
   useEffect(() => {
     if (!open) return;
     void accountsQuery.refetch();
+    void budgetsQuery.refetch();
     void categoriesQuery.refetch();
-  }, [open, accountsQuery, categoriesQuery]);
+  }, [open, accountsQuery, budgetsQuery, categoriesQuery]);
 
   const liquidAccounts = useMemo(
     () => accounts.filter((account) => account.type === "cash" || account.type === "wallet"),
@@ -293,9 +343,35 @@ export function GlobalQuickCapture() {
     () => accounts.filter((account) => account.type === "cash" || account.type === "wallet" || account.type === "credit"),
     [accounts],
   );
-  const parsed = useMemo(
-    () => parseQuickCapture(input, accounts, categories, datePreferences),
-    [input, accounts, categories, datePreferences]
+  const parsed = useMemo(() => {
+    const localDraft = parseQuickCapture(input, accounts, categories, datePreferences);
+    const aiDraft = aiDraftQuery.data;
+    if (!aiDraft) return localDraft;
+
+    return {
+      amountMiliunits: aiDraft.amountMiliunits,
+      budgetId: aiDraft.budgetId,
+      categoryId: aiDraft.categoryId,
+      dateLabel:
+        aiDraft.dateValue === toDateValue()
+          ? "Today"
+          : aiDraft.dateValue === toDateValue(-1)
+            ? "Yesterday"
+            : formatDateWithPreferences(aiDraft.dateValue, datePreferences, "date-no-year"),
+      dateValue: aiDraft.dateValue,
+      description: aiDraft.description,
+      destinationAccountId: aiDraft.destinationAccountId,
+      intent: aiDraft.intent,
+      missing: aiDraft.missing,
+      sourceAccountId: aiDraft.sourceAccountId,
+    } satisfies ParsedQuickCapture;
+  }, [input, accounts, categories, datePreferences, aiDraftQuery.data]);
+  const activeBudgetOptions = useMemo(
+    () =>
+      (budgetsQuery.data ?? [])
+        .filter((budget) => budget.isActive)
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [budgetsQuery.data],
   );
   const relevantCategoryOptions = useMemo(
     () =>
@@ -313,10 +389,17 @@ export function GlobalQuickCapture() {
 
   useEffect(() => {
     setSelectedAccountId(parsed.sourceAccountId ?? "");
+    setSelectedBudgetId(parsed.budgetId ?? "");
     setSelectedCategoryId(parsed.categoryId ?? "");
     setSelectedSourceAccountId(parsed.sourceAccountId ?? "");
     setSelectedDestinationAccountId(parsed.destinationAccountId ?? "");
-  }, [parsed.sourceAccountId, parsed.destinationAccountId, parsed.categoryId, parsed.intent]);
+  }, [
+    parsed.sourceAccountId,
+    parsed.destinationAccountId,
+    parsed.categoryId,
+    parsed.budgetId,
+    parsed.intent,
+  ]);
 
   const canSubmit =
     parsed.intent === "expense" || parsed.intent === "income"
@@ -336,6 +419,7 @@ export function GlobalQuickCapture() {
         type: parsed.intent,
         accountId: selectedAccountId,
         amount: parsed.amountMiliunits,
+        budgetId: parsed.intent === "expense" && selectedBudgetId ? selectedBudgetId : undefined,
         categoryId: selectedCategoryId || undefined,
         date,
         description: parsed.description ?? intentMeta.label,
@@ -375,19 +459,19 @@ export function GlobalQuickCapture() {
         onOpenChange={(nextOpen) => {
           if (isSubmitting && !nextOpen) return;
           setOpen(nextOpen);
-          if (!nextOpen && !isSubmitting) {
-            setInput("");
-          }
         }}
       >
         <DialogContent
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="max-h-[calc(88dvh-env(safe-area-inset-top))] w-[min(92vw,36rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.985),rgba(251,250,246,0.955))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.985),rgba(18,27,29,0.985))] sm:max-h-[92vh] sm:w-auto sm:max-w-[35rem] sm:rounded-[2rem]"
+          className="max-h-[calc(88dvh-env(safe-area-inset-top))] w-[min(92vw,36rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.985),rgba(255,255,255,0.985))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.985),rgba(18,27,29,0.985))] sm:max-h-[92vh] sm:w-auto sm:max-w-[35rem] sm:rounded-[2rem]"
         >
           <DialogHeader className="border-b border-border/70 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pb-5 sm:pt-5.5 sm:pr-16">
             <div className="flex flex-wrap items-center gap-2">
               <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                 Quick capture
+              </div>
+              <div className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[0.68rem] font-medium text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200">
+                AI assist
               </div>
               <div className="hidden rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
                 ⌘/Ctrl ⇧ K
@@ -401,7 +485,7 @@ export function GlobalQuickCapture() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 px-4 py-4 sm:space-y-4.5 sm:px-6 sm:py-5">
+          <div className="space-y-3.5 px-4 py-4 sm:space-y-4 sm:px-6 sm:py-5">
             <div className="space-y-3">
               <div className="flex h-12 items-center rounded-[1rem] border-2 border-[#7fb9b6]/85 bg-white px-4 dark:bg-[#141d1f]">
                 <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
@@ -414,11 +498,31 @@ export function GlobalQuickCapture() {
                   className="h-auto border-0 bg-transparent px-0 py-0 text-[0.95rem] leading-[1.25] shadow-none placeholder:text-muted-foreground/90 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent"
                 />
               </div>
+              {input.trim() ? (
+                <div className="flex flex-wrap items-center gap-2 text-[0.76rem]">
+                  {aiDraftQuery.isFetching ? (
+                    <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 font-medium text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200">
+                      AI is preparing draft
+                    </span>
+                  ) : aiDraftQuery.data ? (
+                    <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 font-medium text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200">
+                      AI ready · {aiDraftQuery.data.confidence} confidence
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
+                      Parser fallback active
+                    </span>
+                  )}
+                  <span className="text-muted-foreground">
+                    Draft is kept if you close this modal.
+                  </span>
+                </div>
+              ) : null}
             </div>
 
             {input.trim() ? (
               <div className="space-y-4">
-                <div className="rounded-[1.25rem] border border-border/70 bg-background/78 px-4 py-4 dark:bg-[#162022]">
+                <div className="rounded-[1.25rem] border border-border/70 bg-white px-4 py-4 dark:bg-[#162022]">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className={`flex size-10 items-center justify-center rounded-full ${
@@ -482,38 +586,39 @@ export function GlobalQuickCapture() {
                             {categories.find((category) => category.id === selectedCategoryId)?.name ?? "No category yet"}
                           </span>
                         </div>
+                        {parsed.intent === "expense" ? (
+                          <div className="flex items-center justify-between gap-3 border-t border-border/70 py-3 text-[0.84rem]">
+                            <span className="text-muted-foreground">Budget</span>
+                            <span className="font-medium text-foreground">
+                              {activeBudgetOptions.find((budget) => budget.id === selectedBudgetId)?.name ??
+                                "No budget"}
+                            </span>
+                          </div>
+                        ) : null}
                       </>
                     )}
-                    <div className="flex items-center justify-between gap-3 border-t border-border/70 py-3 text-[0.84rem]">
-                      <span className="text-muted-foreground">Status</span>
-                      <span className="font-medium text-foreground">
-                        {parsed.missing.length === 0
-                          ? "Ready to record"
-                          : `${parsed.missing.length} field${parsed.missing.length === 1 ? "" : "s"} missing`}
-                      </span>
-                    </div>
                   </div>
                 </div>
 
                 {(parsed.intent === "expense" || parsed.intent === "income") && (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                  <div className="grid gap-4 md:grid-cols-[1.15fr_0.85fr] md:items-start">
+                    <div className="h-fit space-y-3 rounded-[1.2rem] border border-border/70 bg-white px-4 py-4 dark:bg-[#162022]">
                       <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
                         <Landmark className="size-4 text-primary" />
-                        Which account did you use?
+                        Account
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {relevantAccountOptions.slice(0, 4).map((account) => (
+                        {relevantAccountOptions.slice(0, 3).map((account) => (
                           <Button
                             key={account.id}
                             type="button"
                             size="sm"
                             variant={selectedAccountId === account.id ? "default" : "outline"}
-                            className="rounded-full"
+                            className="max-w-full rounded-full"
                             onClick={() => setSelectedAccountId(account.id)}
                             disabled={isSubmitting}
                           >
-                            {account.name}
+                            <span className="max-w-[11rem] truncate">{account.name}</span>
                           </Button>
                         ))}
                       </div>
@@ -529,48 +634,97 @@ export function GlobalQuickCapture() {
                           ))}
                         </SelectContent>
                       </Select>
+
+                      {parsed.intent === "expense" ? (
+                        <div className="space-y-3 border-t border-border/70 pt-3">
+                          <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
+                            <PiggyBank className="size-4 text-primary" />
+                            Budget
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {activeBudgetOptions.slice(0, 4).map((budget) => (
+                              <Button
+                                key={budget.id}
+                                type="button"
+                                size="sm"
+                                variant={selectedBudgetId === budget.id ? "default" : "outline"}
+                                className="max-w-full rounded-full"
+                                onClick={() => setSelectedBudgetId(budget.id)}
+                                disabled={isSubmitting}
+                              >
+                                <span className="max-w-[10rem] truncate">{budget.name}</span>
+                              </Button>
+                            ))}
+                          </div>
+                          <Select
+                            value={selectedBudgetId || "none"}
+                            onValueChange={(value) => setSelectedBudgetId(value === "none" ? "" : value)}
+                            disabled={isSubmitting}
+                          >
+                            <SelectTrigger className="h-11 rounded-[1rem] border-border/80 bg-background px-4">
+                              <SelectValue placeholder="No budget" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No budget</SelectItem>
+                              {activeBudgetOptions.map((budget) => (
+                                <SelectItem key={budget.id} value={budget.id}>
+                                  {budget.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ) : null}
                     </div>
 
-                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                    <div className="h-fit space-y-4 rounded-[1.2rem] border border-border/70 bg-white px-4 py-4 dark:bg-[#162022]">
                       <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
                         <Wallet className="size-4 text-primary" />
                         Category
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        {relevantCategoryOptions.slice(0, 4).map((category) => (
-                          <Button
-                            key={category.id}
-                            type="button"
-                            size="sm"
-                            variant={selectedCategoryId === category.id ? "default" : "outline"}
-                            className="rounded-full"
-                            onClick={() => setSelectedCategoryId(category.id)}
-                            disabled={isSubmitting}
-                          >
-                            {category.name}
-                          </Button>
-                        ))}
-                      </div>
-                      <Select value={selectedCategoryId || "none"} onValueChange={(value) => setSelectedCategoryId(value === "none" ? "" : value)} disabled={isSubmitting}>
-                        <SelectTrigger className="h-11 rounded-[1rem] border-border/80 bg-background px-4">
-                          <SelectValue placeholder="No category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No category</SelectItem>
-                          {relevantCategoryOptions.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
+
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2">
+                          {relevantCategoryOptions.slice(0, 4).map((category) => (
+                            <Button
+                              key={category.id}
+                              type="button"
+                              size="sm"
+                              variant={selectedCategoryId === category.id ? "default" : "outline"}
+                              className="rounded-full"
+                              onClick={() => setSelectedCategoryId(category.id)}
+                              disabled={isSubmitting}
+                            >
                               {category.name}
-                            </SelectItem>
+                            </Button>
                           ))}
-                        </SelectContent>
-                      </Select>
+                        </div>
+                        <Select
+                          value={selectedCategoryId || "none"}
+                          onValueChange={(value) => setSelectedCategoryId(value === "none" ? "" : value)}
+                          disabled={isSubmitting}
+                        >
+                          <SelectTrigger className="h-11 rounded-[1rem] border-border/80 bg-background px-4">
+                            <SelectValue placeholder="No category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No category</SelectItem>
+                            {relevantCategoryOptions.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                     </div>
                   </div>
                 )}
 
                 {parsed.intent === "transfer" && (
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-white px-4 py-4 dark:bg-[#162022]">
                       <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
                         <Wallet className="size-4 text-primary" />
                         From
@@ -588,7 +742,7 @@ export function GlobalQuickCapture() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-background/76 px-4 py-4 dark:bg-[#162022]">
+                    <div className="space-y-3 rounded-[1.2rem] border border-border/70 bg-white px-4 py-4 dark:bg-[#162022]">
                       <div className="flex items-center gap-2 text-[0.88rem] font-medium text-foreground">
                         <ArrowRightLeft className="size-4 text-primary" />
                         To
@@ -639,12 +793,12 @@ export function GlobalQuickCapture() {
             )}
           </div>
 
-          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:py-4">
-            <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pt-3 sm:pb-4">
+            <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="h-10.5 w-full bg-white rounded-full px-6 sm:min-w-[9rem] sm:w-auto"
+                className="h-10.5 w-full rounded-full bg-white px-6 text-foreground/88 sm:min-w-[9rem] sm:w-auto"
                 onClick={() => setOpen(false)}
                 disabled={isSubmitting}
               >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import {
   ArrowRightLeft,
@@ -10,10 +10,10 @@ import {
   Landmark,
   Pencil,
   Search,
+  Sparkles,
   Trash2,
   TrendingDown,
   TrendingUp,
-  Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -322,6 +322,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const budgetsQuery = trpc.budgets.list.useQuery();
   const categoriesQuery = trpc.categories.list.useQuery();
   const summaryQuery = trpc.transactions.summary.useQuery();
+  const aiInsightQuery = trpc.ai.transactionsInsight.useQuery(undefined, {
+    staleTime: 45_000,
+  });
   const settingsQuery = trpc.settings.get.useQuery();
 
   const [open, setOpen] = useState(false);
@@ -337,8 +340,6 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const deferredSearch = useDeferredValue(search);
   const pageSize = isMobile ? 10 : 20;
-  const summaryScrollerRef = useRef<HTMLDivElement | null>(null);
-  const [activeSummaryIndex, setActiveSummaryIndex] = useState(0);
   const eventsQuery = trpc.transactions.list.useQuery({
     page,
     pageSize,
@@ -354,6 +355,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       utils.accounts.summary.invalidate(),
       utils.budgets.list.invalidate(),
       utils.budgets.summary.invalidate(),
+      utils.ai.dashboardInsight.invalidate(),
+      utils.ai.transactionsInsight.invalidate(),
+      utils.ai.budgetsInsight.invalidate(),
     ]);
   };
 
@@ -454,29 +458,6 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const formatEventDate = (value: Date | string) =>
     formatDateWithPreferences(value, datePreferences, "date");
 
-  const summaryCards = summaryQuery.data
-    ? [
-        {
-          label: "Events logged",
-          value: String(summaryQuery.data.totalEvents),
-          detail: "All recorded money movements",
-          icon: Landmark,
-        },
-        {
-          label: "Income vs expense",
-          value: String(summaryQuery.data.incomeEvents + summaryQuery.data.expenseEvents),
-          detail: `${summaryQuery.data.incomeEvents} income · ${summaryQuery.data.expenseEvents} expense`,
-          icon: TrendingUp,
-        },
-        {
-          label: "Transfers & payments",
-          value: String(summaryQuery.data.transferEvents + summaryQuery.data.creditPaymentEvents),
-          detail: "Internal transfers and credit payments",
-          icon: ArrowRightLeft,
-        },
-      ]
-    : [];
-
   const currentTypeMeta = eventTypeOptions.find((option) => option.value === draft.type) ?? {
     value: "loan_disbursement" as const,
     label: "Loan disbursement (disabled)",
@@ -504,57 +485,6 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       mediaQuery.removeEventListener("change", syncViewport);
     };
   }, []);
-
-  useEffect(() => {
-    if (!summaryScrollerRef.current) return;
-
-    const handleScroll = () => {
-      const scroller = summaryScrollerRef.current;
-      if (!scroller) return;
-
-      const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-summary-slide]"));
-      if (cards.length === 0) return;
-
-      const scrollerCenter = scroller.scrollLeft + scroller.clientWidth / 2;
-      let closestIndex = 0;
-      let closestDistance = Number.POSITIVE_INFINITY;
-
-      cards.forEach((card, index) => {
-        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
-        const distance = Math.abs(cardCenter - scrollerCenter);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = index;
-        }
-      });
-
-      setActiveSummaryIndex(closestIndex);
-    };
-
-    handleScroll();
-    const scroller = summaryScrollerRef.current;
-    if (!scroller) return;
-    scroller.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      scroller.removeEventListener("scroll", handleScroll);
-    };
-  }, [summaryCards.length]);
-
-  const scrollSummaryCards = (index: number) => {
-    const scroller = summaryScrollerRef.current;
-    if (!scroller) return;
-
-    const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-summary-slide]"));
-    const nextCard = cards[index];
-    if (!nextCard) return;
-
-    nextCard.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "center",
-    });
-  };
 
   const submitEvent = () => {
     const amount = Math.round(Number(draft.amount) * 1000);
@@ -770,6 +700,69 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
       <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
+          <CardContent className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200">
+                <Sparkles className="size-4" />
+              </div>
+              <div>
+                <p className="text-[0.72rem] uppercase tracking-[0.11em] text-muted-foreground">
+                  AI insight
+                </p>
+                <h3 className="text-[1.02rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  {aiInsightQuery.data?.headline ?? "Transaction intelligence"}
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-[0.9rem] leading-6 text-muted-foreground">
+              {aiInsightQuery.data?.summary ??
+                "Insights are loading. Trends and category shifts will appear here."}
+            </p>
+
+            <div className="grid gap-2.5 md:grid-cols-3">
+              {(aiInsightQuery.data?.metrics ?? []).map((metric) => (
+                <div
+                  key={metric.label}
+                  className="rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f]"
+                >
+                  <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    {metric.label}
+                  </p>
+                  <p
+                    className={`mt-1 text-[0.9rem] font-semibold ${
+                      metric.tone === "positive"
+                        ? "text-emerald-700 dark:text-emerald-300"
+                        : metric.tone === "warning"
+                          ? "text-amber-700 dark:text-amber-300"
+                          : "text-foreground"
+                    }`}
+                  >
+                    {metric.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f]">
+              <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                Recommended next step
+              </p>
+              <ul className="mt-2 space-y-1.5 text-[0.88rem] text-foreground">
+                {(aiInsightQuery.data?.recommendations ?? ["No recommendation yet."]).map((item) => (
+                  <li key={item}>- {item}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[0.76rem] text-muted-foreground">
+                {aiInsightQuery.data?.confidence ?? "Initial estimate"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader className="gap-4 px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-1.5">
@@ -829,7 +822,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       </section>
 
       <Dialog open={isHelpOpen} onOpenChange={setIsHelpOpen}>
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-[44rem] rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:rounded-[1.6rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4">
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[44rem] rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.98))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:rounded-[1.6rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4">
           <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
               Event guide
@@ -1102,11 +1095,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       </div>
 
                       <div className="hidden md:block md:min-w-0">
-                        <span
-                          className={`inline-flex rounded-full border px-2.5 py-1 text-[0.72rem] font-medium ${getEventTypeTone(event.type)}`}
-                        >
-                          {getEventTypeLabel(event.type)}
+                        <span className="inline-flex rounded-full border border-border/70 bg-background px-2.5 py-1 text-[0.72rem] font-medium text-foreground">
+                          {event.category?.name ?? "Uncategorized"}
                         </span>
+                        <p className="mt-1 text-[0.72rem] text-muted-foreground">
+                          {getEventTypeLabel(event.type)}
+                        </p>
                       </div>
 
                       <div className="hidden md:block md:min-w-0">
@@ -1114,7 +1108,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           {getEventAccountsSummary(event)}
                         </p>
                         <p className="mt-1 truncate text-[0.76rem] leading-5 text-muted-foreground">
-                          {event.notes || (event.category ? event.category.name : "No extra notes")}
+                          {event.notes || getEventTypeLabel(event.type)}
                         </p>
                       </div>
 
@@ -1204,7 +1198,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
           }
         }}
       >
-        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:max-h-[92vh] sm:w-auto sm:max-w-[56rem] sm:rounded-[2rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4">
+        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.98))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:max-h-[92vh] sm:w-auto sm:max-w-[56rem] sm:rounded-[2rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4">
           <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-8 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-white px-3 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
               Event composer
@@ -1776,7 +1770,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       >
         <DialogContent
           mobileBehavior="modal"
-          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:w-auto sm:max-w-lg sm:rounded-[1.6rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4"
+          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.98))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:w-auto sm:max-w-lg sm:rounded-[1.6rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4"
         >
           <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">

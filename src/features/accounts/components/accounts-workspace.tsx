@@ -77,7 +77,7 @@ function getInitialState(defaultCurrency: CreateState["currency"] = "PHP"): Crea
 }
 
 const accountFieldClassName =
-  "h-10.5 w-full rounded-[0.9rem] border-border/70 bg-[#fbfaf6] px-3.5 text-[0.9rem] shadow-none transition-colors dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/20";
+  "h-10.5 w-full rounded-[0.9rem] border-border/70 bg-white px-3.5 text-[0.9rem] shadow-none transition-colors dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/20";
 
 const accountFieldLabelClassName =
   "block text-[0.88rem] font-semibold leading-none tracking-tight text-foreground";
@@ -307,7 +307,7 @@ function AccountSection({
 
       <CardContent className="pt-0">
         {accounts.length === 0 ? (
-          <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-[#fbfaf6] px-6 py-12 text-center dark:bg-[#162022]">
+          <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-white px-6 py-12 text-center dark:bg-[#162022]">
             <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
               {emptyTitle}
             </p>
@@ -337,7 +337,7 @@ function AccountSection({
                     <div className="min-w-0">
                       <div className="flex min-w-0 items-center gap-3">
                         <div
-                          className={`flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-[#f6f5ef] dark:bg-[#162022] ${
+                          className={`flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-white dark:bg-[#162022] ${
                             institutionDisplay.logoPath ? "p-0" : institutionDisplay.tone
                           }`}
                         >
@@ -845,7 +845,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
               <DialogContent className={accountDialogContentClassName}>
                 <AccountDialogShell
                   badge={
-                    <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+                    <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-white px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                       Account setup
                     </div>
                   }
@@ -962,7 +962,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                               />
                             </div>
 
-                            <p className="max-w-[420px] rounded-[0.95rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 text-[0.8rem] leading-6 text-muted-foreground dark:bg-[#162022]">
+                            <p className="max-w-[420px] rounded-[0.95rem] border border-dashed border-border/70 bg-white px-4 py-3 text-[0.8rem] leading-6 text-muted-foreground dark:bg-[#162022]">
                               Balances are stored in each account’s native currency. Cross-currency
                               rollups can be layered on later.
                             </p>
@@ -1066,7 +1066,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                               </div>
                             </div>
 
-                            <p className="rounded-[0.95rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 text-[0.8rem] leading-6 text-muted-foreground dark:bg-[#162022]">
+                            <p className="rounded-[0.95rem] border border-dashed border-border/70 bg-white px-4 py-3 text-[0.8rem] leading-6 text-muted-foreground dark:bg-[#162022]">
                               For credit cards, credit limit stays fixed while current balance
                               tracks what you owe. If you only know the available credit from your
                               banking app, Veyra can derive the balance for you.

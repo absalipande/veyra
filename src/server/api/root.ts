@@ -1,3 +1,4 @@
+import { aiRouter } from "@/server/api/routers/ai";
 import { accountsRouter } from "@/server/api/routers/accounts";
 import { categoriesRouter } from "@/server/api/routers/categories";
 import { budgetsRouter } from "@/server/api/routers/budgets";
@@ -8,6 +9,7 @@ import { transactionsRouter } from "@/server/api/routers/transactions";
 import { settingsRouter } from "@/server/api/routers/settings";
 
 export const appRouter = createTRPCRouter({
+  ai: aiRouter,
   accounts: accountsRouter,
   categories: categoriesRouter,
   budgets: budgetsRouter,

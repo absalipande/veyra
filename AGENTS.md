@@ -1919,6 +1919,154 @@ Implementation notes:
 - keep model prompts and parsing schema versioned and testable
 - all AI output must be treated as assistive, not authoritative
 
+### AI Rollout Plan (Veyra)
+
+The AI rollout should follow a feature-first sequence and stay grounded in real user finance data.
+Do not treat AI as a separate chatbot product surface.
+
+#### Phase 1: Foundation + Dashboard + Quick Capture
+
+Primary goal:
+- deliver one useful cross-surface AI loop with strict safety and cost control
+
+Must ship:
+- Dashboard `What to watch next` AI guidance (already scaffolded)
+- budget-linked insight statements with:
+  - insight
+  - projected impact
+  - confidence
+  - time window
+  - recommended next step
+- fallback insight even when no active budgets exist
+- Quick capture assistive parsing:
+  - natural language -> editable draft
+  - suggested type / amount / description / category / budget hint
+  - explicit confirmation before save
+
+Guardrails:
+- no auto-write financial actions
+- no silent recategorization with low confidence
+- no unsupported predictions
+
+Rate limiting (required in this phase):
+- per-user AI route limits
+- burst window and daily cap
+- clear `429` response with retry metadata
+- server-side logging for limiter hits and token/cost monitoring
+
+Current implementation status (as of April 20, 2026):
+- completed:
+  - AI server foundation is live with dedicated feature files:
+    - `src/features/ai/server/schema.ts`
+    - `src/features/ai/server/rate-limit.ts`
+    - `src/features/ai/server/service.ts`
+    - router: `src/server/api/routers/ai.ts`
+    - router registration: `src/server/api/root.ts`
+  - per-user AI limiter is active with burst + daily limits and `429` behavior
+  - dashboard AI guidance is connected with fallback behavior when AI data is unavailable
+  - quick capture AI parsing is connected and editable:
+    - intent/amount/description/date/category/budget hints
+    - draft persistence on accidental modal close
+    - budget selection in quick capture expense flow
+- partially complete:
+  - confidence is surfaced in quick capture, but low-confidence explicit confirmation gating is not yet enforced
+  - parser fallback behavior exists, but model-based output quality and merchant formatting still need deeper tuning
+
+#### Phase 2: Transactions + Budgets Operational Intelligence
+
+Primary goal:
+- turn AI from passive commentary into decision guidance inside active workflows
+
+Must ship:
+- transactions insights:
+  - unusual spend shifts by category
+  - recurring pattern detection
+  - confidence-aware category suggestions
+- budgets insights:
+  - pacing risk
+  - likely overshoot timing
+  - compact “what to adjust now” recommendation
+- quick capture integration refinement:
+  - category and budget suggestions remain editable
+  - low-confidence drafts require explicit confirmation
+
+Design rule:
+- keep AI copy concise and product-native; avoid verbose analysis blocks
+
+Current implementation status (as of April 20, 2026):
+- completed:
+  - transactions AI insight panel is live in:
+    - `src/features/transactions/components/transactions-workspace.tsx`
+  - budgets AI insight panel is live in:
+    - `src/features/budgets/components/budgets-workspace.tsx`
+  - dashboard + transactions + budgets + quick-capture now trigger cross-surface invalidation for AI refresh:
+    - `ai.dashboardInsight`
+    - `ai.transactionsInsight`
+    - `ai.budgetsInsight`
+  - largest-shift metric copy is now currency/context-aware (`vs prior 7d`)
+- partially complete:
+  - transactions insight is still heuristic and should evolve to richer anomaly/recurrence scoring
+  - budgets overshoot forecasting exists but needs stronger pacing math and confidence calibration
+  - insight copy/visual hierarchy is usable but still needs final polish pass for premium readability
+
+Resume checklist for next AI session:
+1. enforce low-confidence confirmation gating in quick capture submit flow
+2. add structured insight versioning + lightweight audit/history persistence
+3. improve recurrence and category-shift signal quality with tighter thresholds
+4. add Accounts watchdog insight surface (Phase 3 start)
+
+#### Phase 3: Accounts + Loans + Category Intelligence
+
+Primary goal:
+- cover balance-sheet and debt health without bloating dashboard density
+
+Must ship:
+- Accounts watchdog (lightweight):
+  - assets vs liabilities pressure signal
+  - concentration risk callouts
+  - recommended next step (transfer/review/paydown)
+- Loans intelligence:
+  - due-pressure and schedule risk
+  - principal vs interest awareness
+  - payment timing guidance
+- Categories intelligence:
+  - top over-trending categories
+  - volatility/risk flags
+
+Scope rule:
+- Accounts AI should stay lightweight and watchdog-oriented, not become a full analytics workspace
+
+#### Phase 4: Digest + Personalization + Premium Layer
+
+Primary goal:
+- improve retention and monetizable value with calm, high-signal delivery
+
+Must ship:
+- daily/weekly AI digest surface
+- notification gating to avoid noisy alert spam
+- personalized recommendation ranking by user behavior
+- premium-ready advanced what-if insights (later)
+
+#### AI Surface Contract (All Phases)
+
+Every user-facing AI insight should map to:
+- one concrete finance context (dashboard, budget, transaction, account, loan, category)
+- one confidence statement
+- one practical next action
+
+Avoid:
+- speculative confidence theater
+- fake precision
+- conversational thread UX inside dashboard cards
+
+#### Architecture Contract (All Phases)
+
+- feature services own AI business logic (`src/features/<feature>/server`)
+- routers stay transport-thin
+- prompts/schemas are versioned and testable
+- insight history should be auditable
+- limiter and usage metrics should be observable in production
+
 ## Secrets and Token Policy
 
 Security and ethics are mandatory:

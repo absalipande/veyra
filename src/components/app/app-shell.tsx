@@ -41,7 +41,7 @@ function AppShellLayout({ children }: AppShellProps) {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col xl:py-3 xl:pr-3 xl:pl-3">
-          <header className="sticky top-0 z-20 border-b border-border/70 bg-background/78 backdrop-blur-xl dark:bg-[#11191b]/84 xl:rounded-none xl:border-0">
+          <header className="sticky top-0 z-20 border-b border-border/70 bg-[#f8f6ef]/92 backdrop-blur-xl dark:bg-[#11191b]/84 xl:rounded-none xl:border-0">
             <div className="flex min-h-[72px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:gap-4 lg:px-8 xl:px-7">
               <div className="flex items-center gap-3 lg:gap-4">
                 <div className="xl:hidden">

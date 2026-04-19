@@ -33,11 +33,11 @@
 }
 
 :root {
-  --background: oklch(0.985 0.01 95);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.22 0.03 210);
-  --card: oklch(0.995 0.004 95);
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.22 0.03 210);
-  --popover: oklch(0.995 0.004 95);
+  --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.22 0.03 210);
   --primary: oklch(0.39 0.07 196);
   --primary-foreground: oklch(0.98 0.01 95);

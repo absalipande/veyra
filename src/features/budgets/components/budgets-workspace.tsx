@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   PiggyBank,
   Search,
+  Sparkles,
   ShieldAlert,
   Trash2,
 } from "lucide-react";
@@ -194,6 +195,9 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
   const utils = trpc.useUtils();
   const budgetsQuery = trpc.budgets.list.useQuery();
   const summaryQuery = trpc.budgets.summary.useQuery();
+  const aiInsightQuery = trpc.ai.budgetsInsight.useQuery(undefined, {
+    staleTime: 45_000,
+  });
   const settingsQuery = trpc.settings.get.useQuery();
   const datePreferences = resolveDatePreferences(settingsQuery.data);
   const formatDate = (value: Date | string) =>
@@ -236,7 +240,12 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
 
   const createBudget = trpc.budgets.create.useMutation({
     onSuccess: async () => {
-      await Promise.all([utils.budgets.list.invalidate(), utils.budgets.summary.invalidate()]);
+      await Promise.all([
+        utils.budgets.list.invalidate(),
+        utils.budgets.summary.invalidate(),
+        utils.ai.dashboardInsight.invalidate(),
+        utils.ai.budgetsInsight.invalidate(),
+      ]);
       toast.success("Budget created.");
       setOpen(false);
       setDraft(initialDraft);
@@ -248,7 +257,12 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
 
   const updateBudget = trpc.budgets.update.useMutation({
     onSuccess: async () => {
-      await Promise.all([utils.budgets.list.invalidate(), utils.budgets.summary.invalidate()]);
+      await Promise.all([
+        utils.budgets.list.invalidate(),
+        utils.budgets.summary.invalidate(),
+        utils.ai.dashboardInsight.invalidate(),
+        utils.ai.budgetsInsight.invalidate(),
+      ]);
       toast.success("Budget updated.");
       setOpen(false);
       setEditingBudgetId(null);
@@ -261,7 +275,12 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
 
   const removeBudget = trpc.budgets.remove.useMutation({
     onSuccess: async () => {
-      await Promise.all([utils.budgets.list.invalidate(), utils.budgets.summary.invalidate()]);
+      await Promise.all([
+        utils.budgets.list.invalidate(),
+        utils.budgets.summary.invalidate(),
+        utils.ai.dashboardInsight.invalidate(),
+        utils.ai.budgetsInsight.invalidate(),
+      ]);
       toast.success("Budget deleted.");
       setDeleteTarget(null);
     },
@@ -672,6 +691,72 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
             );
           })}
         </div>
+      </section>
+
+      <section>
+        <Card className="rounded-[1.5rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
+          <CardContent className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200">
+                <Sparkles className="size-4" />
+              </div>
+              <div>
+                <p className="text-[0.72rem] uppercase tracking-[0.11em] text-muted-foreground">
+                  AI insight
+                </p>
+                <h3 className="text-[1.02rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  {aiInsightQuery.data?.headline ?? "Budget intelligence"}
+                </h3>
+              </div>
+            </div>
+
+            <p className="text-[0.9rem] leading-6 text-muted-foreground">
+              {aiInsightQuery.data?.summary ??
+                "Cycle pacing and overshoot guidance will appear here."}
+            </p>
+
+            <div className="grid gap-2.5 md:grid-cols-3">
+              {(aiInsightQuery.data?.metrics ?? []).map((metric) => (
+                <div
+                  key={metric.label}
+                  className="rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f]"
+                >
+                  <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    {metric.label}
+                  </p>
+                  <p
+                    className={`mt-1 text-[0.9rem] font-semibold ${
+                      metric.tone === "positive"
+                        ? "text-emerald-700 dark:text-emerald-300"
+                        : metric.tone === "warning"
+                          ? "text-amber-700 dark:text-amber-300"
+                          : "text-foreground"
+                    }`}
+                  >
+                    {metric.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f]">
+              <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                Recommended next step
+              </p>
+              <ul className="mt-2 space-y-1.5 text-[0.88rem] text-foreground">
+                {(aiInsightQuery.data?.recommendations ?? ["No recommendation yet."]).map((item) => (
+                  <li key={item}>- {item}</li>
+                ))}
+              </ul>
+              <p className="mt-2 text-[0.76rem] text-muted-foreground">
+                {aiInsightQuery.data?.confidence ?? "Initial estimate"}
+                {aiInsightQuery.data?.likelyOvershootDate
+                  ? ` · Possible overshoot by ${aiInsightQuery.data.likelyOvershootDate}`
+                  : ""}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.78fr)]">

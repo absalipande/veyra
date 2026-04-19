@@ -187,7 +187,7 @@ export function GlobalSearch() {
       >
         <DialogContent
           showCloseButton={false}
-          className="max-h-[calc(88dvh-env(safe-area-inset-top))] w-[min(94vw,48rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(251,250,246,0.96))] px-0 py-0 text-foreground shadow-[0_34px_120px_-70px_rgba(10,31,34,0.4)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.99),rgba(18,27,29,0.99))] sm:max-h-[90vh] sm:w-auto sm:max-w-[48rem] sm:rounded-[2rem]"
+          className="max-h-[calc(88dvh-env(safe-area-inset-top))] w-[min(94vw,48rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(255,255,255,0.99))] px-0 py-0 text-foreground shadow-[0_34px_120px_-70px_rgba(10,31,34,0.4)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.99),rgba(18,27,29,0.99))] sm:max-h-[90vh] sm:w-auto sm:max-w-[48rem] sm:rounded-[2rem]"
         >
           <DialogTitle className="sr-only">Global search</DialogTitle>
           <DialogDescription className="sr-only">

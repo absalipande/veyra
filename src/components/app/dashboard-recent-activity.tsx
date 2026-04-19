@@ -150,6 +150,9 @@ export function DashboardRecentActivity() {
     type: "all",
   });
   const budgetsSummaryQuery = trpc.budgets.summary.useQuery();
+  const aiDashboardInsightQuery = trpc.ai.dashboardInsight.useQuery(undefined, {
+    staleTime: 60_000,
+  });
   const settingsQuery = trpc.settings.get.useQuery();
 
   const datePreferences = useMemo(
@@ -294,7 +297,7 @@ export function DashboardRecentActivity() {
 
   const budgetSummary = budgetsSummary?.summary;
 
-  const watchNextInsight = useMemo(() => {
+  const fallbackWatchNextInsight = useMemo(() => {
     const total = budgetSummary?.totalBudgets ?? 0;
     const warning = budgetSummary?.warningBudgets ?? 0;
     const danger = budgetSummary?.dangerBudgets ?? 0;
@@ -361,6 +364,8 @@ export function DashboardRecentActivity() {
       totalRemaining,
     };
   }, [budgetSummary, transactions.length]);
+
+  const watchNextInsight = aiDashboardInsightQuery.data ?? fallbackWatchNextInsight;
 
   const trendMetrics = useMemo(() => {
     const latestReferenceTime =
