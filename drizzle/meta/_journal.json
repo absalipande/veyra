@@ -92,6 +92,13 @@
       "when": 1776215771697,
       "tag": "0012_strong_overlord",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1776619162272,
+      "tag": "0013_striped_storm",
+      "breakpoints": true
     }
   ]
 }

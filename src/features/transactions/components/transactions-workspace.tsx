@@ -338,6 +338,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     },
   });
   const isGeneratingInsight = generateHabitInsight.isPending;
+  const [cooldownNowMs, setCooldownNowMs] = useState(() => Date.now());
   const settingsQuery = trpc.settings.get.useQuery();
 
   const [open, setOpen] = useState(false);
@@ -359,6 +360,25 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     search: deferredSearch,
     type: typeFilter,
   });
+  const habitGeneratedAtMs = habitInsightQuery.data
+    ? new Date(habitInsightQuery.data.generatedAt).getTime()
+    : null;
+  const cooldownEndsAtMs = habitGeneratedAtMs ? habitGeneratedAtMs + 25 * 60 * 1000 : null;
+  const cooldownRemainingMs = cooldownEndsAtMs ? Math.max(0, cooldownEndsAtMs - cooldownNowMs) : 0;
+  const isInsightCooldownActive = cooldownRemainingMs > 0;
+  const canGenerateInsight = !isGeneratingInsight && !isInsightCooldownActive;
+
+  useEffect(() => {
+    if (!isInsightCooldownActive) return;
+    const timer = window.setInterval(() => {
+      setCooldownNowMs(Date.now());
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [isInsightCooldownActive]);
+
+  const cooldownMinutes = Math.floor(cooldownRemainingMs / 60_000);
+  const cooldownSeconds = Math.floor((cooldownRemainingMs % 60_000) / 1000);
+  const cooldownLabel = `${cooldownMinutes}:${String(cooldownSeconds).padStart(2, "0")}`;
 
   const refreshTransactions = async () => {
     await Promise.all([
@@ -727,23 +747,32 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 </h3>
               </div>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-fit rounded-full"
-              onClick={() => generateHabitInsight.mutate()}
-              disabled={isGeneratingInsight}
-            >
-              {isGeneratingInsight ? (
-                <>
-                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                  Generating insight...
-                </>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-fit rounded-full"
+                onClick={() => generateHabitInsight.mutate()}
+                disabled={!canGenerateInsight}
+              >
+                {isGeneratingInsight ? (
+                  <>
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                    Generating insight...
+                  </>
+                ) : (
+                  "Generate insight"
+                )}
+              </Button>
+              {isInsightCooldownActive ? (
+                <p className="text-[0.8rem] text-muted-foreground">Cooldown: {cooldownLabel}</p>
               ) : (
-                "Generate insight"
+                <p className="text-[0.82rem] text-muted-foreground">
+                  Ready to generate a fresh monthly coaching insight.
+                </p>
               )}
-            </Button>
+            </div>
 
             {habitInsightQuery.data ? (
               <div
@@ -817,29 +846,29 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   </div>
                 </div>
 
-                <div className="mt-3 rounded-lg border border-border/70 bg-white/65 px-3 py-2.5 dark:bg-[#1a2527]/80">
+                <div className="mt-4 rounded-lg border border-border/70 bg-white/65 px-4 py-3 dark:bg-[#1a2527]/80">
                   <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
                     What changed
                   </p>
-                  <ul className="mt-2 space-y-2 text-[0.86rem] text-foreground">
+                  <ul className="mt-3 space-y-2.5 pl-1 text-[0.86rem] text-foreground">
                     {habitInsightQuery.data.keyFindings.map((item: string) => (
-                      <li key={item} className="flex items-start gap-2">
-                        <span className="mt-1.5 size-1.5 rounded-full bg-[#14656B] dark:bg-primary" />
-                        <span>{item}</span>
+                      <li key={item} className="flex items-start gap-3 pl-1">
+                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[#14656B] dark:bg-primary" />
+                        <span className="leading-6">{item}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
-                <div className="mt-3 rounded-lg border border-border/70 bg-white/65 px-3 py-2.5 dark:bg-[#1a2527]/80">
+                <div className="mt-3 rounded-lg border border-border/70 bg-white/65 px-4 py-3 dark:bg-[#1a2527]/80">
                   <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
                     Suggested actions
                   </p>
-                  <ul className="mt-2 space-y-2 text-[0.86rem] text-foreground">
+                  <ul className="mt-3 space-y-2.5 pl-1 text-[0.86rem] text-foreground">
                     {habitInsightQuery.data.advice.map((item: string) => (
-                      <li key={item} className="flex items-start gap-2">
-                        <span className="mt-1.5 size-1.5 rounded-full bg-emerald-500 dark:bg-emerald-300" />
-                        <span>{item}</span>
+                      <li key={item} className="flex items-start gap-3 pl-1">
+                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-emerald-500 dark:bg-emerald-300" />
+                        <span className="leading-6">{item}</span>
                       </li>
                     ))}
                   </ul>

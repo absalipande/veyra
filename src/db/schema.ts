@@ -1,4 +1,4 @@
-import { boolean, index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const userPreferences = pgTable(
   "veyra_user_preferences",
@@ -23,6 +23,27 @@ export const userPreferences = pgTable(
   },
   (table) => ({
     clerkUserIdx: index("veyra_user_preferences_clerk_user_idx").on(table.clerkUserId),
+  })
+);
+
+export const aiInsights = pgTable(
+  "veyra_ai_insights",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    surface: text("surface").notNull(),
+    payload: text("payload").notNull(),
+    generatedAt: timestamp("generated_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_ai_insights_clerk_user_idx").on(table.clerkUserId),
+    surfaceIdx: index("veyra_ai_insights_surface_idx").on(table.surface),
+    uniqueUserSurfaceIdx: uniqueIndex("veyra_ai_insights_user_surface_uidx").on(
+      table.clerkUserId,
+      table.surface
+    ),
   })
 );
 

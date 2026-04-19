@@ -2,7 +2,7 @@ import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { accounts, budgets, categories, transactionEvents } from "@/db/schema";
+import { accounts, aiInsights, budgets, categories, transactionEvents } from "@/db/schema";
 import { formatCurrencyMiliunits } from "@/lib/currencies";
 import { getQuickCaptureDraftSchema } from "@/features/ai/server/schema";
 import { getBudgetsSummary } from "@/features/budgets/server/service";
@@ -620,7 +620,7 @@ export async function getAiTransactionsInsightCheckpoint(
   ].join("|");
 }
 
-type HabitCoachingInsight = {
+export type HabitCoachingInsight = {
   generatedAt: string;
   periodLabel: string;
   summary: string;
@@ -637,6 +637,61 @@ type HabitCoachingInsight = {
   keyFindings: string[];
   advice: string[];
 };
+
+const HABIT_SURFACE = "habit_coaching";
+
+function parseHabitInsightPayload(payload: string): HabitCoachingInsight | null {
+  try {
+    const parsed = JSON.parse(payload) as HabitCoachingInsight;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (typeof parsed.generatedAt !== "string") return null;
+    if (typeof parsed.periodLabel !== "string") return null;
+    if (typeof parsed.summary !== "string") return null;
+    if (!Array.isArray(parsed.keyFindings) || !Array.isArray(parsed.advice)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export async function getStoredHabitInsight(ctx: Pick<TRPCContext, "db" | "userId">) {
+  const userId = assertUserId(ctx.userId);
+  const row = await ctx.db.query.aiInsights.findFirst({
+    where: and(eq(aiInsights.clerkUserId, userId), eq(aiInsights.surface, HABIT_SURFACE)),
+    columns: { payload: true },
+  });
+  if (!row) return null;
+  return parseHabitInsightPayload(row.payload);
+}
+
+export async function saveHabitInsight(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  insight: HabitCoachingInsight
+) {
+  const userId = assertUserId(ctx.userId);
+  const id = `${userId}:${HABIT_SURFACE}`;
+  const now = new Date();
+
+  await ctx.db
+    .insert(aiInsights)
+    .values({
+      id,
+      clerkUserId: userId,
+      surface: HABIT_SURFACE,
+      payload: JSON.stringify(insight),
+      generatedAt: new Date(insight.generatedAt),
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: aiInsights.id,
+      set: {
+        payload: JSON.stringify(insight),
+        generatedAt: new Date(insight.generatedAt),
+        updatedAt: now,
+      },
+    });
+}
 
 function getMonthDateRange(reference: Date, shiftMonths: number) {
   const shifted = new Date(reference.getFullYear(), reference.getMonth() + shiftMonths, 1);

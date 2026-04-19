@@ -13,6 +13,8 @@ import {
   getAiTransactionsInsightCheckpoint,
   getAiTransactionsInsight,
   generateMonthlyHabitCoachingInsight,
+  getStoredHabitInsight,
+  saveHabitInsight,
 } from "@/features/ai/server/service";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
@@ -46,13 +48,14 @@ const aiRateLimitedProcedure = protectedProcedure.use(({ ctx, path, next }) => {
   return next();
 });
 
-type HabitSnapshot = Awaited<ReturnType<typeof generateMonthlyHabitCoachingInsight>>;
-const habitStoreGlobal = globalThis as typeof globalThis & {
-  __veyraHabitInsightStore?: Map<string, HabitSnapshot>;
-};
-const habitInsightStore =
-  habitStoreGlobal.__veyraHabitInsightStore ??
-  (habitStoreGlobal.__veyraHabitInsightStore = new Map());
+const HABIT_INSIGHT_COOLDOWN_MS = 25 * 60 * 1000;
+
+function getCooldownSecondsRemaining(generatedAtIso: string) {
+  const generatedAtMs = new Date(generatedAtIso).getTime();
+  if (!Number.isFinite(generatedAtMs)) return 0;
+  const remainingMs = generatedAtMs + HABIT_INSIGHT_COOLDOWN_MS - Date.now();
+  return Math.max(0, Math.ceil(remainingMs / 1000));
+}
 
 export const aiRouter = createTRPCRouter({
   dashboardInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
@@ -158,14 +161,28 @@ export const aiRouter = createTRPCRouter({
     }
   }),
   latestHabitInsight: protectedProcedure.query(({ ctx }) => {
-    return habitInsightStore.get(ctx.userId) ?? null;
+    return getStoredHabitInsight(ctx);
   }),
   generateHabitInsight: aiRateLimitedProcedure.mutation(async ({ ctx }) => {
     try {
+      const latest = await getStoredHabitInsight(ctx);
+      if (latest) {
+        const remainingSeconds = getCooldownSecondsRemaining(latest.generatedAt);
+        if (remainingSeconds > 0) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: `You can generate a new insight in ${remainingSeconds}s.`,
+          });
+        }
+      }
+
       const generated = await generateMonthlyHabitCoachingInsight(ctx);
-      habitInsightStore.set(ctx.userId, generated);
+      await saveHabitInsight(ctx, generated);
       return generated;
     } catch (error) {
+      if (error instanceof TRPCError) {
+        throw error;
+      }
       console.error("[ai.generateHabitInsight] failed", error);
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
