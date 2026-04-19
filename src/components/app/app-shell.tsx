@@ -81,7 +81,7 @@ function AppShellLayout({ children }: AppShellProps) {
 
                 <div className="xl:hidden">
                   <VeyraWordmark
-                    iconClassName="size-7 dark:brightness-0 dark:invert"
+                    iconClassName="size-7"
                     textClassName="text-[1.65rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
                   />
                 </div>

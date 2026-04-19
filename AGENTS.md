@@ -1883,3 +1883,51 @@ Every change should move Veyra toward:
 - less noise
 - more trust
 - more polish
+
+## AI Roadmap (Current Direction)
+
+Veyra will introduce AI in two tracks:
+
+1. `AI Insights`
+- first target surfaces:
+  - dashboard
+  - transactions
+  - budgets
+- later extension surfaces:
+  - accounts
+  - categories
+- initial scope is read-only guidance:
+  - posture summaries
+  - trend observations
+  - actionable recommendations
+- do not auto-write user financial data from insights in the first phase
+
+2. `LLM Quick Capture`
+- quick capture should support natural language transaction intake
+- the model should convert user text into structured draft fields:
+  - type
+  - amount
+  - description
+  - category hint
+  - optional notes
+  - confidence
+- quick capture should present a clear editable draft before save
+- when confidence is low, require explicit user confirmation before submission
+
+Implementation notes:
+- keep insight/business rules in feature server services, not UI
+- keep model prompts and parsing schema versioned and testable
+- all AI output must be treated as assistive, not authoritative
+
+## Secrets and Token Policy
+
+Security and ethics are mandatory:
+
+- never copy client-provided tokens/secrets into source code, commits, screenshots, or docs
+- never reuse a token from another system (for example an n8n credential) without explicit client approval for this exact app/use case
+- use least-privilege credentials scoped specifically for Veyra where possible
+- store secrets only in approved secret/env management, not in tracked files
+- rotate/revoke any secret that was accidentally exposed
+
+Decision rule:
+- if ownership, scope, or permission is unclear, do not use the token until client approval is documented

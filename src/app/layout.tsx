@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   title: "veyra",
   description: "Premium personal finance workspace",
   icons: {
-    icon: "/veyra-tab.svg",
+    icon: "/veyra-premium-original.svg",
   },
 };
 

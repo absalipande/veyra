@@ -7,7 +7,6 @@ import {
   CalendarClock,
   CheckCircle2,
   PiggyBank,
-  Plus,
   Search,
   ShieldAlert,
   Trash2,
@@ -712,7 +711,6 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   </div>
 
                   <Button type="button" onClick={startCreate} className="h-12 rounded-2xl px-5">
-                    <Plus className="size-4" />
                     Create budget
                   </Button>
                 </div>
@@ -738,7 +736,6 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                     window.
                   </p>
                   <Button type="button" onClick={startCreate} className="mt-7 rounded-2xl px-5">
-                    <Plus className="size-4" />
                     Create your first budget
                   </Button>
                 </div>
@@ -1019,7 +1016,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
         </Card>
 
         <div className="space-y-6">
-          <Card className="rounded-[1.7rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
+          <Card className="rounded-[1.7rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#151f21]">
             <CardHeader className="px-6 pb-4 pt-6">
               <CardTitle className="text-[1.32rem] tracking-tight">
                 What this workspace helps you see
@@ -1029,17 +1026,19 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
               {[
                 {
                   icon: PiggyBank,
-                  tone: "bg-emerald-100 text-emerald-700",
+                  tone:
+                    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/18 dark:text-emerald-200",
                   copy: "Pick the right cadence first so the budget window matches how money actually arrives and gets spent.",
                 },
                 {
                   icon: ShieldAlert,
-                  tone: "bg-sky-100 text-sky-700",
+                  tone: "bg-sky-100 text-sky-700 dark:bg-sky-500/18 dark:text-sky-200",
                   copy: "Use parent budgets for broader control and child budgets when one cycle needs finer operating detail.",
                 },
                 {
                   icon: AlertTriangle,
-                  tone: "bg-amber-100 text-amber-700",
+                  tone:
+                    "bg-amber-100 text-amber-700 dark:bg-amber-500/18 dark:text-amber-200",
                   copy: "Watch the status and remaining amount to catch pressure before a budget slips over the line.",
                 },
               ].map((item) => {
@@ -1047,14 +1046,16 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                 return (
                   <div
                     key={item.copy}
-                    className="flex items-start gap-4 rounded-[1.2rem] border border-border/70 bg-white px-4 py-4"
+                    className="flex items-start gap-4 rounded-[1.2rem] border border-border/70 bg-white px-4 py-4 dark:border-white/10 dark:bg-[#11191b]"
                   >
                     <span
                       className={`flex size-11 shrink-0 items-center justify-center rounded-full ${item.tone}`}
                     >
                       <Icon className="size-4.5" />
                     </span>
-                    <p className="text-sm leading-7 text-muted-foreground">{item.copy}</p>
+                    <p className="text-sm leading-7 text-muted-foreground dark:text-slate-300">
+                      {item.copy}
+                    </p>
                   </div>
                 );
               })}

@@ -8,7 +8,6 @@ import {
   HandCoins,
   Landmark,
   Pencil,
-  Plus,
   Search,
   Trash2,
 } from "lucide-react";
@@ -901,7 +900,6 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                 onClick={openCreateDialog}
                 className="order-1 h-9 w-auto self-start rounded-full bg-[#17393c] px-4 text-[0.95rem] text-white hover:bg-[#1d4a4d] sm:order-2 sm:h-9"
               >
-                <Plus className="size-4" />
                 Add loan
               </Button>
               <div className="relative order-2 w-full sm:order-1 sm:w-80">

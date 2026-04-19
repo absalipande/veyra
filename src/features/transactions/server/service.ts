@@ -469,7 +469,7 @@ export async function listTransactionEvents(
     .select()
     .from(transactionEvents)
     .where(whereClause)
-    .orderBy(desc(transactionEvents.occurredAt), desc(transactionEvents.createdAt))
+    .orderBy(desc(transactionEvents.createdAt), desc(transactionEvents.occurredAt))
     .limit(pageSize)
     .offset(safeOffset);
 

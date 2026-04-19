@@ -149,7 +149,7 @@ export function MobileAppNavigation() {
         <div className="flex h-full flex-col">
           <div className="border-b border-border/70 px-6 py-5.5">
             <VeyraWordmark
-              iconClassName="size-10 dark:brightness-0 dark:invert"
+              iconClassName="size-10"
               textClassName="text-[1.5rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
             />
             <p className="mt-2 text-[0.92rem] text-muted-foreground">Protected workspace</p>

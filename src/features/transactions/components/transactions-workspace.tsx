@@ -10,7 +10,6 @@ import {
   Landmark,
   Pencil,
   Search,
-  SlidersHorizontal,
   Trash2,
   TrendingDown,
   TrendingUp,
@@ -953,14 +952,6 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               </div>
 
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="rounded-full bg-white px-3.5 text-[0.88rem] dark:bg-[#162022]"
-                >
-                  <SlidersHorizontal className="size-4" />
-                  Filters
-                </Button>
                 <Select
                   value={typeFilter}
                   onValueChange={(value) => {

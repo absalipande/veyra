@@ -9,7 +9,6 @@ import {
   CreditCard,
   Landmark,
   PiggyBank,
-  Plus,
   Wallet,
 } from "lucide-react";
 import Image from "next/image";
@@ -624,10 +623,7 @@ export function DashboardRecentActivity() {
             variant="ghost"
             className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none"
           >
-            <Link href="/transactions">
-              <Plus className="size-4" />
-              Add transaction
-            </Link>
+            <Link href="/transactions">Add transaction</Link>
           </Button>
           <Button
             asChild

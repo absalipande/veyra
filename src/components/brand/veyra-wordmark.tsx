@@ -14,7 +14,7 @@ export function VeyraWordmark({
   return (
     <div className="flex items-center gap-3">
       <Image
-        src="/veyra.svg"
+        src="/veyra-premium-original.svg"
         alt="veyra"
         width={40}
         height={40}

@@ -1,0 +1,11 @@
+<svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-md" xmlns="http://www.w3.org/2000/svg">
+                        <!-- App Icon Background -->
+                        <rect width="100" height="100" rx="22" fill="#151d1f"/>
+                        <defs>
+                            <linearGradient id="emeraldGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#34D399"/>
+                                <stop offset="100%" stop-color="#059669"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M 28 32 L 50 68 L 72 32" fill="none" stroke="url(#emeraldGrad1)" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>

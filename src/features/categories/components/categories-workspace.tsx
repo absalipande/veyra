@@ -371,7 +371,6 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                 className="w-auto self-start rounded-full bg-[#17393c] text-white hover:bg-[#1d4a4d] dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c]"
                 onClick={openCreateDialog}
               >
-                <Plus className="size-4" />
                 Create category
               </Button>
             </div>
@@ -449,7 +448,6 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                   className="mt-5 rounded-full bg-[#17393c] text-white hover:bg-[#1d4a4d] dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c]"
                   onClick={openCreateDialog}
                 >
-                  <Plus className="size-4" />
                   Create first category
                 </Button>
               </div>

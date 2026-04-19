@@ -9,7 +9,6 @@ import {
   Globe2,
   Landmark,
   Pencil,
-  Plus,
   Search,
   Trash2,
   Wallet,
@@ -84,13 +83,13 @@ const accountFieldLabelClassName =
   "block text-[0.88rem] font-semibold leading-none tracking-tight text-foreground";
 
 const accountDialogContentClassName =
-  "h-[100dvh] w-screen max-w-none overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-background px-0 py-0 ring-0 sm:h-auto sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-[56rem] sm:rounded-[1.45rem] sm:border sm:border-border/70 sm:bg-background/98 sm:shadow-[0_32px_90px_-58px_rgba(10,31,34,0.4)] [&_[data-slot='dialog-close']]:right-5 [&_[data-slot='dialog-close']]:top-5 [&_[data-slot='dialog-close']]:h-10 [&_[data-slot='dialog-close']]:w-10 [&_[data-slot='dialog-close']]:rounded-full [&_[data-slot='dialog-close']]:border [&_[data-slot='dialog-close']]:border-border/70 [&_[data-slot='dialog-close']]:bg-background/92 [&_[data-slot='dialog-close']]:shadow-sm"
+  "h-[100dvh] w-screen max-w-none overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-background px-0 py-0 ring-0 sm:h-auto sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-[56rem] sm:rounded-[1.45rem] sm:border sm:border-border/70 sm:bg-background/98 sm:shadow-[0_32px_90px_-58px_rgba(10,31,34,0.4)] [&_[data-slot='dialog-close']]:right-5 [&_[data-slot='dialog-close']]:top-5 [&_[data-slot='dialog-close']]:h-10 [&_[data-slot='dialog-close']]:w-10 [&_[data-slot='dialog-close']]:rounded-full [&_[data-slot='dialog-close']]:border [&_[data-slot='dialog-close']]:border-border/70 [&_[data-slot='dialog-close']]:bg-background/92 [&_[data-slot='dialog-close']]:shadow-sm";
 
 const accountDialogHeaderClassName =
-  "shrink-0 border-b border-border/70 px-4 pb-2.5 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-3 sm:pt-5.5 sm:pr-16"
+  "shrink-0 border-b border-border/70 px-4 pb-2.5 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-3 sm:pt-5.5 sm:pr-16";
 
 const accountDialogBodyClassName =
-  "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2.5 sm:px-7 sm:py-3"
+  "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2.5 sm:px-7 sm:py-3";
 
 const accountDialogFooterClassName =
   "shrink-0 border-t border-border/70 px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-7 sm:py-3";
@@ -745,7 +744,6 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             <div className="absolute inset-y-0 right-0 hidden w-[44%] bg-[radial-gradient(circle_at_72%_28%,rgba(80,255,214,0.13),transparent_30%),radial-gradient(circle_at_84%_72%,rgba(80,255,214,0.08),transparent_22%)] lg:block" />
           </div>
 
-
           <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
             <div className="flex items-start justify-between gap-4">
               <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
@@ -772,7 +770,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   See every balance in one clear shape
                 </div>
                 <p className="max-w-[30ch] text-[0.9rem] leading-6 text-white/74 md:max-w-[34ch] md:text-[0.93rem] md:leading-7">
-                  Track liquid cash, credit exposure, and account currencies without losing each institution’s identity.
+                  Track liquid cash, credit exposure, and account currencies without losing each
+                  institution’s identity.
                 </p>
               </div>
 
@@ -808,7 +807,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   Currency in use
                 </div>
                 <p className="line-clamp-2 text-[0.95rem] font-semibold tracking-tight text-white lg:text-[0.99rem]">
-                  {summaryQuery.data?.activeCurrencies ?? 0} active {summaryQuery.data?.activeCurrencies === 1 ? "currency" : "currencies"}
+                  {summaryQuery.data?.activeCurrencies ?? 0} active{" "}
+                  {summaryQuery.data?.activeCurrencies === 1 ? "currency" : "currencies"}
                 </p>
                 <p className="text-[0.82rem] leading-6 text-white/70">
                   {summaryQuery.data?.totalAccounts ?? 0} tracked accounts across your workspace
@@ -838,7 +838,6 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   onClick={startCreate}
                   className="rounded-full bg-[#17393c] px-5 text-white hover:bg-[#1d4a4d] dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c]"
                 >
-                  <Plus className="size-4" />
                   Add account
                 </Button>
               </DialogTrigger>
@@ -864,7 +863,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                             Account basics
                           </h3>
                           <p className="text-[0.82rem] leading-5.5 text-muted-foreground">
-                            Name the account, choose its type, and keep the original currency intact.
+                            Name the account, choose its type, and keep the original currency
+                            intact.
                           </p>
                         </div>
 
@@ -952,7 +952,10 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                 inputMode="decimal"
                                 value={form.balance}
                                 onChange={(event) =>
-                                  setForm((current) => ({ ...current, balance: event.target.value }))
+                                  setForm((current) => ({
+                                    ...current,
+                                    balance: event.target.value,
+                                  }))
                                 }
                                 placeholder="0.00"
                                 className={accountFieldClassName}
@@ -960,7 +963,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                             </div>
 
                             <p className="max-w-[420px] rounded-[0.95rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 text-[0.8rem] leading-6 text-muted-foreground dark:bg-[#162022]">
-                              Balances are stored in each account’s native currency. Cross-currency rollups can be layered on later.
+                              Balances are stored in each account’s native currency. Cross-currency
+                              rollups can be layered on later.
                             </p>
                           </div>
                         </section>
@@ -1063,7 +1067,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                             </div>
 
                             <p className="rounded-[0.95rem] border border-dashed border-border/70 bg-[#fbfaf6] px-4 py-3 text-[0.8rem] leading-6 text-muted-foreground dark:bg-[#162022]">
-                              For credit cards, credit limit stays fixed while current balance tracks what you owe. If you only know the available credit from your banking app, Veyra can derive the balance for you.
+                              For credit cards, credit limit stays fixed while current balance
+                              tracks what you owe. If you only know the available credit from your
+                              banking app, Veyra can derive the balance for you.
                             </p>
                           </div>
                         </section>
