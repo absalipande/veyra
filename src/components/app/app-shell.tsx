@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { SignOutButton, useClerk, useUser } from "@clerk/nextjs";
-import { ChevronRight, LogOut, SlidersHorizontal, UserCircle2 } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
+import { SlidersHorizontal } from "lucide-react";
 
 import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
 import { DesktopAppNavigation, MobileAppNavigation } from "@/components/app/app-navigation";
@@ -11,14 +10,6 @@ import { SidebarTodaySnapshot } from "@/components/app/sidebar-today-snapshot";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { ControlCenterProvider, useControlCenter } from "@/components/app/control-center";
 import { GlobalQuickCapture } from "@/features/transactions/components/global-quick-capture";
-
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 
 type AppShellProps = {
@@ -26,39 +17,17 @@ type AppShellProps = {
 };
 
 function AppShellLayout({ children }: AppShellProps) {
-  const { user } = useUser();
-  const clerk = useClerk();
   const { openControlCenter } = useControlCenter();
-
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-
-  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
-  const primaryEmail = user?.primaryEmailAddress?.emailAddress ?? "";
-  const displayName = fullName || primaryEmail.split("@")[0] || "Account";
-  const initials =
-    fullName
-      ?.split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || displayName.slice(0, 2).toUpperCase();
-
-  const openManageAccount = () => {
-    setProfileMenuOpen(false);
-    clerk.openUserProfile();
-  };
-
-  const openSettingsModal = () => {
-    setProfileMenuOpen(false);
-    openControlCenter();
-  };
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,rgba(248,246,239,0.96),rgba(243,247,244,0.94))] dark:bg-[linear-gradient(180deg,rgba(16,23,24,0.98),rgba(18,30,31,0.97))]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px] px-0 xl:px-3">
         <aside className="sticky top-0 hidden h-screen w-[292px] shrink-0 self-start rounded-[2rem] border-r border-border/70 bg-white/72 px-5 py-6 backdrop-blur dark:bg-[#101718]/90 xl:my-3 xl:flex xl:flex-col xl:border xl:border-white/60 dark:xl:border-white/6">
           <div className="rounded-[1.85rem] border border-white/80 bg-white/78 p-4.5 shadow-[0_20px_60px_-45px_rgba(10,31,34,0.42)] dark:border-white/7 dark:bg-[#151d1f] dark:shadow-[0_20px_60px_-45px_rgba(0,0,0,0.58)]">
-            <VeyraWordmark />
+            <VeyraWordmark
+              iconSrc="/auth/veyra-v-icon.svg"
+              textClassName="text-2xl font-semibold tracking-tight text-[#10292B] dark:text-[#e7f2f1]"
+            />
             <p className="mt-3 text-[0.92rem] leading-6 text-muted-foreground">
               A calmer workspace for accounts, budgets, and day-to-day money decisions.
             </p>
@@ -81,6 +50,7 @@ function AppShellLayout({ children }: AppShellProps) {
 
                 <div className="xl:hidden">
                   <VeyraWordmark
+                    iconSrc="/auth/veyra-v-icon.svg"
                     iconClassName="size-7"
                     textClassName="text-[1.65rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
                   />
@@ -102,53 +72,28 @@ function AppShellLayout({ children }: AppShellProps) {
                   <ThemeToggle />
                 </div>
 
-                <DropdownMenu open={profileMenuOpen} onOpenChange={setProfileMenuOpen}>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="rounded-full border border-border/70 bg-white/92 p-1.5 shadow-[0_18px_40px_-35px_rgba(10,31,34,0.24)] outline-none transition hover:bg-white dark:bg-[#182123] dark:shadow-[0_18px_40px_-35px_rgba(0,0,0,0.42)]"
-                      aria-label="Open profile menu"
-                    >
-                      {user?.imageUrl ? (
-                        <img src={user.imageUrl} alt={displayName} className="size-8 rounded-full object-cover" />
-                      ) : (
-                        <div className="flex size-8 items-center justify-center rounded-full bg-[#17393c] text-[0.78rem] font-semibold text-white">
-                          {initials}
-                        </div>
-                      )}
-                    </button>
-                  </DropdownMenuTrigger>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full border-border/70 bg-white/92 dark:bg-[#182123]"
+                  onClick={openControlCenter}
+                >
+                  <SlidersHorizontal className="size-4" />
+                  <span className="sr-only">Open settings</span>
+                </Button>
 
-                  <DropdownMenuContent
-                    align="end"
-                    sideOffset={10}
-                    className="w-[225px] rounded-[1rem] border border-border/70 bg-white p-1.5 shadow-[0_24px_60px_-35px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]"
-                  >
-                    <DropdownMenuItem className="h-10 rounded-lg px-2.5 text-sm" onSelect={openManageAccount}>
-                      <UserCircle2 className="mr-2 size-4 text-muted-foreground" />
-                      <span className="flex-1">Manage account</span>
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem className="h-10 rounded-lg px-2.5 text-sm" onSelect={openSettingsModal}>
-                      <SlidersHorizontal className="mr-2 size-4 text-muted-foreground" />
-                      <span className="flex-1">Settings</span>
-                      <ChevronRight className="size-4 text-muted-foreground" />
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator className="my-1" />
-
-                    <SignOutButton>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-10 w-full justify-start rounded-lg px-2.5 text-sm font-medium text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:hover:bg-rose-950/20"
-                      >
-                        <LogOut className="mr-2 size-4" />
-                        <span className="flex-1 text-left">Sign out</span>
-                      </Button>
-                    </SignOutButton>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <UserButton
+                  appearance={{
+                    elements: {
+                      userButtonTrigger:
+                        "size-10 rounded-full border border-border/70 bg-transparent p-0 shadow-none hover:bg-transparent",
+                      userButtonAvatarBox: "size-8.5 rounded-full shadow-none ring-0",
+                      userButtonPopoverCard:
+                        "rounded-[1rem] border border-border/70 bg-white shadow-[0_24px_60px_-35px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]",
+                    },
+                  }}
+                />
               </div>
             </div>
           </header>

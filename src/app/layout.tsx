@@ -22,7 +22,12 @@ export const metadata: Metadata = {
   title: "veyra",
   description: "Premium personal finance workspace",
   icons: {
-    icon: "/veyra-premium-original.svg",
+    icon: [
+      { url: "/auth/veyra-v-icon.svg", type: "image/svg+xml" },
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/auth/veyra-v-icon.svg",
+    apple: "/auth/veyra-v-icon.svg",
   },
 };
 

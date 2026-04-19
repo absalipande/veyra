@@ -30,86 +30,78 @@ export function AuthShell({
   children,
 }: AuthShellProps) {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,rgba(251,249,243,0.98),rgba(245,248,244,0.95))] lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-      <section className="relative flex min-h-screen w-full items-start justify-center px-5 py-8 sm:px-8 sm:py-12 lg:items-center lg:px-14">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(circle_at_top,rgba(143,200,179,0.14),transparent_68%)] lg:h-48 lg:bg-[radial-gradient(circle_at_top,rgba(143,200,179,0.24),transparent_68%)]" />
+    <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,rgba(251,249,243,0.96),rgba(245,248,244,0.94))]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 hidden bg-cover bg-center bg-no-repeat lg:block"
+        style={{ backgroundImage: "url('/auth/auth-bg-v3.png')" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 hidden bg-[linear-gradient(145deg,rgba(248,252,252,0.75),rgba(236,244,242,0.5)_42%,rgba(13,40,44,0.2))] lg:block"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-52 bg-[radial-gradient(circle_at_top,rgba(151,203,182,0.24),transparent_74%)] lg:hidden"
+      />
 
-        <div className="relative flex w-full justify-center lg:hidden">
-          <div className="mx-auto flex w-full max-w-[27rem] min-w-0 flex-col items-center pt-6 text-center">
-            <div className="space-y-3">
-              <h1 className="text-[2.45rem] font-semibold leading-[1.02] tracking-tight text-[#2E2A47] sm:text-[3rem]">
-                {title}
-              </h1>
-              <p className="text-[0.94rem] leading-7 text-[#7E8CA0] sm:text-[1rem] sm:leading-8">
-                {description}
-              </p>
-            </div>
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1280px] flex-col px-5 pb-8 pt-7 sm:px-8 sm:pb-10 sm:pt-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(460px,520px)] lg:items-center lg:gap-14 lg:px-14 lg:py-14">
+        <header className="sr-only">
+          <h1>{title}</h1>
+          <p>{description}</p>
+        </header>
 
-            <div className="mt-7 w-full rounded-[1.9rem] border border-[#dfe4e8] bg-white px-4 py-5 shadow-[0_22px_60px_-42px_rgba(20,29,44,0.28)] sm:px-6 sm:py-7">
-              <div className="mx-auto w-full max-w-full">{children}</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="relative hidden w-full lg:flex lg:justify-center">
-          <div className="w-full max-w-[36rem] min-w-0">
-            <div className="space-y-6">
-              <VeyraWordmark
-                iconClassName="size-10"
-                textClassName="text-[1.82rem] font-semibold tracking-tight text-[#10292B]"
-              />
-              <div className="space-y-4">
-                <p className="text-[0.82rem] font-medium uppercase tracking-[0.22em] text-[#567170]">
-                  {badge}
-                </p>
-                <h1 className="max-w-[34rem] text-[2.6rem] font-semibold leading-[1.01] tracking-tight text-[#10292B] lg:text-[3rem]">
-                  {title}
-                </h1>
-                <p className="max-w-2xl text-base leading-7 text-[#5C7472]">{description}</p>
-              </div>
-            </div>
-
-            <div className="mt-9 rounded-[1.75rem] border border-white/78 bg-white/88 p-5 shadow-[0_22px_72px_-48px_rgba(10,31,34,0.32)] backdrop-blur">
-              <div className="mx-auto w-full max-w-[30rem]">{children}</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <aside className="relative hidden min-h-screen overflow-hidden rounded-l-[2.75rem] border-l border-white/10 bg-[linear-gradient(155deg,rgba(15,44,47,0.98),rgba(26,72,76,0.95))] lg:flex">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -left-24 top-20 size-72 rounded-full bg-[radial-gradient(circle,rgba(143,200,179,0.14),transparent_72%)]" />
-          <div className="absolute bottom-16 right-8 size-80 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.06),transparent_74%)]" />
-          <div className="absolute left-12 right-12 top-28 h-px bg-white/8" />
-          <div className="absolute bottom-28 left-12 right-12 h-px bg-white/6" />
-        </div>
-
-        <div className="relative z-10 flex w-full flex-col justify-between p-12 xl:p-16">
-          <div className="flex justify-end">
+        <section className="space-y-6 lg:max-w-[36rem]">
+          <div className="flex items-center justify-between lg:block">
+            <VeyraWordmark
+              iconSrc="/auth/veyra-v-icon.svg"
+              iconClassName="size-9"
+              textClassName="text-[1.7rem] font-semibold tracking-tight text-[#14363A]"
+            />
             <Link
               href={sideCtaHref}
-              className="inline-flex items-center gap-2 rounded-full border border-white/18 bg-white/6 px-5 py-2.5 text-sm text-white/88 transition hover:bg-white/12"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#bed1ca] bg-white/70 px-3.5 py-1.5 text-xs font-medium text-[#355d5f] transition hover:bg-white sm:px-4 sm:py-2 sm:text-sm lg:hidden"
             >
               {sideCtaLabel}
-              <ArrowRight className="size-4" />
+              <ArrowRight className="size-3.5 sm:size-4" />
             </Link>
           </div>
 
-          <div className="space-y-6">
-            <div className="space-y-5">
-              <p className="text-sm uppercase tracking-[0.24em] text-white/54">{sideEyebrow}</p>
-              <h2 className="max-w-xl text-[2.7rem] font-semibold leading-[1.06] tracking-tight text-white xl:text-[3.25rem]">
-                {sideTitle}
-              </h2>
-              <p className="max-w-xl text-base leading-7 text-white/72">{sideDescription}</p>
-            </div>
+          <div className="hidden space-y-4 lg:block">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#4c6b6a]">{sideEyebrow}</p>
+            <h1 className="text-[3rem] font-semibold leading-[1.03] tracking-tight text-[#133a3e]">
+              {sideTitle}
+            </h1>
+            <p className="max-w-[34rem] text-[1rem] leading-7 text-[#4d6665]">{sideDescription}</p>
           </div>
 
-          <div className="max-w-md rounded-[1.7rem] border border-white/12 bg-white/6 p-6 backdrop-blur">
-            <p className="text-base font-medium leading-relaxed text-white/90">{sideFootnote}</p>
+          <div className="hidden rounded-2xl border border-white/75 bg-white/55 p-5 shadow-[0_24px_75px_-50px_rgba(15,46,49,0.45)] backdrop-blur-sm lg:block">
+            <p className="text-[0.95rem] leading-7 text-[#2f5558]">{sideFootnote}</p>
+            <div className="mt-4">
+              <Link
+                href={sideCtaHref}
+                className="inline-flex items-center gap-2 rounded-full border border-[#bfd4cd] bg-white/75 px-4 py-2 text-sm font-medium text-[#2f5558] transition hover:bg-white"
+              >
+                {sideCtaLabel}
+                <ArrowRight className="size-4" />
+              </Link>
+            </div>
           </div>
-        </div>
-      </aside>
+        </section>
+
+        <section className="mt-7 rounded-[1.5rem] border border-[#d5e3dc] bg-white/90 p-4 shadow-[0_24px_60px_-40px_rgba(16,42,45,0.28)] backdrop-blur sm:mt-8 sm:p-6 lg:mt-0 lg:rounded-[1.25rem] lg:border-[#dce8e2] lg:bg-white/92 lg:px-10 lg:py-10">
+          <div className="w-full">{children}</div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-4 border-t border-[#e5edeb] pt-4 text-[0.74rem] font-medium text-[#6a7b7a] lg:mt-8 lg:justify-between lg:text-[0.78rem]">
+            <span>{badge}</span>
+            <div className="flex items-center gap-4">
+              <span>Privacy Policy</span>
+              <span>Terms of Service</span>
+              <span>Support</span>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

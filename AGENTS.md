@@ -1931,3 +1931,179 @@ Security and ethics are mandatory:
 
 Decision rule:
 - if ownership, scope, or permission is unclear, do not use the token until client approval is documented
+
+## Auth v3
+
+Auth v3 should treat authentication as a calm entrypoint into a private finance workspace.
+
+It should feel:
+- premium
+- quiet
+- trustworthy
+- modern
+- focused
+
+It should not feel:
+- like a marketing landing page
+- overly fintech or neon
+- split into too many competing messages
+- crowded with decorative surfaces
+- inconsistent with the rest of Veyra UI v2
+
+Auth v3 should reuse the existing Veyra visual system:
+- current theme tokens from `src/app/globals.css`
+- Veyra brand treatment only
+- calm teal primary actions
+- warm light surfaces in light mode
+- muted teal-charcoal surfaces in dark mode
+- restrained radius, shadow, and border language
+
+Auth v3 should be treated as a presentation and UX system update only.
+Do not redesign Clerk auth architecture just to achieve a visual effect.
+Use Clerk as the auth engine and restyle the surrounding shell and container experience so it feels native to Veyra.
+
+### Auth v3 Objective
+
+Auth v3 should make Veyra feel like:
+- a private workspace for personal money management
+- a premium but restrained product
+- a clear and low-friction sign-in experience
+
+The goal is not to turn auth into a hero-heavy promo page.
+The goal is to make the first-touch experience feel polished, calm, and product-like.
+
+### Auth v3 Desktop Direction
+
+Desktop auth may carry more atmosphere than mobile, but it should still stay restrained.
+
+Preferred desktop structure:
+1. outer auth shell
+- full-height page shell
+- soft atmospheric background or image treatment
+- desktop split layout with clear breathing room
+
+2. brand / atmosphere panel
+- Veyra wordmark or logo at the top
+- one strong headline
+- one short supporting paragraph
+- optional compact trust/value bullets
+- optional calm scenic or abstract visual treatment
+- this panel should support mood, not compete with the form
+
+3. auth card panel
+- one clear card surface for the active task
+- sign-in / sign-up / recovery flow contained inside the card
+- compact, deliberate spacing
+- no extra promo tiles inside the auth card
+
+Desktop rules:
+- prefer one dominant auth card around `460px` to `520px` wide
+- keep the desktop shell premium through spacing and surface quality, not through loud gradients
+- use scenic or atmospheric background imagery only when soft, calm, and slightly subdued
+- keep the auth form as the main focal point
+- use concise headings such as `Welcome back` or `Create your account`
+- supporting copy should be short and product-like
+- avoid repeating the same headline both in the side panel and again inside the card when the repetition adds no value
+- hide unnecessary Clerk default header clutter when the page already provides the heading and context
+- legal/support links should stay quiet and secondary
+- desktop auth should feel lighter than a landing page and more intentional than a generic white-card login
+
+Recommended desktop auth flows:
+- `Sign in`
+- `Sign up`
+- `Forgot password`
+- `Check your email`
+- `Already signed in`
+
+All desktop auth states should share:
+- the same shell
+- the same card rhythm
+- the same max widths
+- the same footer/legal treatment
+- the same tonal family of copy
+
+### Auth v3 Mobile Direction
+
+Mobile auth should stay intentionally simpler than desktop.
+
+Preferred mobile structure:
+1. compact top brand row
+- Veyra logo/wordmark
+- optional back button only when the flow needs it
+
+2. single auth surface
+- one primary card or light container
+- one clear heading
+- one short support line
+- the form immediately below
+
+3. minimal footer
+- quiet legal/support links only if needed
+
+Mobile rules:
+- do not force the desktop split-shell concept onto phones
+- do not stack a large brand panel above the form
+- do not use oversized floating cards with excessive outer margins
+- prefer a single-column layout with fast scanability
+- keep vertical spacing tight but breathable
+- keep headings short
+- use one clear task per screen
+- treat the form as the hero on mobile
+- keep helper copy brief and avoid duplicating context already visible in the UI
+- maintain easy thumb reach for primary actions
+- keep mobile auth visually calm and quick to complete
+
+Mobile auth should feel:
+- fast
+- clear
+- private
+- low-friction
+
+It should not feel:
+- decorative
+- promo-heavy
+- visually top-loaded
+- slower than necessary
+
+### Auth v3 Copy Guidance
+
+Preferred copy tone:
+- concise
+- calm
+- human
+- product-like
+
+Prefer:
+- `Welcome back`
+- `Sign in to continue to your workspace`
+- `Create your account`
+- `Use Google or email to get started`
+- `Forgot password?`
+- `Check your email`
+- `You're already signed in`
+
+Avoid:
+- marketing slogans inside the form card
+- repetitive explanatory copy
+- developer/prototype phrasing
+- loud fintech language
+
+### Auth v3 Implementation Notes
+
+- keep Clerk as the auth provider and form engine
+- style Clerk surfaces so they match Veyra inputs, buttons, and card language
+- keep the mobile experience simpler than desktop by default
+- prefer shared auth shell primitives under `src/components/auth`
+- keep route composition in `src/app/(auth)/...`
+- do not leak non-auth product complexity into auth screens
+- keep all auth states visually aligned with the current Veyra UI v2 baseline
+
+### Auth v3 Success Standard
+
+An Auth v3 surface is successful when:
+- the first impression feels recognizably Veyra
+- desktop feels premium without becoming a landing page
+- mobile feels fast and clean
+- Clerk feels visually integrated instead of embedded by default
+- sign-in, sign-up, recovery, and signed-in states all feel like one system
+- the experience is calmer and more polished than the previous auth version
