@@ -884,7 +884,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-full px-3 text-[0.78rem]"
+                            className="h-8 bg-white rounded-full px-3 text-[0.78rem]"
                             onClick={() => {
                               const record = budgets.find((entry) => entry.id === budget.id);
                               if (record) startEdit(record);
@@ -1075,7 +1075,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                 The key numbers should tell you whether the current budget window is healthy, tight,
                 or already exceeded at a glance.
               </p>
-              <div className="rounded-[1.2rem] border border-white/15 bg-white px-4 py-4 text-sm leading-7">
+              <div className="rounded-[1.2rem] border border-white/15  px-4 py-4 text-sm leading-7">
                 Total budgeted {formatBudgetMoney(totalBudgetAmount)} · Remaining{" "}
                 {formatBudgetMoney(totalRemaining)}
               </div>
@@ -1358,7 +1358,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 rounded-lg px-4 text-sm sm:h-10 sm:min-w-32 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
+                className="h-9 bg-white rounded-lg px-4 text-sm sm:h-10 sm:min-w-32 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
                 onClick={() => setDeleteTarget(null)}
               >
                 Cancel

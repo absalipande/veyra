@@ -27,6 +27,7 @@ import {
   settingsWeekStartOptions,
 } from "@/features/settings/lib/options";
 import { Button } from "@/components/ui/button";
+import { useControlCenter } from "@/components/app/control-center";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -63,6 +64,7 @@ function toDraft(settings: SettingsItem): UpdateSettingsInput {
 }
 
 export function SettingsWorkspace() {
+  const { openControlCenter } = useControlCenter();
   const utils = trpc.useUtils();
   const settingsQuery = trpc.settings.get.useQuery();
 
@@ -162,184 +164,287 @@ export function SettingsWorkspace() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[2rem] border border-white/70 bg-[linear-gradient(160deg,rgba(20,53,55,0.98),rgba(25,64,67,0.96))] px-6 py-6 text-white shadow-[0_26px_90px_-60px_rgba(10,31,34,0.75)] dark:border-white/8">
-        <p className="text-xs uppercase tracking-[0.24em] text-white/70">Settings</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight sm:text-[2rem]">
-          Workspace preferences
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">
-          Keep your regional defaults and planning cadence consistent across accounts, budgets, and
-          upcoming modules.
-        </p>
-      </section>
-
-      <Card className="border-white/75 bg-white/82 dark:border-white/8 dark:bg-[#182123]">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe2 className="size-4 text-primary" />
-            Regional defaults
-          </CardTitle>
-          <CardDescription>
-            These preferences are used as defaults when you add new records.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Default currency</p>
-            <Select
-              value={draft.defaultCurrency}
-              onValueChange={(value) =>
-                setDraftOverride((current) => ({
-                  ...(current ?? draft),
-                  defaultCurrency: value as UpdateSettingsInput["defaultCurrency"],
-                }))
-              }
+      <Card className="rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
+        <CardContent className="space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
+          <div className="flex items-start justify-between gap-4">
+            <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
+              Today · {new Date().toLocaleDateString()}
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => updateSettings.mutate(draft)}
+              disabled={!hasChanges || updateSettings.isPending}
+              className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
             >
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {settingsCurrencyOptions.map((currency) => (
-                  <SelectItem key={currency} value={currency}>
-                    {currency} - {getCurrencyLabel(currency)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {updateSettings.isPending ? "Saving..." : "Save preferences"}
+            </Button>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Locale</p>
-            <Select
-              value={draft.locale}
-              onValueChange={(value) =>
-                setDraftOverride((current) => ({
-                  ...(current ?? draft),
-                  locale: value as UpdateSettingsInput["locale"],
-                }))
-              }
-            >
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Select locale" />
-              </SelectTrigger>
-              <SelectContent>
-                {settingsLocaleOptions.map((locale) => (
-                  <SelectItem key={locale} value={locale}>
-                    {settingsLocaleLabels[locale]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
+            <div className="space-y-2.5 md:space-y-3 md:pr-7">
+              <h2 className="text-[0.98rem] font-semibold tracking-tight text-white/95 md:text-[1.08rem] lg:text-[1.16rem]">
+                Workspace preferences
+              </h2>
+              <div className="flex items-center gap-2 text-[1.06rem] font-semibold leading-none tracking-tight text-white md:text-[1.34rem] lg:text-[1.48rem]">
+                <span
+                  className={`size-2.5 rounded-full md:size-3 ${
+                    hasChanges ? "bg-amber-400" : "bg-emerald-400"
+                  }`}
+                />
+                {hasChanges ? "Unsaved changes in progress" : "Defaults aligned and ready"}
+              </div>
+              <p className="max-w-[30ch] text-[0.9rem] leading-6 text-white/74 md:max-w-[34ch] md:text-[0.93rem] md:leading-7">
+                Keep your currency, locale, timezone, and planning defaults consistent across new records.
+              </p>
+            </div>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Timezone</p>
-            <Select
-              value={draft.timezone}
-              onValueChange={(value) =>
-                setDraftOverride((current) => ({
-                  ...(current ?? draft),
-                  timezone: value as UpdateSettingsInput["timezone"],
-                }))
-              }
-            >
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Select timezone" />
-              </SelectTrigger>
-              <SelectContent>
-                {settingsTimezoneOptions.map((timezone) => (
-                  <SelectItem key={timezone} value={timezone}>
-                    {settingsTimezoneLabels[timezone]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-0 border-t border-white/15 pt-3.5 md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
+              <div className="space-y-2.5 pr-4 md:pr-5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[0.82rem] text-white/70 md:text-[0.88rem]">Regional defaults</p>
+                  <span className="flex size-8.5 items-center justify-center rounded-full bg-emerald-100/95 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 md:size-9">
+                    <Globe2 className="size-3.5 md:size-[0.95rem]" />
+                  </span>
+                </div>
+                <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
+                  {draft.defaultCurrency}
+                </p>
+                <p className="text-[0.82rem] leading-6 text-white/70">
+                  {settingsLocaleLabels[draft.locale]} · {settingsTimezoneLabels[draft.timezone]}
+                </p>
+              </div>
+
+              <div className="space-y-2.5 border-l border-white/15 pl-4 pr-4 md:pr-5">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[0.82rem] text-white/70 md:text-[0.88rem]">Planning preferences</p>
+                  <span className="flex size-8.5 items-center justify-center rounded-full bg-sky-100/95 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200 md:size-9">
+                    <SlidersHorizontal className="size-3.5 md:size-[0.95rem]" />
+                  </span>
+                </div>
+                <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
+                  {settingsWeekStartLabels[draft.weekStartsOn]}
+                </p>
+                <p className="text-[0.82rem] leading-6 text-white/70">
+                  {settingsDateFormatLabels[draft.dateFormat]}
+                </p>
+              </div>
+            </div>
+
+            <div className="hidden space-y-2 border-t border-white/15 pt-4 md:block md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
+              <div className="flex items-center gap-2 text-[0.82rem] text-white/70">
+                <ShieldCheck className="size-4" />
+                Preference status
+              </div>
+              <p className="line-clamp-2 text-[0.95rem] font-semibold tracking-tight text-white lg:text-[0.99rem]">
+                {hasChanges ? "Review and save your new defaults" : "Your workspace preferences are up to date"}
+              </p>
+              <p className="text-[0.82rem] leading-6 text-white/70">
+                Week starts on {settingsWeekStartLabels[draft.weekStartsOn]} · Timezone {settingsTimezoneLabels[draft.timezone]}
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <Card className="border-white/75 bg-white/82 dark:border-white/8 dark:bg-[#182123]">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="space-y-2 border-b border-border/60 pb-5">
+          <CardTitle className="flex items-center gap-2 text-[1.35rem] tracking-tight">
             <SlidersHorizontal className="size-4 text-primary" />
-            Planning preferences
+            Preferences
           </CardTitle>
-          <CardDescription>Keep weekly and date views aligned with how you plan.</CardDescription>
+          <CardDescription>
+            Set your defaults and planning preferences to keep your workspace consistent.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Week starts on</p>
-            <Select
-              value={draft.weekStartsOn}
-              onValueChange={(value) =>
-                setDraftOverride((current) => ({
-                  ...(current ?? draft),
-                  weekStartsOn: value as UpdateSettingsInput["weekStartsOn"],
-                }))
-              }
-            >
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Select week start" />
-              </SelectTrigger>
-              <SelectContent>
-                {settingsWeekStartOptions.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {settingsWeekStartLabels[option]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
 
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">Date format</p>
-            <Select
-              value={draft.dateFormat}
-              onValueChange={(value) =>
-                setDraftOverride((current) => ({
-                  ...(current ?? draft),
-                  dateFormat: value as UpdateSettingsInput["dateFormat"],
-                }))
-              }
-            >
-              <SelectTrigger className="h-11 rounded-xl">
-                <SelectValue placeholder="Select date format" />
-              </SelectTrigger>
-              <SelectContent>
-                {settingsDateFormatOptions.map((format) => (
-                  <SelectItem key={format} value={format}>
-                    {settingsDateFormatLabels[format]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <CardContent className="space-y-6 pt-6">
+          <section className="space-y-4">
+            <div className="space-y-1">
+              <h3 className="flex items-center gap-2 text-[1rem] font-semibold tracking-tight text-foreground">
+                <Globe2 className="size-4 text-primary" />
+                Regional defaults
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                These preferences are used as defaults when you add new records.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Default currency</p>
+                <Select
+                  value={draft.defaultCurrency}
+                  onValueChange={(value) =>
+                    setDraftOverride((current) => ({
+                      ...(current ?? draft),
+                      defaultCurrency: value as UpdateSettingsInput["defaultCurrency"],
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {settingsCurrencyOptions.map((currency) => (
+                      <SelectItem key={currency} value={currency}>
+                        {currency} - {getCurrencyLabel(currency)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Locale</p>
+                <Select
+                  value={draft.locale}
+                  onValueChange={(value) =>
+                    setDraftOverride((current) => ({
+                      ...(current ?? draft),
+                      locale: value as UpdateSettingsInput["locale"],
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Select locale" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {settingsLocaleOptions.map((locale) => (
+                      <SelectItem key={locale} value={locale}>
+                        {settingsLocaleLabels[locale]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Timezone</p>
+                <Select
+                  value={draft.timezone}
+                  onValueChange={(value) =>
+                    setDraftOverride((current) => ({
+                      ...(current ?? draft),
+                      timezone: value as UpdateSettingsInput["timezone"],
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {settingsTimezoneOptions.map((timezone) => (
+                      <SelectItem key={timezone} value={timezone}>
+                        {settingsTimezoneLabels[timezone]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-border/60 pt-6">
+            <div className="space-y-1">
+              <h3 className="flex items-center gap-2 text-[1rem] font-semibold tracking-tight text-foreground">
+                <SlidersHorizontal className="size-4 text-primary" />
+                Planning preferences
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Keep weekly and date views aligned with how you plan.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Week starts on</p>
+                <Select
+                  value={draft.weekStartsOn}
+                  onValueChange={(value) =>
+                    setDraftOverride((current) => ({
+                      ...(current ?? draft),
+                      weekStartsOn: value as UpdateSettingsInput["weekStartsOn"],
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Select week start" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {settingsWeekStartOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {settingsWeekStartLabels[option]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">Date format</p>
+                <Select
+                  value={draft.dateFormat}
+                  onValueChange={(value) =>
+                    setDraftOverride((current) => ({
+                      ...(current ?? draft),
+                      dateFormat: value as UpdateSettingsInput["dateFormat"],
+                    }))
+                  }
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue placeholder="Select date format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {settingsDateFormatOptions.map((format) => (
+                      <SelectItem key={format} value={format}>
+                        {settingsDateFormatLabels[format]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </section>
         </CardContent>
       </Card>
 
       <Card className="border-amber-300/45 bg-amber-50/60 dark:border-amber-500/20 dark:bg-amber-500/5">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-200">
-            <ShieldCheck className="size-4" />
-            Privacy and account controls
-          </CardTitle>
-          <CardDescription className="text-amber-900/80 dark:text-amber-200/85">
-            Manage sign-in, sessions, and account-level actions from the profile menu in the header.
-          </CardDescription>
-        </CardHeader>
+        <CardContent className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-1">
+            <p className="flex items-center gap-2 text-[1rem] font-semibold tracking-tight text-amber-900 dark:text-amber-200">
+              <ShieldCheck className="size-4" />
+              Privacy and account controls
+            </p>
+            <p className="text-sm leading-6 text-amber-900/80 dark:text-amber-200/85">
+              Manage sign-in, sessions, and account-level actions from the profile menu in the header.
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 rounded-full border-amber-300/55 bg-white/70 px-5 text-amber-900 hover:bg-white dark:border-amber-400/25 dark:bg-transparent dark:text-amber-100"
+            onClick={openControlCenter}
+          >
+            Open control center
+          </Button>
+        </CardContent>
       </Card>
 
       <Card className="border-rose-200/70 bg-rose-50/40 dark:border-rose-900/50 dark:bg-rose-950/10">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="size-4" />
-            Danger zone
-          </CardTitle>
-          <CardDescription>
-            Permanently delete all workspace finance records. This cannot be undone.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-1">
+            <p className="flex items-center gap-2 text-[1rem] font-semibold tracking-tight text-destructive">
+              <AlertTriangle className="size-4" />
+              Danger zone
+            </p>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Permanently delete all workspace finance records. This cannot be undone.
+            </p>
+          </div>
+
           <Button
             type="button"
             variant="destructive"
@@ -351,16 +456,6 @@ export function SettingsWorkspace() {
           </Button>
         </CardContent>
       </Card>
-
-      <div className="flex items-center justify-end">
-        <Button
-          onClick={() => updateSettings.mutate(draft)}
-          disabled={!hasChanges || updateSettings.isPending}
-          className="rounded-full px-6"
-        >
-          {updateSettings.isPending ? "Saving..." : "Save preferences"}
-        </Button>
-      </div>
 
       <Dialog
         open={showClearDialog}

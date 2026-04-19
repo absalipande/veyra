@@ -268,7 +268,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               data-summary-slide
               className="min-w-0 shrink-0 basis-full snap-center"
             >
-              <Card className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
+              <Card className="border-white/75 bg-white shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
                 <CardContent className="p-5">
                   <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
                     {card.label}
@@ -334,7 +334,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
           {summaryCards.map((card) => (
             <Card
               key={card.label}
-              className="border-white/75 bg-white/84 shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]"
+              className="border-white/75 bg-white shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]"
             >
               <CardContent className="p-5">
                 <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
@@ -353,7 +353,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
       </section>
 
       <section>
-        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
+        <Card className="border-white/75 bg-white shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
           <CardHeader className="gap-5 px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-1.5">
@@ -383,7 +383,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Search categories"
-                  className="h-12 rounded-full border-border/70 bg-[#fbfaf6] pl-10 pr-4 text-[0.92rem] dark:bg-[#162022]"
+                  className="h-12 rounded-full border-border/70 bg-white pl-10 pr-4 text-[0.92rem] dark:bg-[#162022]"
                 />
               </div>
               <div className="flex gap-2 md:hidden">
@@ -412,7 +412,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                   value={kindFilter}
                   onValueChange={(value) => setKindFilter(value as "all" | CategoryKind)}
                 >
-                  <SelectTrigger className="h-12 rounded-full border-border/70 bg-[#fbfaf6] px-4 text-[0.92rem] dark:bg-[#162022]">
+                  <SelectTrigger className="h-12 rounded-full border-border/70 bg-white px-4 text-[0.92rem] dark:bg-[#162022]">
                     <SelectValue placeholder="Filter by type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -431,12 +431,12 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div
                     key={index}
-                    className="h-24 animate-pulse rounded-[1.5rem] border border-border/70 bg-[#fbfaf6] dark:bg-[#162022]"
+                    className="h-24 animate-pulse rounded-[1.5rem] border border-border/70 bg-white dark:bg-[#162022]"
                   />
                 ))}
               </div>
             ) : visibleCategories.length === 0 ? (
-              <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-[#fbfaf6] px-6 py-12 text-center dark:bg-[#162022]">
+              <div className="rounded-[1.8rem] border border-dashed border-border/80 bg-white px-6 py-12 text-center dark:bg-[#162022]">
                 <p className="text-[1.35rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                   No categories yet
                 </p>
@@ -485,7 +485,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                             {group.items.map((category) => (
                               <div
                                 key={category.id}
-                                className="flex items-center justify-between gap-4 rounded-[1.35rem] border border-border/70 bg-[#fdfcf8] px-4 py-3 dark:bg-[#141d1f]"
+                                className="flex items-center justify-between gap-4 rounded-[1.35rem] border border-border/70 bg-white px-4 py-3 dark:bg-[#141d1f]"
                               >
                                 <div className="min-w-0">
                                   <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
@@ -541,7 +541,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                     return (
                       <div
                         key={group.kind}
-                        className="rounded-[1.7rem] border border-border/70 bg-[#fdfcf8] p-4 dark:bg-[#141d1f]"
+                        className="rounded-[1.7rem] border border-border/70 bg-white p-4 dark:bg-[#141d1f]"
                       >
                         <div className="flex items-start justify-between gap-4">
                           <div>
@@ -562,11 +562,11 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                           </span>
                         </div>
 
-                        <div className="mt-4 space-y-3">
+                        <div className="mt-4 overflow-hidden rounded-[1.15rem] border border-border/70 bg-white dark:bg-[#182123]">
                           {group.items.map((category) => (
                             <div
                               key={category.id}
-                              className="flex items-center justify-between gap-4 rounded-[1.35rem] border border-border/70 bg-white/85 px-4 py-3 dark:bg-[#182123]"
+                              className="flex items-center justify-between gap-4 border-b border-border/70 px-4 py-3 last:border-b-0"
                             >
                               <div className="min-w-0">
                                 <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
@@ -623,7 +623,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
           }
         }}
       >
-        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[92vh] sm:max-w-xl sm:rounded-[1.9rem]">
+        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-white/80 bg-white px-0 py-0 dark:border-white/8 dark:bg-[#182123] sm:max-h-[92vh] sm:max-w-xl sm:rounded-[1.9rem]">
           <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-lg border border-[#17393c]/10 bg-[#17393c]/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary sm:rounded-full sm:px-3 sm:text-[0.68rem] sm:tracking-[0.22em]">
               Category setup
@@ -646,7 +646,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                 value={draft.name}
                 onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
                 placeholder="e.g. Groceries"
-                className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-13 sm:rounded-[1.35rem] sm:px-5 sm:text-base"
+                className="h-9 rounded-lg border-border/80 bg-white px-3 text-sm sm:h-13 sm:rounded-[1.35rem] sm:px-5 sm:text-base"
               />
             </div>
 
@@ -658,7 +658,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                 value={draft.kind}
                 onValueChange={(value) => setDraft((current) => ({ ...current, kind: value as CategoryKind }))}
               >
-                <SelectTrigger className="h-9 rounded-lg border-border/80 bg-background px-3 text-sm sm:h-13 sm:rounded-[1.35rem] sm:px-5 sm:text-base">
+                <SelectTrigger className="h-9 rounded-lg border-border/80 bg-white px-3 text-sm sm:h-13 sm:rounded-[1.35rem] sm:px-5 sm:text-base">
                   <SelectValue placeholder="Category type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -668,7 +668,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               </Select>
             </div>
 
-            <div className="rounded-xl border border-border/70 bg-[#fbfaf6] px-3.5 py-3 text-[0.76rem] leading-5 text-muted-foreground dark:bg-[#162022] sm:rounded-[1.3rem] sm:px-4 sm:text-[0.83rem] sm:leading-6">
+            <div className="rounded-xl border border-border/70 bg-white px-3.5 py-3 text-[0.76rem] leading-5 text-muted-foreground dark:bg-[#162022] sm:rounded-[1.3rem] sm:px-4 sm:text-[0.83rem] sm:leading-6">
               Categories show up as dropdown choices inside the transaction composer. Start narrow
               and expand only when a new label would genuinely change how you review spending.
             </div>
@@ -677,7 +677,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 rounded-lg text-sm sm:h-10 sm:w-auto sm:rounded-full sm:text-base"
+                className="h-9 bg-white rounded-lg text-sm sm:h-10 sm:w-auto sm:rounded-full sm:text-base"
                 onClick={() => setOpen(false)}
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
@@ -710,7 +710,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
       >
         <DialogContent
           mobileBehavior="modal"
-          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(251,250,246,0.95))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.6rem]"
+          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-white px-0 py-0 dark:border-white/8 dark:bg-[#182123] sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.6rem]"
         >
           <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
             <div className="inline-flex w-fit rounded-lg border border-destructive/15 bg-destructive/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-destructive sm:rounded-full sm:px-3 sm:text-[0.68rem] sm:tracking-[0.22em]">
@@ -730,7 +730,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-lg px-4 text-sm sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
+              className="h-9 bg-white rounded-lg px-4 text-sm sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
               onClick={() => setDeleteTarget(null)}
               disabled={deleteCategory.isPending}
             >
