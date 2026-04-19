@@ -2107,3 +2107,363 @@ An Auth v3 surface is successful when:
 - Clerk feels visually integrated instead of embedded by default
 - sign-in, sign-up, recovery, and signed-in states all feel like one system
 - the experience is calmer and more polished than the previous auth version
+
+## Dashboard v3
+
+Dashboard v3 should turn the current dashboard into a calm decision-first briefing built around 3 questions:
+
+- What's happening
+- Why is it happening
+- What is going to happen next
+
+Dashboard v3 is not a full visual reset.
+It is a hierarchy and decision-layer upgrade on top of the current dashboard baseline.
+
+Do not discard the current shell, card language, or premium tone.
+Refine the information structure so the dashboard feels more guided and more useful.
+
+### Dashboard v3 Objective
+
+Dashboard v3 should help the user understand:
+- their current financial posture
+- the main drivers behind that posture
+- the most likely near-term pressure or next action
+
+The dashboard should feel:
+- calm
+- premium
+- guided
+- concise
+- useful at a glance
+
+The dashboard should not feel:
+- like a widget wall
+- like a report builder
+- like a trading terminal
+- like a generic analytics dashboard
+- passive or purely descriptive
+
+### Dashboard v3 Core Model
+
+Use the 3 W structure as the primary dashboard hierarchy.
+
+1. `What's happening`
+- current money posture
+- assets and liabilities context
+- latest meaningful activity
+- one strong top-level takeaway
+
+2. `Why is it happening`
+- the accounts most responsible for the current posture
+- the most recent changes affecting the current balance picture
+
+3. `What is going to happen next`
+- budget posture with forward-looking interpretation
+- AI insight or projected pressure
+- one recommended next step
+
+### Dashboard v3 Role
+
+Dashboard v3 should remain a briefing surface.
+It should not become a replacement for feature workspaces.
+
+Keep the dashboard lighter than:
+- Accounts
+- Transactions
+- Budgets
+
+Use the dashboard to orient and guide.
+Use feature pages for deeper interaction and management.
+
+### Dashboard v3 Desktop Direction
+
+Preferred desktop structure:
+
+1. top utility row
+- global search
+- quick capture
+- compact utility controls
+
+2. primary hero
+- full-width overview card
+- this is the `What's happening` layer
+- it should feel like a financial brief, not just a stat banner
+
+3. middle explanatory row
+- left: accounts shaping the current position
+- right: recent changes affecting the current balance
+- this is the `Why is it happening` layer
+
+4. bottom predictive row
+- one full-width insight / watch-next card
+- this is the `What is going to happen next` layer
+
+5. sidebar support
+- keep the current sidebar and its premium shell behavior
+- keep the lower snapshot module restrained and supportive
+- do not let sidebar widgets compete with the main dashboard narrative
+
+### Dashboard v3 Mobile Direction
+
+Mobile dashboard should preserve the same 3 W order.
+
+Preferred mobile order:
+1. `What's happening`
+2. `Why is it happening`
+3. `What is going to happen next`
+
+Mobile rules:
+- keep the hero compact and high-value
+- do not let decorative treatment push the core posture too far below the fold
+- stack sections in the same logical order as desktop
+- keep each section scannable with minimal repeated copy
+- use compact cards and restrained spacing
+- treat the bottom insight card as the primary forward-looking surface
+
+### Dashboard v3 Hero Rules
+
+The hero is the most important surface in Dashboard v3.
+
+Hero purpose:
+- answer the user's first money question immediately
+- show the current financial posture clearly
+- summarize the most important context without noise
+
+Hero should include:
+- one small context label such as `Overview`
+- date / time context
+- one clear takeaway headline
+- one short explanation sentence
+- assets
+- liabilities
+- latest meaningful activity
+- optional short trend indicator when trustworthy
+
+Hero should not:
+- feel like a KPI strip without interpretation
+- overuse labels that are visually stronger than the conclusion
+- become a dense stat wall
+- rely on decorative visuals to create importance
+
+Preferred hero copy pattern:
+- `You're in a stable position today`
+- `Assets are ahead of liabilities by a meaningful margin, though debt is still worth watching.`
+
+Preferred hero behavior:
+- keep the current premium dark/atmospheric direction
+- use atmosphere as support only
+- keep CTA secondary and quiet
+- preserve strong desktop presence without making it feel like a promo banner
+
+### Dashboard v3 Section Naming
+
+Rename and frame sections more intentionally.
+
+Preferred section titles:
+- hero badge: `Overview`
+- first middle card: `Accounts shaping your position`
+- second middle card: `Recent changes affecting your balance`
+- bottom card: `What to watch next`
+
+Avoid generic section labels when a more causal title improves clarity.
+
+### Dashboard v3 Middle Layer Rules
+
+The middle row is the explanation layer.
+
+#### Accounts shaping your position
+This card should explain which accounts matter most today.
+
+Prioritize:
+- highest balance
+- highest debt
+- primary daily-use account
+- liquid account importance
+- notable liability concentration
+
+Keep:
+- institution logo / fallback system
+- quiet metadata line
+- note badges such as `Main account` or `Highest debt`
+
+Improve:
+- causal relevance
+- scanability
+- why each account matters today
+
+Do not turn this card into:
+- a full account list
+- a duplicate of the Accounts page
+- a decorative KPI box
+
+#### Recent changes affecting your balance
+This card should explain what recent activity is shaping the current posture.
+
+Prioritize:
+- meaningful recent movements
+- income vs expense clarity
+- short supporting context
+- timestamps or dates when useful
+
+Keep:
+- current feed-like clarity
+- restrained positive/negative treatment
+- compact rows
+
+Improve:
+- make it feel explanatory, not just chronological
+- frame the items as drivers of the current posture
+- use quiet secondary metadata to explain relevance
+
+Do not:
+- overstuff this card with filters or charts
+- make it a full transactions workspace
+- add noisy badges unless they improve meaning
+
+### Dashboard v3 Bottom Layer Rules
+
+The bottom row is the forward-looking layer.
+
+This is the biggest Dashboard v3 upgrade.
+
+Replace the purely passive budget posture block with a more useful predictive and action-guiding surface.
+
+Preferred card title:
+- `What to watch next`
+
+Preferred content:
+- AI insight or system-generated posture summary
+- budget-related forward-looking signal
+- projected impact
+- confidence
+- time window
+- recommended next action
+- compact budget status summary
+
+Good examples:
+- `Dining is trending above pace this week.`
+- `If this continues, your remaining monthly buffer may tighten by Friday.`
+- `Review budgets`
+
+This surface should feel:
+- calm
+- useful
+- product-native
+- quietly intelligent
+
+It should not feel:
+- like a chatbot
+- like a warning center
+- like a marketing AI feature
+- like a speculative prediction engine with weak evidence
+
+### Dashboard v3 Budget and AI Insight Rules
+
+Budget presence on the dashboard should remain compact.
+Do not duplicate the budgets workspace.
+
+AI insight should:
+- be assistive
+- be short
+- be confidence-aware
+- be tied to real finance posture or planning context
+- recommend a practical next action when useful
+
+AI insight should not:
+- auto-take action
+- invent unsupported predictions
+- dominate the full dashboard
+- become a conversational thread inside the dashboard
+
+Preferred structure for the bottom card:
+- insight statement
+- projected impact
+- confidence
+- time window
+- recommended next step
+- compact budget status summary or chart
+
+### Dashboard v3 Sidebar Snapshot Rules
+
+The lower sidebar snapshot may remain, but it should stay secondary.
+
+Keep it:
+- compact
+- visually integrated
+- quiet
+
+Do not:
+- give it more emphasis than the main 3 W narrative
+- add too many mini-metrics
+- let it feel like a separate dashboard inside the sidebar
+
+### Dashboard v3 Copy Guidance
+
+Dashboard copy should feel:
+- calm
+- concise
+- confident
+- product-like
+
+Prefer:
+- `You're in a stable position`
+- `Assets are ahead of liabilities`
+- `Accounts shaping your position`
+- `Recent changes affecting your balance`
+- `What to watch next`
+- `Budgets are on track`
+- `One budget may need attention soon`
+
+Avoid:
+- loud finance-gamification language
+- market-terminal language
+- alarmist phrasing when calmer wording will do
+- generic analytics labels with weak meaning
+- filler insight copy that says little
+
+### Dashboard v3 Layout Guidance
+
+Desktop layout contract:
+- preserve the current premium shell
+- preserve the current sidebar
+- preserve the current hero-first structure
+- keep the middle row as two balanced cards
+- keep the bottom row as one full-width insight card
+
+Recommended desktop dimensions:
+- dashboard shell max width: `1280px`
+- sidebar width: `280px`
+- page padding: `24px`
+- section gap: `24px`
+- hero min height: `220px`
+- middle cards min height: `300px`
+- bottom insight min height: `200px`
+- card radius: `16px` to `24px`
+- card padding: `24px`
+
+Mobile layout contract:
+- stack the 3 W sections in order
+- keep cards compact
+- preserve section naming clarity
+- keep the bottom insight card visible without excessive scroll fatigue
+
+### Dashboard v3 Implementation Notes
+
+- keep the current dashboard visual language as the baseline
+- do not rebuild the dashboard from scratch without need
+- treat this as a narrative and hierarchy refinement pass
+- preserve the current design-system tokens from `src/app/globals.css`
+- preserve the current shell, search, and quick-capture alignment
+- keep dashboard cards calmer than feature workspace surfaces
+- use AI insight only where it improves decision-making
+- keep all dashboard content tied to real, implemented product data
+
+### Dashboard v3 Success Standard
+
+A Dashboard v3 surface is successful when:
+- the hero clearly explains the user's current money posture
+- the middle row explains why that posture looks the way it does
+- the bottom row gives a credible next thing to watch or do
+- the dashboard feels more guided without becoming more crowded
+- the page still feels calm, premium, and lighter than feature workspaces
+- the 3 W structure is obvious in both desktop and mobile

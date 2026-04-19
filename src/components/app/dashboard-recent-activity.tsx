@@ -8,7 +8,7 @@ import {
   Clock3,
   CreditCard,
   Landmark,
-  PiggyBank,
+  Sparkles,
   Wallet,
 } from "lucide-react";
 import Image from "next/image";
@@ -93,8 +93,8 @@ function getMoneyPosture(assets: number, liabilities: number): MoneyPosture {
 function getPostureCopy(posture: MoneyPosture) {
   if (posture === "stable") {
     return {
-      title: "Stable this week",
-      body: "Assets are ahead of liabilities, but debt remains meaningful.",
+      headline: "You're in a stable position",
+      body: "Assets are ahead of liabilities. Debt is still worth monitoring.",
       tone: "text-emerald-700 dark:text-emerald-300",
       dot: "bg-emerald-500",
     };
@@ -102,15 +102,15 @@ function getPostureCopy(posture: MoneyPosture) {
 
   if (posture === "watch") {
     return {
-      title: "Close balance this week",
-      body: "You are still ahead, though liabilities are close enough to watch.",
+      headline: "You're in a close position",
+      body: "Assets are still ahead, though liabilities are close enough to watch this week.",
       tone: "text-amber-700 dark:text-amber-300",
       dot: "bg-amber-500",
     };
   }
 
   return {
-    title: "Liabilities leading",
+    headline: "You're in a pressured position",
     body: "Liabilities are ahead of assets. A payment-focused week can reduce pressure.",
     tone: "text-rose-700 dark:text-rose-300",
     dot: "bg-rose-500",
@@ -145,7 +145,7 @@ export function DashboardRecentActivity() {
   const accountsQuery = trpc.accounts.list.useQuery();
   const transactionsQuery = trpc.transactions.list.useQuery({
     page: 1,
-    pageSize: 8,
+    pageSize: 30,
     search: "",
     type: "all",
   });
@@ -293,35 +293,131 @@ export function DashboardRecentActivity() {
   const postureCopy = getPostureCopy(posture);
 
   const budgetSummary = budgetsSummary?.summary;
-  const budgetPosture = useMemo(() => {
+
+  const watchNextInsight = useMemo(() => {
     const total = budgetSummary?.totalBudgets ?? 0;
     const warning = budgetSummary?.warningBudgets ?? 0;
     const danger = budgetSummary?.dangerBudgets ?? 0;
     const exceeded = budgetSummary?.exceededBudgets ?? 0;
-    const needsAttention = warning + danger + exceeded;
+    const atRisk = warning + danger + exceeded;
+    const onTrack = Math.max(0, total - atRisk);
+    const hasRecentMovement = transactions.length > 0;
+    const totalRemaining = budgetSummary?.totalRemaining ?? 0;
 
     if (total === 0) {
       return {
-        title: "No active budgets yet",
-        body: "Set a monthly or weekly budget to track your spending with confidence.",
-        action: "Create budget",
+        statement: hasRecentMovement
+          ? "AI Insights is ready. Add your first budget to unlock next-step guidance."
+          : "AI Insights is ready. Record activity and add a budget to unlock next-step guidance.",
+        projectedImpact: "No budget projection yet",
+        confidence: "Initial estimate",
+        window: "Next 7 days",
+        nextActionLabel: "Set your first budget",
+        nextActionHref: "/budgets",
+        budgetStatusSummary: "No active budgets yet",
+        totalBudgets: total,
+        atRisk,
+        onTrack,
+        warning,
+        danger,
+        exceeded,
+        totalRemaining,
       };
     }
 
-    if (needsAttention > 0) {
+    if (atRisk > 0) {
       return {
-        title: `${needsAttention} budget${needsAttention === 1 ? "" : "s"} need review`,
-        body: `${formatCurrencyMiliunits(budgetSummary?.totalRemaining ?? 0, "PHP")} remains across active parent budgets.`,
-        action: "Manage budget",
+        statement: `${atRisk} budget${atRisk === 1 ? "" : "s"} may tighten your buffer this cycle.`,
+        projectedImpact: "Buffer tightening likely",
+        confidence: "Medium confidence",
+        window: "This cycle",
+        nextActionLabel: "Review budgets",
+        nextActionHref: "/budgets",
+        budgetStatusSummary: `${onTrack} on track · ${atRisk} at risk`,
+        totalBudgets: total,
+        atRisk,
+        onTrack,
+        warning,
+        danger,
+        exceeded,
+        totalRemaining,
       };
     }
 
     return {
-      title: "Budgets are on track",
-      body: `${formatCurrencyMiliunits(budgetSummary?.totalRemaining ?? 0, "PHP")} remains across active parent budgets.`,
-      action: "Manage budget",
+      statement: "Your budgets are holding steady. Keep this pace to preserve your monthly buffer.",
+      projectedImpact: "Stable budget runway",
+      confidence: "Medium confidence",
+      window: "Next 7 days",
+      nextActionLabel: "Review budgets",
+      nextActionHref: "/budgets",
+      budgetStatusSummary: `${onTrack} on track · 0 at risk`,
+      totalBudgets: total,
+      atRisk,
+      onTrack,
+      warning,
+      danger,
+      exceeded,
+      totalRemaining,
     };
-  }, [budgetSummary]);
+  }, [budgetSummary, transactions.length]);
+
+  const trendMetrics = useMemo(() => {
+    const latestReferenceTime =
+      transactions.length > 0
+        ? Math.max(...transactions.map((event) => new Date(event.occurredAt).getTime()))
+        : 0;
+    const dayMs = 24 * 60 * 60 * 1000;
+    const currentWindowStart = latestReferenceTime - 7 * dayMs;
+    const previousWindowStart = latestReferenceTime - 14 * dayMs;
+
+    let currentNet = 0;
+    let previousNet = 0;
+    let currentCount = 0;
+
+    for (const event of transactions) {
+      const occurredAt = new Date(event.occurredAt).getTime();
+      const signedAmount = getMovementSignedAmount(event.type, event.amount);
+
+      if (occurredAt >= currentWindowStart) {
+        currentNet += signedAmount;
+        currentCount += 1;
+        continue;
+      }
+
+      if (occurredAt >= previousWindowStart) {
+        previousNet += signedAmount;
+      }
+    }
+
+    const delta = currentNet - previousNet;
+    let trendLabel = "Flat vs prior 7d";
+    let trendTone = "text-white/72";
+
+    if (delta > 0) {
+      trendLabel = "Up vs prior 7d";
+      trendTone = "text-emerald-300";
+    } else if (delta < 0) {
+      trendLabel = "Down vs prior 7d";
+      trendTone = "text-rose-300";
+    }
+
+    let deltaDisplay = "No baseline";
+    if (previousNet !== 0) {
+      const percentage = (delta / Math.abs(previousNet)) * 100;
+      deltaDisplay = `${percentage >= 0 ? "+" : "-"}${Math.abs(percentage).toFixed(1)}%`;
+    } else if (delta !== 0) {
+      deltaDisplay = delta > 0 ? "Improving" : "Softening";
+    }
+
+    return {
+      currentNet,
+      currentCount,
+      trendLabel,
+      trendTone,
+      deltaDisplay,
+    };
+  }, [transactions]);
 
   if (accountsQuery.isLoading || transactionsQuery.isLoading || budgetsSummaryQuery.isLoading) {
     return (
@@ -366,16 +462,20 @@ export function DashboardRecentActivity() {
 
           <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
             <div className="space-y-2.5 md:space-y-3 md:pr-7">
-              <h2 className="text-[0.98rem] font-semibold tracking-tight text-white/95 md:text-[1.08rem] lg:text-[1.16rem]">
-                Money posture
-              </h2>
+              <p className="text-[0.72rem] uppercase tracking-[0.12em] text-white/65">Overview</p>
               <div className="flex items-center gap-2 text-[1.06rem] font-semibold leading-none tracking-tight text-white md:text-[1.34rem] lg:text-[1.48rem]">
                 <span className={`size-2.5 rounded-full ${postureCopy.dot} md:size-3`} />
-                {postureCopy.title}
+                {postureCopy.headline}
               </div>
               <p className="max-w-[30ch] text-[0.9rem] leading-6 text-white/74 md:max-w-[34ch] md:text-[0.93rem] md:leading-7">
                 {postureCopy.body}
               </p>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.05] px-3 py-1.5">
+                <span className="text-[0.78rem] text-white/72">7d trend</span>
+                <span className={`text-[0.8rem] font-semibold ${trendMetrics.trendTone}`}>
+                  {trendMetrics.deltaDisplay}
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-0 border-t border-white/15 pt-3.5 md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
@@ -419,6 +519,31 @@ export function DashboardRecentActivity() {
               </p>
             </div>
           </div>
+
+          <div className="grid gap-2.5 border-t border-white/15 pt-3.5 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
+              <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">
+                7d net movement
+              </p>
+              <p className="mt-1 text-[0.9rem] font-semibold text-white">
+                {formatCurrencyMiliunits(trendMetrics.currentNet, "PHP")}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
+              <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">Trend</p>
+              <p className={`mt-1 text-[0.9rem] font-semibold ${trendMetrics.trendTone}`}>
+                {trendMetrics.trendLabel}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
+              <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">
+                Events (7d)
+              </p>
+              <p className="mt-1 text-[0.9rem] font-semibold text-white">
+                {trendMetrics.currentCount}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -427,7 +552,7 @@ export function DashboardRecentActivity() {
           <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
             <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
               <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
-                Important accounts
+                Accounts shaping your position
               </h3>
               <Button
                 asChild
@@ -511,7 +636,7 @@ export function DashboardRecentActivity() {
           <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
             <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
               <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
-                Recent movement
+                Recent changes affecting your balance
               </h3>
               <Button
                 asChild
@@ -585,31 +710,131 @@ export function DashboardRecentActivity() {
       <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
         <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
           <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
-            <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
-              Budget posture
-            </h3>
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-full bg-[#17393c] px-3.5 text-[0.8rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
-            >
-              <Link href="/budgets">{budgetPosture.action}</Link>
-            </Button>
+            <div className="flex items-center gap-2.5">
+              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
+                What to watch next
+              </h3>
+              <span className="inline-flex h-6 items-center rounded-full bg-violet-100 px-2.5 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                AI insight
+              </span>
+            </div>
+            <div className="text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
+              Forward-looking guidance
+            </div>
           </div>
 
-          <div className="rounded-[1.1rem] border border-border/70 bg-white p-4 md:flex md:items-center md:justify-between md:gap-4 md:p-5.5 dark:bg-[#141d1f]">
-            <div className="flex items-center gap-3.5">
-              <div className="flex size-11 items-center justify-center rounded-[0.95rem] bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200 md:size-11 md:rounded-[0.95rem]">
-                <PiggyBank className="size-6 md:size-6" />
+          <div className="grid gap-4 rounded-[1.1rem] border border-border/70 bg-white p-4 md:min-h-[11.5rem] md:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] md:items-stretch md:gap-5 md:p-5.5 dark:bg-[#141d1f]">
+            <div className="space-y-3.5">
+              <div className="flex items-start gap-3.5">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-[0.95rem] bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200 md:size-11 md:rounded-[0.95rem]">
+                  <Sparkles className="size-5 md:size-5" />
+                </div>
+                <div>
+                  <p className="text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
+                    {watchNextInsight.statement}
+                  </p>
+                  <p className="mt-1 text-[0.88rem] leading-6 text-muted-foreground md:text-[0.86rem]">
+                    {watchNextInsight.budgetStatusSummary}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
-                  {budgetPosture.title}
-                </p>
-                <p className="mt-1 text-[0.88rem] leading-6 text-muted-foreground md:text-[0.86rem]">
-                  {budgetPosture.body}
-                </p>
+
+              <div className="grid grid-cols-1 gap-2 rounded-[0.9rem] border border-border/70 bg-white p-3 dark:bg-[#192325] sm:grid-cols-3">
+                <div className="space-y-1">
+                  <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Projected impact
+                  </p>
+                  <p className="text-[0.84rem] font-medium text-foreground">
+                    {watchNextInsight.projectedImpact}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Confidence
+                  </p>
+                  <p className="text-[0.84rem] font-medium text-foreground">
+                    {watchNextInsight.confidence}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Time window
+                  </p>
+                  <p className="text-[0.84rem] font-medium text-foreground">
+                    {watchNextInsight.window}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-[0.9rem] border border-border/70 bg-white/70 px-3 py-2.5 dark:bg-[#111a1c]">
+                <div>
+                  <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Recommended next step
+                  </p>
+                  <p className="mt-0.5 text-[0.86rem] font-medium text-foreground">
+                    {watchNextInsight.nextActionLabel}
+                  </p>
+                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full bg-[#17393c] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white"
+                >
+                  <Link href={watchNextInsight.nextActionHref}>{watchNextInsight.nextActionLabel}</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-[0.95rem] border border-border/70 bg-white p-3.5 dark:bg-[#192325]">
+              <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                Budget status
+              </p>
+              <div className="mt-3 space-y-2.5 text-[0.84rem]">
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <span className="size-1.5 rounded-full bg-muted-foreground/60" />
+                    Total budgets
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {watchNextInsight.totalBudgets}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
+                  <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    On track
+                  </span>
+                  <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                    {watchNextInsight.onTrack}
+                  </span>
+                </div>
+                <div
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 dark:bg-[#111a1c] ${
+                    watchNextInsight.atRisk > 0
+                      ? "border-amber-300/60 bg-amber-50/60 dark:border-amber-500/25 dark:bg-amber-500/10"
+                      : "border-border/70 bg-white/70"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                    <span className="size-1.5 rounded-full bg-amber-500" />
+                    At risk
+                  </span>
+                  <span className="font-semibold text-amber-700 dark:text-amber-300">
+                    {watchNextInsight.atRisk}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <span className="size-1.5 rounded-full bg-sky-500/80" />
+                    Remaining
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {watchNextInsight.totalBudgets > 0
+                      ? formatCurrencyMiliunits(watchNextInsight.totalRemaining, "PHP")
+                      : "—"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
