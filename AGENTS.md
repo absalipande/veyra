@@ -1919,6 +1919,120 @@ Implementation notes:
 - keep model prompts and parsing schema versioned and testable
 - all AI output must be treated as assistive, not authoritative
 
+### AI Architecture v1 (Architecture-First Contract)
+
+AI in Veyra is module-owned guidance, not a standalone chatbot.
+Every page gets one primary AI responsibility so behavior stays predictable, testable, and cost-aware.
+
+#### Surface responsibilities (v1)
+
+1. Dashboard: `briefing AI` (read-only)
+- job:
+  - summarize current posture in a short `what changed / what needs attention / next step` briefing
+- output:
+  - one concise insight statement
+  - one confidence label
+  - one recommended next action
+- constraints:
+  - do not duplicate full budgets or transactions analysis in dashboard cards
+  - keep this card compact and briefing-oriented
+
+2. Transactions: `habit coaching AI`
+- job:
+  - detect spend concentration and month-over-month category shifts
+  - produce practical cost-control actions
+- output:
+  - top spend category
+  - biggest shift vs previous month
+  - 2-3 actions the user can apply immediately
+- constraints:
+  - advice must stay tied to user transaction history
+  - no fake precision or unsupported forecasting claims
+
+3. Budgets: `pacing AI`
+- job:
+  - detect cycle pacing pressure and likely overshoot timing
+- output:
+  - pacing summary
+  - likely overshoot signal/date when defensible
+  - compact recommendation for what to adjust now
+- constraints:
+  - use budget period engine + linked expense events as source of truth
+  - do not invent spend values outside tracked windows
+
+4. Accounts: `watchdog AI` (phase-next target)
+- job:
+  - detect low runway, utilization pressure, and concentration risk
+- output:
+  - risk callout
+  - suggested transfer/review/paydown action
+- constraints:
+  - keep this lightweight
+  - do not turn Accounts into a second analytics dashboard
+
+5. Loans: `repayment AI` (after Loan v2 reopen)
+- job:
+  - highlight due pressure, slippage risk, and repayment health
+- output:
+  - upcoming due risk
+  - principal vs interest progress cue
+  - timing suggestion for next payment
+- constraints:
+  - must use Loan v2 schedule/payment records
+  - do not ship on top of legacy paused flows
+
+6. Quick capture: `AI parser`
+- job:
+  - convert natural language into editable transaction draft fields
+- output:
+  - intent/type, amount, description, account hints, category hint, budget hint, confidence
+- constraints:
+  - always editable before save
+  - low-confidence drafts require explicit user confirmation
+  - no silent field locks or auto-submits
+
+#### Trigger model (v1)
+
+- default rule:
+  - quick capture uses AI on-input parsing with throttled queries
+  - insight cards use manual `Generate insight` for deep analysis
+- transactions coaching:
+  - manual generate only in v1
+  - cooldown: 25 minutes per user
+- dashboard/budgets:
+  - keep current auto-refresh + invalidation model for lightweight guidance
+  - move to manual-generate parity only if cost/performance requires it
+
+#### Persistence and cooldown contract (v1)
+
+- persistence:
+  - generated habit coaching insights persist in DB (`veyra_ai_insights`)
+  - latest insight survives refresh, sign-out, and server restarts
+- replacement behavior:
+  - each new generation replaces the prior snapshot for the same user/surface
+- cooldown:
+  - enforce both client and server side
+  - display live countdown near action button in muted text
+  - server returns `TOO_MANY_REQUESTS` when cooldown is active
+
+#### Data and ownership contract
+
+- DB source:
+  - AI must read real user-scoped finance data (transactions, budgets, categories, accounts, loans)
+- service ownership:
+  - compute and interpretation logic belongs in feature AI services
+- router ownership:
+  - input validation, auth, rate-limit/cooldown enforcement, response transport only
+- UI ownership:
+  - rendering, loading/error states, and user controls only
+
+#### Non-goals for v1
+
+- no autonomous actions (AI never writes financial records without user confirmation)
+- no free-form chat thread as primary UX
+- no heavy historical insight timeline yet
+- no personalized premium ranking until base signals are stable
+
 ### AI Rollout Plan (Veyra)
 
 The AI rollout should follow a feature-first sequence and stay grounded in real user finance data.
@@ -1997,6 +2111,11 @@ Current implementation status (as of April 20, 2026):
 - completed:
   - transactions AI insight panel is live in:
     - `src/features/transactions/components/transactions-workspace.tsx`
+  - transactions manual `Generate insight` flow is live with:
+    - server-side 25-minute cooldown enforcement
+    - client-side live cooldown timer label
+    - persisted latest snapshot in DB (`veyra_ai_insights`)
+    - overwrite-latest behavior per user/surface
   - budgets AI insight panel is live in:
     - `src/features/budgets/components/budgets-workspace.tsx`
   - dashboard + transactions + budgets + quick-capture now trigger cross-surface invalidation for AI refresh:
@@ -2008,10 +2127,11 @@ Current implementation status (as of April 20, 2026):
   - transactions insight is still heuristic and should evolve to richer anomaly/recurrence scoring
   - budgets overshoot forecasting exists but needs stronger pacing math and confidence calibration
   - insight copy/visual hierarchy is usable but still needs final polish pass for premium readability
+  - insight history/versioning remains latest-snapshot only (no full timeline yet)
 
 Resume checklist for next AI session:
 1. enforce low-confidence confirmation gating in quick capture submit flow
-2. add structured insight versioning + lightweight audit/history persistence
+2. add structured insight versioning + lightweight multi-entry audit/history persistence
 3. improve recurrence and category-shift signal quality with tighter thresholds
 4. add Accounts watchdog insight surface (Phase 3 start)
 
