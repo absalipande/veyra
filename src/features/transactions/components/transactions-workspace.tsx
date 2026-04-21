@@ -156,6 +156,15 @@ const initialDraft: EventDraft = {
   accountId: "",
 };
 
+const composerFieldClassName =
+  "h-9.5 w-full rounded-[0.8rem] border-border/80 bg-white px-3 text-[0.84rem] shadow-none dark:bg-[#162022] md:px-3 md:text-[0.8rem]";
+
+const composerAmountFieldClassName =
+  "h-9.5 rounded-[0.8rem] border-border/80 bg-white px-3 text-[0.86rem] font-semibold tracking-tight shadow-none dark:bg-[#162022] md:px-3 md:text-[0.82rem]";
+
+const composerDateFieldClassName =
+  "h-9.5 w-full rounded-[0.8rem] px-3 text-[0.84rem] md:px-3 md:text-[0.8rem]";
+
 function getEventTypeLabel(type: TransactionEventType) {
   if (type === "loan_disbursement") return "Loan disbursement";
   return eventTypeOptions.find((option) => option.value === type)?.label ?? type;
@@ -1192,7 +1201,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                             <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                               Amount
                             </p>
-                            <p className="mt-1 text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                            <p className="mt-1 text-[0.9rem] font-medium tracking-tight text-[#17393c] dark:text-foreground/90">
                               {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
                             </p>
                           </div>
@@ -1246,7 +1255,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       </div>
 
                       <div className="hidden md:block md:text-right">
-                        <p className="text-[1rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                        <p className="text-[0.92rem] font-medium tracking-tight text-[#17393c] dark:text-foreground/90">
                           {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
                         </p>
                       </div>
@@ -1383,7 +1392,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     setDraft((current) => ({ ...current, amount: event.target.value }))
                   }
                   placeholder="0.00"
-                  className="h-11 rounded-xl border-border/80 bg-white px-4 text-[1rem] font-semibold tracking-tight sm:text-[1.22rem]"
+                  className={composerAmountFieldClassName}
                 />
               </div>
               {(draft.type === "income" || draft.type === "expense") && (
@@ -1398,7 +1407,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         setDraft((current) => ({ ...current, accountId: value }))
                       }
                     >
-                      <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                      <SelectTrigger className={composerFieldClassName}>
                         <SelectValue
                           placeholder={
                             draft.type === "expense"
@@ -1425,7 +1434,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     <DatePickerField
                       value={draft.date}
                       onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
-                      className="h-11 rounded-xl px-4 text-[0.98rem]"
+                      className={composerDateFieldClassName}
                     />
                   </div>
                 </div>
@@ -1442,7 +1451,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         setDraft((current) => ({ ...current, sourceAccountId: value }))
                       }
                     >
-                      <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                      <SelectTrigger className={composerFieldClassName}>
                         <SelectValue placeholder="Source account" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1464,7 +1473,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         setDraft((current) => ({ ...current, destinationAccountId: value }))
                       }
                     >
-                      <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                      <SelectTrigger className={composerFieldClassName}>
                         <SelectValue placeholder="Destination account" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1491,7 +1500,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, sourceAccountId: value }))
                         }
                       >
-                        <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                        <SelectTrigger className={composerFieldClassName}>
                           <SelectValue placeholder="Bank or wallet account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1513,7 +1522,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, creditAccountId: value }))
                         }
                       >
-                        <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                        <SelectTrigger className={composerFieldClassName}>
                           <SelectValue placeholder="Credit account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1533,7 +1542,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     <DatePickerField
                       value={draft.date}
                       onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
-                      className="h-11 w-full rounded-xl px-4 text-[0.98rem]"
+                      className={composerDateFieldClassName}
                     />
                   </div>
                 </>
@@ -1551,7 +1560,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, loanAccountId: value }))
                         }
                       >
-                        <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                        <SelectTrigger className={composerFieldClassName}>
                           <SelectValue placeholder="Loan account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1573,7 +1582,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, destinationAccountId: value }))
                         }
                       >
-                        <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                        <SelectTrigger className={composerFieldClassName}>
                           <SelectValue placeholder="Bank or wallet account" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1593,7 +1602,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     <DatePickerField
                       value={draft.date}
                       onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
-                      className="h-11 w-full rounded-xl px-4 text-[0.98rem]"
+                      className={composerDateFieldClassName}
                     />
                   </div>
                 </>
@@ -1615,7 +1624,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         setDraft((current) => ({ ...current, description: event.target.value }))
                       }
                       placeholder="Optional short label"
-                      className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]"
+                      className={composerFieldClassName}
                     />
                     <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
                       Short label for this income.
@@ -1633,7 +1642,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, categoryId: value }))
                         }
                       >
-                        <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                        <SelectTrigger className={composerFieldClassName}>
                           <SelectValue placeholder="No category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1660,7 +1669,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, notes: event.target.value }))
                         }
                         placeholder="Optional context"
-                        className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]"
+                        className={composerFieldClassName}
                       />
                       <p className="min-h-[1.15rem] text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
                         Add any extra context about this income.
@@ -1682,7 +1691,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, categoryId: value }))
                         }
                       >
-                        <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                        <SelectTrigger className={composerFieldClassName}>
                           <SelectValue placeholder="No category" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1706,7 +1715,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, budgetId: value }))
                         }
                       >
-                        <SelectTrigger className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]">
+                        <SelectTrigger className={composerFieldClassName}>
                           <SelectValue placeholder="No budget" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1736,7 +1745,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         setDraft((current) => ({ ...current, feeAmount: event.target.value }))
                       }
                       placeholder="0.00"
-                      className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]"
+                      className={composerFieldClassName}
                     />
                     <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
                       Optional. Fee is deducted from the source account.
@@ -1750,7 +1759,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     <DatePickerField
                       value={draft.date}
                       onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
-                      className="h-11 w-full rounded-xl px-4 text-[0.98rem]"
+                      className={composerDateFieldClassName}
                     />
                   </div>
                 </div>
@@ -1767,7 +1776,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         setDraft((current) => ({ ...current, description: event.target.value }))
                       }
                       placeholder="Optional short label"
-                      className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]"
+                      className={composerFieldClassName}
                     />
                     <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
                       Short label for this payment.
@@ -1787,7 +1796,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, feeAmount: event.target.value }))
                         }
                         placeholder="0.00"
-                        className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]"
+                        className={composerFieldClassName}
                       />
                       <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
                         Optional. Fee is deducted from the payment account.
@@ -1804,7 +1813,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                           setDraft((current) => ({ ...current, notes: event.target.value }))
                         }
                         placeholder="Optional context"
-                        className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]"
+                        className={composerFieldClassName}
                       />
                       <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
                         Add any extra context about this payment.
@@ -1825,7 +1834,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         setDraft((current) => ({ ...current, description: event.target.value }))
                       }
                       placeholder="Optional short label"
-                      className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]"
+                      className={composerFieldClassName}
                     />
                     <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
                       Short label for this for this event.
@@ -1841,7 +1850,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         setDraft((current) => ({ ...current, notes: event.target.value }))
                       }
                       placeholder="Optional context"
-                      className="h-11 w-full rounded-xl border-border/80 bg-white px-4 text-[0.98rem]"
+                      className={composerFieldClassName}
                     />
                     <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
                       Add any extra context about this event.{" "}
@@ -1888,27 +1897,27 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       >
         <DialogContent
           mobileBehavior="modal"
-          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.98))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:w-auto sm:max-w-lg sm:rounded-[1.6rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4"
+          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.2rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.98))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:w-auto sm:max-w-[30rem] sm:rounded-[1.35rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4"
         >
-          <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
+          <DialogHeader className="border-b border-border/70 px-5 pb-3.5 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pb-4 sm:pt-5 sm:pr-16">
             <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
               Confirm delete
             </div>
-            <DialogTitle className="pt-2 text-[1.15rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.7rem]">
+            <DialogTitle className="pt-1.5 text-[1.1rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-2.5 sm:text-[1.4rem]">
               Remove this event?
             </DialogTitle>
-            <DialogDescription className="max-w-md text-[0.82rem] leading-5.5 sm:text-[0.95rem] sm:leading-7">
+            <DialogDescription className="max-w-md text-[0.8rem] leading-5.5 sm:text-[0.9rem] sm:leading-6.5">
               {deleteTarget
                 ? `Delete "${deleteTarget.description}" from your ledger? This also removes the account effects recorded for it.`
                 : "Delete this event from your ledger? This also removes the account effects recorded for it."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-3 px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 sm:flex sm:justify-end sm:px-7 sm:py-6">
+          <div className="grid grid-cols-2 gap-2.5 px-5 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 sm:flex sm:justify-end sm:px-6 sm:py-4">
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-full rounded-full px-5 sm:h-11 sm:w-auto"
+              className="h-9.5 w-full rounded-full px-4.5 sm:h-10 sm:w-auto"
               onClick={() => setDeleteTarget(null)}
               disabled={deleteEvent.isPending}
             >
@@ -1916,7 +1925,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
             </Button>
             <Button
               type="button"
-              className="h-10 w-full rounded-full bg-destructive px-5 text-white hover:bg-destructive/90 sm:h-11 sm:w-auto"
+              className="h-9.5 w-full rounded-full bg-destructive px-4.5 text-white hover:bg-destructive/90 sm:h-10 sm:w-auto"
               onClick={() => deleteTarget && deleteEvent.mutate({ id: deleteTarget.id })}
               disabled={deleteEvent.isPending}
             >

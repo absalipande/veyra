@@ -109,12 +109,19 @@ export function SettingsWorkspace() {
       await Promise.all([
         utils.accounts.list.invalidate(),
         utils.accounts.summary.invalidate(),
+        utils.loans.list.invalidate(),
+        utils.loans.summary.invalidate(),
         utils.transactions.list.invalidate(),
         utils.transactions.summary.invalidate(),
         utils.budgets.list.invalidate(),
         utils.budgets.summary.invalidate(),
         utils.categories.list.invalidate(),
         utils.categories.summary.invalidate(),
+        utils.ai.dashboardInsight.invalidate(),
+        utils.ai.accountsInsight.invalidate(),
+        utils.ai.transactionsInsight.invalidate(),
+        utils.ai.budgetsInsight.invalidate(),
+        utils.ai.loansInsight.invalidate(),
       ]);
 
       setShowClearDialog(false);
@@ -433,22 +440,22 @@ export function SettingsWorkspace() {
         </CardContent>
       </Card>
 
-      <Card className="border-rose-200/70 bg-rose-50/40 dark:border-rose-900/50 dark:bg-rose-950/10">
-        <CardContent className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="border-destructive/20 bg-background/90">
+        <CardContent className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0 space-y-1">
-            <p className="flex items-center gap-2 text-[1rem] font-semibold tracking-tight text-destructive">
+            <p className="flex items-center gap-2 text-sm font-semibold tracking-[0.08em] text-destructive">
               <AlertTriangle className="size-4" />
               Danger zone
             </p>
-            <p className="text-sm leading-6 text-muted-foreground">
+            <p className="text-sm leading-5 text-muted-foreground">
               Permanently delete all workspace finance records. This cannot be undone.
             </p>
           </div>
 
           <Button
             type="button"
-            variant="destructive"
-            className="h-11 rounded-full px-5"
+            variant="outline"
+            className="h-10 rounded-xl border-destructive/35 px-4 text-destructive hover:bg-destructive/5 hover:text-destructive"
             onClick={() => setShowClearDialog(true)}
           >
             <Trash2 className="size-4" />
@@ -470,39 +477,36 @@ export function SettingsWorkspace() {
           mobileBehavior="modal"
           className="
     w-[min(92vw,30rem)]
-    rounded-[1.5rem]
+    rounded-[1rem]
     border border-border/70
     bg-background
     p-0
-    shadow-2xl
+    shadow-xl
     overflow-hidden
   "
         >
-          <DialogHeader className="border-b border-border/60 px-4 pb-4 pt-5 sm:px-5 sm:pb-5 sm:pt-5">
-            <div className="flex items-start gap-3 pr-10">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-                <AlertTriangle className="size-5" />
+          <DialogHeader className="border-b border-border/60 px-5 pb-4 pt-5 sm:px-6">
+            <div className="space-y-2 pr-10 text-left">
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-destructive/25 bg-destructive/5 px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-destructive">
+                <AlertTriangle className="size-3.5" />
+                Confirm delete
               </div>
-
-              <div className="min-w-0 text-left">
-                <DialogTitle className="text-[1.1rem] font-semibold tracking-tight text-foreground sm:text-[1.2rem]">
-                  Delete workspace data
-                </DialogTitle>
-                <DialogDescription className="mt-2 text-sm leading-7 text-muted-foreground">
-                  This permanently deletes all accounts, transactions, budgets, and categories.
-                </DialogDescription>
-              </div>
+              <DialogTitle className="text-[2rem] font-semibold leading-none tracking-tight text-foreground">
+                Delete workspace data
+              </DialogTitle>
+              <DialogDescription className="text-[1.05rem] leading-8 text-muted-foreground">
+                This permanently deletes all accounts, transactions, budgets, and categories.
+              </DialogDescription>
             </div>
           </DialogHeader>
 
-          <div className="px-4 py-4 sm:px-5">
-            <div className="space-y-4">
-              <div className="rounded-[1.25rem] border border-border/80 px-4 py-3 text-sm leading-6 text-muted-foreground">
-                Type{" "}
-                <span className="font-mono font-semibold uppercase tracking-[0.08em] text-foreground">
+          <div className="px-5 py-4 sm:px-6">
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border/80 bg-muted/30 px-3.5 py-3 text-sm leading-6 text-muted-foreground">
+                Enter the confirmation phrase:
+                <span className="mt-1.5 block font-mono text-sm font-semibold uppercase tracking-[0.14em] text-foreground">
                   {DELETE_CONFIRMATION_PHRASE}
-                </span>{" "}
-                to continue.
+                </span>
               </div>
 
               <Input
@@ -513,13 +517,26 @@ export function SettingsWorkspace() {
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
-                className="h-12 rounded-[1.25rem] border-border/80 bg-background px-4 font-mono text-sm uppercase tracking-[0.08em] sm:text-base"
+                className="h-11 rounded-xl border-border/80 bg-background px-3.5 font-mono text-sm uppercase tracking-[0.14em]"
               />
             </div>
           </div>
 
-          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 px-5 pt-4 pb-7 sm:px-6 sm:pb-6">
-            <div className="grid w-full grid-cols-2 gap-2">
+          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 px-5 py-4 sm:px-6">
+            <div className="ml-auto flex w-full justify-end gap-2 sm:w-auto">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowClearDialog(false);
+                  setClearConfirmation("");
+                }}
+                disabled={clearWorkspace.isPending}
+                className="h-10 min-w-[7rem] rounded-full px-4"
+              >
+                Cancel
+              </Button>
+
               <Button
                 type="button"
                 variant="destructive"
@@ -529,22 +546,9 @@ export function SettingsWorkspace() {
                     confirmation: DELETE_CONFIRMATION_PHRASE,
                   })
                 }
-                className="h-11 w-full rounded-full px-4 sm:px-6"
+                className="h-10 min-w-[10.5rem] rounded-full px-4"
               >
                 {clearWorkspace.isPending ? "Deleting..." : "Delete permanently"}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowClearDialog(false);
-                  setClearConfirmation("");
-                }}
-                disabled={clearWorkspace.isPending}
-                className="h-11 w-full rounded-full px-4 sm:px-6"
-              >
-                Cancel
               </Button>
             </div>
           </DialogFooter>

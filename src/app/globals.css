@@ -103,6 +103,25 @@ body {
     );
 }
 
+/* Clickable controls should consistently show pointer cursor */
+button,
+a[href],
+[role="button"],
+[data-slot="button"],
+[data-slot="dialog-close"],
+[data-slot="sheet-close"],
+[data-slot="select-trigger"],
+[data-slot="dropdown-menu-trigger"],
+[data-slot="popover-trigger"],
+[data-slot="tooltip-trigger"] {
+  cursor: pointer;
+}
+
+button:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Prevent iOS Safari auto-zoom on focus for small form text */
 @media (max-width: 768px) and (hover: none) and (pointer: coarse) {
   input,

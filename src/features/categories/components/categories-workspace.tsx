@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import { Pencil, Search, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { Pencil, Search, Tags, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import type { AppRouter } from "@/server/api/root";
@@ -86,6 +86,8 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
       utils.categories.list.invalidate(),
       utils.categories.summary.invalidate(),
       utils.transactions.list.invalidate(),
+      utils.ai.transactionsInsight.invalidate(),
+      utils.ai.dashboardInsight.invalidate(),
     ]);
   };
 
@@ -171,6 +173,9 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
       detail: "Inflow categories for salary, reimbursements, and other incoming money.",
     },
   ];
+  const totalCategories = summaryQuery.data?.totalCategories ?? 0;
+  const expenseCount = summaryQuery.data?.expenseCategories ?? 0;
+  const incomeCount = summaryQuery.data?.incomeCategories ?? 0;
 
   useEffect(() => {
     if (!summaryScrollerRef.current) return;
@@ -258,6 +263,91 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
   return (
     <div className="space-y-6 lg:space-y-7">
       <section className="space-y-4">
+        <Card className="relative overflow-hidden rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
+          <div className="pointer-events-none absolute inset-0 opacity-70">
+            <div className="absolute inset-y-0 left-0 w-[58%] bg-[radial-gradient(circle_at_20%_26%,rgba(6,17,18,0.28),transparent_42%)]" />
+            <div className="absolute inset-y-0 right-0 hidden w-[44%] bg-[radial-gradient(circle_at_72%_28%,rgba(80,255,214,0.13),transparent_30%),radial-gradient(circle_at_84%_72%,rgba(80,255,214,0.08),transparent_22%)] lg:block" />
+          </div>
+
+          <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
+                Category posture
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white sm:inline-flex md:h-8 md:px-3.5 md:text-[0.79rem]"
+                onClick={openCreateDialog}
+              >
+                Create category
+              </Button>
+            </div>
+
+            <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
+              <div className="space-y-2.5 md:space-y-3 md:pr-7">
+                <h2 className="text-[0.98rem] font-semibold tracking-tight text-white/95 md:text-[1.08rem] lg:text-[1.16rem]">
+                  Category posture
+                </h2>
+                <div className="flex items-center gap-2 text-[1.06rem] font-semibold leading-none tracking-tight text-white md:text-[1.34rem] lg:text-[1.48rem]">
+                  <span className="size-2.5 rounded-full bg-emerald-400 md:size-3" />
+                  Keep labels small, clean, and useful
+                </div>
+                <p className="max-w-[30ch] text-[0.9rem] leading-6 text-white/74 md:max-w-[34ch] md:text-[0.93rem] md:leading-7">
+                  Categories should stay stable enough for consistent transaction capture and clear
+                  spending/income review.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-0 border-t border-white/15 pt-3.5 md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
+                <div className="space-y-2.5 pr-4 md:pr-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[0.82rem] text-white/70 md:text-[0.88rem]">Expense</p>
+                    <span className="flex size-8.5 items-center justify-center rounded-full bg-rose-100/95 text-rose-700 md:size-9">
+                      <TrendingDown className="size-3.5 md:size-[0.95rem]" />
+                    </span>
+                  </div>
+                  <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
+                    {String(expenseCount)}
+                  </p>
+                  <p className="text-[0.78rem] leading-5.5 text-white/64 md:text-[0.82rem] md:leading-6">
+                    Spending-focused labels
+                  </p>
+                </div>
+
+                <div className="space-y-2.5 border-l border-white/15 pl-4 pr-4 md:pr-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[0.82rem] text-white/70 md:text-[0.88rem]">Income</p>
+                    <span className="flex size-8.5 items-center justify-center rounded-full bg-emerald-100/95 text-emerald-700 md:size-9">
+                      <TrendingUp className="size-3.5 md:size-[0.95rem]" />
+                    </span>
+                  </div>
+                  <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
+                    {String(incomeCount)}
+                  </p>
+                  <p className="text-[0.78rem] leading-5.5 text-white/64 md:text-[0.82rem] md:leading-6">
+                    Inflow-focused labels
+                  </p>
+                </div>
+              </div>
+
+              <div className="hidden space-y-2 border-t border-white/15 pt-4 md:block md:border-0 md:border-l md:border-white/15 md:pl-7 md:pt-0">
+                <div className="flex items-center gap-2 text-[0.82rem] text-white/70">
+                  <Tags className="size-4" />
+                  Total categories
+                </div>
+                <p className="line-clamp-2 text-[0.95rem] font-semibold tracking-tight text-white lg:text-[0.99rem]">
+                  {totalCategories} tracked labels
+                </p>
+                <p className="text-[0.82rem] leading-6 text-white/70">
+                  Keep the taxonomy compact to preserve quick capture speed.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div
           ref={summaryScrollerRef}
           className="flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-1 md:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -268,17 +358,17 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               data-summary-slide
               className="min-w-0 shrink-0 basis-full snap-center"
             >
-              <Card className="border-white/75 bg-white shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]">
-                <CardContent className="p-5">
-                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
+              <Card className="rounded-[1.35rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
+                <CardHeader className="px-4 pb-1.5 pt-4">
+                  <CardDescription className="text-[0.68rem] uppercase tracking-[0.24em]">
                     {card.label}
-                  </p>
-                  <p className="mt-2 text-[1.8rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  </CardDescription>
+                  <CardTitle className="text-[1.15rem] font-semibold tracking-tight">
                     {card.value}
-                  </p>
-                  <p className="mt-2 text-[0.92rem] leading-6 text-muted-foreground">
-                    {card.detail}
-                  </p>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4 text-[0.8rem] leading-5 text-muted-foreground">
+                  {card.detail}
                 </CardContent>
               </Card>
             </div>
@@ -330,25 +420,43 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
           </div>
         ) : null}
 
-        <div className="hidden gap-4 md:grid md:grid-cols-3">
-          {summaryCards.map((card) => (
+        <div className="hidden gap-3 md:grid md:grid-cols-3">
+          {summaryCards.map((card) => {
+            const Icon =
+              card.label === "Expense" ? TrendingDown : card.label === "Income" ? TrendingUp : Tags;
+            const iconTone =
+              card.label === "Expense"
+                ? "bg-rose-100 text-rose-700"
+                : card.label === "Income"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-slate-100 text-slate-700";
+
+            return (
             <Card
               key={card.label}
-              className="border-white/75 bg-white shadow-[0_20px_60px_-52px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123]"
+              className="rounded-[1.25rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]"
             >
-              <CardContent className="p-5">
-                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground">
-                  {card.label}
-                </p>
-                <p className="mt-2 text-[1.8rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                  {card.value}
-                </p>
-                <p className="mt-2 text-[0.92rem] leading-6 text-muted-foreground">
-                  {card.detail}
-                </p>
+              <CardHeader className="px-4 pb-1.5 pt-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardDescription className="text-[0.68rem] uppercase tracking-[0.24em]">
+                      {card.label}
+                    </CardDescription>
+                    <CardTitle className="mt-1.5 text-[1.1rem] font-semibold tracking-tight">
+                      {card.value}
+                    </CardTitle>
+                  </div>
+                  <span className={`flex size-8 items-center justify-center rounded-full ${iconTone}`}>
+                    <Icon className="size-4" />
+                  </span>
+                </div>
+              </CardHeader>
+              <CardContent className="px-4 pb-4 text-[0.8rem] leading-5 text-muted-foreground">
+                {card.detail}
               </CardContent>
             </Card>
-          ))}
+          );
+          })}
         </div>
       </section>
 
@@ -625,22 +733,22 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
           mobileBehavior="adaptive"
           className="h-[100dvh] overflow-hidden border border-border/70 bg-white px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))]"
         >
-          <DialogHeader className="sticky top-0 z-10 shrink-0 border-b border-border/70 bg-white px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-6 sm:pb-5 sm:pt-7 sm:pr-16 dark:bg-[#1a2325]">
-            <div className="inline-flex w-fit rounded-lg border border-[#17393c]/10 bg-[#17393c]/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary sm:rounded-full sm:px-3 sm:text-[0.68rem] sm:tracking-[0.22em]">
+          <DialogHeader className="sticky top-0 z-10 shrink-0 border-b border-border/70 bg-white px-3.5 pb-3 pt-[max(0.8rem,env(safe-area-inset-top))] pr-12 sm:px-6 sm:pb-5 sm:pt-7 sm:pr-16 dark:bg-[#1a2325]">
+            <div className="inline-flex w-fit rounded-lg border border-[#17393c]/10 bg-[#17393c]/5 px-2.5 py-0.75 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary sm:rounded-full sm:px-3 sm:py-1 sm:text-[0.68rem] sm:tracking-[0.22em]">
               Category setup
             </div>
-            <DialogTitle className="pt-1.5 text-[1.2rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.8rem]">
+            <DialogTitle className="pt-1 text-[1.08rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.8rem]">
               {draft.id ? "Edit category" : "Create a category"}
             </DialogTitle>
-            <DialogDescription className="max-w-md text-[0.82rem] leading-6 sm:text-[0.95rem] sm:leading-7">
+            <DialogDescription className="max-w-md text-[0.76rem] leading-5.25 sm:text-[0.95rem] sm:leading-7">
               Keep names short and durable so they stay useful as transaction filters and dropdown
               options.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
-            <div className="space-y-4 sm:space-y-5">
-              <div className="space-y-3">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3.5 sm:px-6 sm:py-6">
+            <div className="space-y-3 sm:space-y-5">
+              <div className="space-y-2.5">
                 <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                   Category name
                 </label>
@@ -650,11 +758,11 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                     setDraft((current) => ({ ...current, name: event.target.value }))
                   }
                   placeholder="e.g. Groceries"
-                  className="h-9 rounded-lg border-border/80 bg-white px-3 text-sm sm:h-11 sm:rounded-xl sm:px-4 sm:text-[0.98rem]"
+                  className="h-8.5 rounded-lg border-border/80 bg-white px-3 text-[0.8rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-[0.98rem]"
                 />
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                   Type
                 </label>
@@ -664,7 +772,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                     setDraft((current) => ({ ...current, kind: value as CategoryKind }))
                   }
                 >
-                  <SelectTrigger className="h-9 rounded-lg border-border/80 bg-white px-3 text-sm sm:h-11 sm:rounded-xl sm:px-4 sm:text-[0.98rem]">
+                  <SelectTrigger className="h-8.5 rounded-lg border-border/80 bg-white px-3 text-[0.8rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-[0.98rem]">
                     <SelectValue placeholder="Category type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -674,19 +782,19 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                 </Select>
               </div>
 
-              <div className="rounded-xl border border-border/70 bg-white px-3.5 py-3 text-[0.76rem] leading-5 text-muted-foreground dark:bg-[#162022] sm:rounded-[1.3rem] sm:px-4 sm:text-[0.83rem] sm:leading-6">
+              <div className="rounded-xl border border-border/70 bg-white px-3 py-2.5 text-[0.72rem] leading-4.75 text-muted-foreground dark:bg-[#162022] sm:rounded-[1.3rem] sm:px-4 sm:py-3 sm:text-[0.83rem] sm:leading-6">
                 Categories show up as dropdown choices inside the transaction composer. Start narrow
                 and expand only when a new label would genuinely change how you review spending.
               </div>
             </div>
           </div>
 
-          <div className="sticky bottom-0 z-10 shrink-0 border-t border-border/60 bg-white px-4 py-4 dark:bg-[#1a2325] sm:px-6 sm:py-4">
+          <div className="sticky bottom-0 z-10 shrink-0 border-t border-border/60 bg-white px-3.5 py-3 dark:bg-[#1a2325] sm:px-6 sm:py-4">
             <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end sm:pt-0">
               <Button
                 type="button"
                 variant="outline"
-                className="h-9 bg-white rounded-lg text-sm sm:h-10 sm:w-auto sm:rounded-full sm:text-base"
+                className="h-8.5 rounded-lg bg-white px-3 text-[0.84rem] sm:h-10 sm:w-auto sm:rounded-full sm:px-5 sm:text-base"
                 onClick={() => setOpen(false)}
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
@@ -694,7 +802,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               </Button>
               <Button
                 type="button"
-                className="h-9 rounded-lg bg-[#17393c] text-sm text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:h-10 sm:w-auto sm:rounded-full sm:text-base"
+                className="h-8.5 rounded-lg bg-[#17393c] px-3 text-[0.84rem] text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:h-10 sm:w-auto sm:rounded-full sm:px-5 sm:text-base"
                 onClick={submitCategory}
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
@@ -719,27 +827,27 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
       >
         <DialogContent
           mobileBehavior="modal"
-          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-white px-0 py-0 dark:border-white/8 dark:bg-[#182123] sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.6rem]"
+          className="max-h-[calc(84dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1rem] border-white/80 bg-white px-0 py-0 dark:border-white/8 dark:bg-[#182123] sm:w-auto sm:max-w-[30rem] sm:rounded-[1.35rem]"
         >
-          <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
-            <div className="inline-flex w-fit rounded-lg border border-destructive/15 bg-destructive/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-destructive sm:rounded-full sm:px-3 sm:text-[0.68rem] sm:tracking-[0.22em]">
+          <DialogHeader className="border-b border-border/70 px-4 pb-3 pt-[max(0.8rem,env(safe-area-inset-top))] pr-12 sm:px-6 sm:pb-4 sm:pt-5 sm:pr-16">
+            <div className="inline-flex w-fit rounded-lg border border-destructive/15 bg-destructive/5 px-2.5 py-0.75 text-[0.58rem] font-semibold uppercase tracking-[0.16em] text-destructive sm:rounded-full sm:px-3 sm:py-1 sm:text-[0.68rem] sm:tracking-[0.22em]">
               Confirm delete
             </div>
-            <DialogTitle className="pt-1.5 text-[1.12rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.65rem]">
+            <DialogTitle className="pt-1 text-[1rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-2.5 sm:text-[1.35rem]">
               Delete category?
             </DialogTitle>
-            <DialogDescription className="max-w-md text-[0.82rem] leading-6 sm:text-[0.95rem] sm:leading-7">
+            <DialogDescription className="max-w-md text-[0.76rem] leading-5 sm:text-[0.9rem] sm:leading-6.5">
               {deleteTarget
                 ? `Remove "${deleteTarget.name}" from your workspace? Existing transactions will keep their amounts and dates, but the category link will be cleared.`
                 : "Remove this category from your workspace? Existing transactions will keep their amounts and dates, but the category link will be cleared."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex items-center justify-end gap-2 px-4 py-4 sm:px-7 sm:py-6">
+          <div className="flex items-center justify-end gap-2 px-4 py-3 sm:gap-2.5 sm:px-6 sm:py-4">
             <Button
               type="button"
               variant="outline"
-              className="h-9 bg-white rounded-lg px-4 text-sm sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
+              className="h-8.5 rounded-full bg-white px-3.5 text-[0.84rem] sm:h-10 sm:px-4.5 sm:text-[0.92rem]"
               onClick={() => setDeleteTarget(null)}
               disabled={deleteCategory.isPending}
             >
@@ -747,7 +855,7 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
             </Button>
             <Button
               type="button"
-              className="h-9 rounded-lg bg-destructive px-4 text-sm text-white hover:bg-destructive/90 sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
+              className="h-8.5 rounded-full bg-destructive px-3.5 text-[0.84rem] text-white hover:bg-destructive/90 sm:h-10 sm:px-4.5 sm:text-[0.92rem]"
               onClick={() => deleteTarget && deleteCategory.mutate({ id: deleteTarget.id })}
               disabled={deleteCategory.isPending}
             >

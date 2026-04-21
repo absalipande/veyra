@@ -101,9 +101,9 @@ type DeleteTarget = {
 
 const initialDraft: LoanDraft = {
   id: null,
-  setupPath: "institution_app",
+  setupPath: "personal_flexible",
   personalScheduleStyle: "scheduled",
-  kind: "institution",
+  kind: "personal",
   name: "",
   lenderName: "",
   applicationId: "",
@@ -113,7 +113,7 @@ const initialDraft: LoanDraft = {
   currency: "PHP",
   principalAmount: "",
   outstandingAmount: "",
-  disbursedAt: new Date().toISOString().slice(0, 10),
+  disbursedAt: toDateInputLocal(new Date()),
   status: "active",
   destinationAccountId: "",
   underlyingLoanAccountId: "auto",
@@ -133,8 +133,25 @@ const initialDraft: LoanDraft = {
 };
 
 const loanFieldClassName =
-  "h-9 w-full rounded-lg px-3 text-sm sm:h-10 sm:rounded-xl sm:px-3.5 sm:text-[0.94rem]";
-const loanLabelClassName = "text-[0.76rem] font-medium text-foreground sm:text-[0.82rem]";
+  "!h-8 w-full !rounded-[0.75rem] px-2.5 text-[0.74rem] sm:!h-9 sm:!rounded-[0.85rem] sm:px-3 sm:text-[0.84rem]";
+const loanLabelClassName = "text-[0.88rem] font-semibold text-foreground sm:text-[0.82rem]";
+
+function toDateInputLocal(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toDateInputUTC(value: Date | string | null | undefined) {
+  if (!value) return "";
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (!Number.isFinite(parsed.getTime())) return "";
+  const year = parsed.getUTCFullYear();
+  const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function formatDate(value: Date | string | null | undefined) {
   if (!value) return "No due date";
@@ -225,6 +242,31 @@ function parseFlexibleDateInput(value: string) {
   const fallback = new Date(raw);
   if (!Number.isFinite(fallback.getTime())) return null;
   return fallback;
+}
+
+function parseDateOnlyToUTC(value: string) {
+  const raw = value.trim();
+  if (!raw) return null;
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (isoMatch) {
+    const year = Number(isoMatch[1]);
+    const month = Number(isoMatch[2]);
+    const day = Number(isoMatch[3]);
+    return new Date(Date.UTC(year, month - 1, day));
+  }
+
+  const slashMatch = raw.match(/^(\d{1,2})\s*\/\s*(\d{1,2})\s*\/\s*(\d{4})$/);
+  if (slashMatch) {
+    const month = Number(slashMatch[1]);
+    const day = Number(slashMatch[2]);
+    const year = Number(slashMatch[3]);
+    return new Date(Date.UTC(year, month - 1, day));
+  }
+
+  const parsed = parseFlexibleDateInput(raw);
+  if (!parsed) return null;
+  return new Date(Date.UTC(parsed.getFullYear(), parsed.getMonth(), parsed.getDate()));
 }
 
 function simulateScheduleByRate(input: {
@@ -341,7 +383,7 @@ function buildAutoRepaymentPlan(input: {
       const row = simulation.rows[index];
       plan.push({
         id: crypto.randomUUID(),
-        dueDate: dueDate.toISOString().slice(0, 10),
+        dueDate: toDateInputLocal(dueDate),
         amount: toMoneyInput(row.amount),
         principalAmount: toMoneyInput(row.principal),
         interestAmount: toMoneyInput(row.interest),
@@ -371,7 +413,7 @@ function buildAutoRepaymentPlan(input: {
 
     plan.push({
       id: crypto.randomUUID(),
-      dueDate: dueDate.toISOString().slice(0, 10),
+      dueDate: toDateInputLocal(dueDate),
       amount: toMoneyInput(amount),
       principalAmount: toMoneyInput(principal),
       interestAmount: toMoneyInput(Math.max(amount - principal, 0)),
@@ -453,6 +495,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
         utils.ai.loansInsight.invalidate(),
         utils.ai.dashboardInsight.invalidate(),
         utils.ai.accountsInsight.invalidate(),
+        utils.accounts.list.invalidate(),
+        utils.accounts.summary.invalidate(),
+        utils.transactions.list.invalidate(),
+        utils.transactions.summary.invalidate(),
       ]);
       toast.success("Loan updated.");
       resetDialog();
@@ -474,6 +520,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
         utils.accounts.summary.invalidate(),
         utils.transactions.list.invalidate(),
         utils.transactions.summary.invalidate(),
+      ]);
+      await Promise.all([
+        utils.accounts.list.refetch(),
+        utils.accounts.summary.refetch(),
       ]);
       toast.success("Loan deleted.");
       setDeleteTarget(null);
@@ -560,6 +610,44 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
     return sum + (amount ?? 0);
   }, 0);
   const financeChargePreview = Math.max(repaymentPlanTotal - principalPreview, 0);
+  const personalScheduledPreviewTotal =
+    autoMonthlyPayment > 0 && Number.isFinite(autoInstallmentCount) && autoInstallmentCount > 0
+      ? autoMonthlyPayment * autoInstallmentCount
+      : 0;
+  const personalPreviewTotalPayable =
+    draft.id === null && draft.setupPath === "personal_flexible"
+      ? draft.personalScheduleStyle === "scheduled"
+        ? personalScheduledPreviewTotal
+        : principalPreview
+      : repaymentPlanTotal;
+  const personalPreviewInterestAndFees =
+    draft.id === null && draft.setupPath === "personal_flexible"
+      ? draft.personalScheduleStyle === "scheduled"
+        ? Math.max(personalScheduledPreviewTotal - principalPreview, 0)
+        : 0
+      : financeChargePreview;
+  const personalPreviewMaturityDate = useMemo(() => {
+    if (!(draft.id === null && draft.setupPath === "personal_flexible" && draft.personalScheduleStyle === "scheduled")) return null;
+    if (!draft.autoFirstDueDate) return null;
+    if (!Number.isFinite(autoInstallmentCount) || autoInstallmentCount <= 0) return null;
+    const firstDue = parseFlexibleDateInput(draft.autoFirstDueDate);
+    if (!firstDue) return null;
+    const cadenceForPreview =
+      draft.cadence === "none" ? ("monthly" as const) : draft.cadence;
+    if (cadenceForPreview === "daily") return addDays(firstDue, autoInstallmentCount - 1);
+    if (cadenceForPreview === "weekly") return addDays(firstDue, (autoInstallmentCount - 1) * 7);
+    if (cadenceForPreview === "bi-weekly") {
+      return addDays(firstDue, (autoInstallmentCount - 1) * 14);
+    }
+    return addMonths(firstDue, autoInstallmentCount - 1);
+  }, [
+    autoInstallmentCount,
+    draft.autoFirstDueDate,
+    draft.cadence,
+    draft.personalScheduleStyle,
+    draft.id,
+    draft.setupPath,
+  ]);
 
   const isSaving = createLoan.isPending || updateLoan.isPending;
   const isCreateMode = draft.id === null;
@@ -670,7 +758,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       currency: isSupportedCurrency(loan.currency) ? loan.currency : "PHP",
       principalAmount: toInputAmount(loan.principalAmount),
       outstandingAmount: toInputAmount(loan.outstandingAmount),
-      disbursedAt: new Date(loan.disbursedAt).toISOString().slice(0, 10),
+      disbursedAt: toDateInputUTC(loan.disbursedAt),
       status: loan.status,
       destinationAccountId: loan.destinationAccountId,
       underlyingLoanAccountId: loan.underlyingLoanAccountId ?? "none",
@@ -685,14 +773,14 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
         loan.installments?.[0] ? toMoneyInput(loan.installments[0].amount) : "",
       autoInstallmentCount: loan.installments?.length ? String(loan.installments.length) : "",
       autoFirstDueDate: loan.installments?.[0]
-        ? new Date(loan.installments[0].dueDate).toISOString().slice(0, 10)
+        ? toDateInputUTC(loan.installments[0].dueDate)
         : "",
       autoMonthlyRate: "",
       autoTotalPayable: loan.totalPayable ? toMoneyInput(loan.totalPayable) : "",
       repaymentPlan:
         loan.installments?.map((installment) => ({
           id: installment.id,
-          dueDate: new Date(installment.dueDate).toISOString().slice(0, 10),
+          dueDate: toDateInputUTC(installment.dueDate),
           amount: toInputAmount(installment.amount),
           principalAmount: toInputAmount(installment.principalAmount ?? 0),
           interestAmount: toInputAmount(installment.interestAmount ?? 0),
@@ -724,7 +812,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       amountReceived: amountReceivedPreview,
       totalPayable: totalPayablePreview,
       interestAndFees: interestAndFeesPreview,
-      maturityDate: maturityDatePreview ? maturityDatePreview.toISOString().slice(0, 10) : undefined,
+      maturityDate: maturityDatePreview ? toDateInputLocal(maturityDatePreview) : undefined,
       setupPath: draft.setupPath,
       personalScheduleStyle: draft.personalScheduleStyle,
     };
@@ -765,7 +853,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       setFormError("Choose a disbursement date.");
       return;
     }
-    const parsedDisbursedAt = parseFlexibleDateInput(draft.disbursedAt);
+    const parsedDisbursedAt = parseDateOnlyToUTC(draft.disbursedAt);
     if (!parsedDisbursedAt) {
       setFormError("Enter a valid disbursement date.");
       return;
@@ -793,6 +881,11 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
         return;
       }
 
+      if (autoMonthlyPayment <= 0) {
+        setFormError("Enter a valid installment amount.");
+        return;
+      }
+
       const firstDueDate = parseFlexibleDateInput(draft.autoFirstDueDate);
       if (!firstDueDate) {
         setFormError("Enter a valid first payment due date.");
@@ -801,11 +894,15 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
 
       const cadenceForPlan =
         draft.cadence === "none" ? ("monthly" as const) : draft.cadence;
-      const baseAmount = Math.floor((principalAmount ?? 0) / autoInstallmentCount);
-      let remainingAmount = (principalAmount ?? 0) - baseAmount * autoInstallmentCount;
+      if (autoMonthlyPayment * autoInstallmentCount < (principalAmount ?? 0)) {
+        setFormError("Installment amount and duration must cover the full loan amount.");
+        return;
+      }
+      let remainingAmount = principalAmount ?? 0;
       sourceRepaymentPlan = Array.from({ length: autoInstallmentCount }).map((_, index) => {
-        const amount = baseAmount + (remainingAmount > 0 ? 1 : 0);
-        if (remainingAmount > 0) remainingAmount -= 1;
+        const isLast = index === autoInstallmentCount - 1;
+        const amount = isLast ? remainingAmount : Math.min(autoMonthlyPayment, remainingAmount);
+        remainingAmount = Math.max(remainingAmount - amount, 0);
 
         const dueDate =
           cadenceForPlan === "daily"
@@ -818,7 +915,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
 
         return {
           id: crypto.randomUUID(),
-          dueDate: dueDate.toISOString().slice(0, 10),
+          dueDate: toDateInputLocal(dueDate),
           amount: toMoneyInput(amount),
           principalAmount: toMoneyInput(amount),
           interestAmount: "0.00",
@@ -853,9 +950,9 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
 
     const normalizedRepaymentPlan = sourceRepaymentPlan
       .map((installment) => {
-        const parsedDueDate = parseFlexibleDateInput(installment.dueDate);
+        const parsedDueDate = parseDateOnlyToUTC(installment.dueDate);
         return {
-        dueDate: parsedDueDate ? parsedDueDate.toISOString().slice(0, 10) : "",
+        dueDate: parsedDueDate ? toDateInputUTC(parsedDueDate) : "",
         amount: parseMoneyToMiliunits(installment.amount),
         principalAmount: parseMoneyToMiliunits(installment.principalAmount),
         interestAmount: parseMoneyToMiliunits(installment.interestAmount),
@@ -1291,7 +1388,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
           setOpen(nextOpen);
         }}
       >
-        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-border/70 bg-background/96 p-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur sm:max-h-[92vh] sm:w-[calc(100vw-3rem)] sm:max-w-3xl sm:rounded-[2rem]">
+        <DialogContent
+          mobileBehavior="adaptive"
+          className="h-[100dvh] overflow-hidden border border-border/70 bg-background/96 p-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4"
+        >
           <div className="border-b border-border/60 px-4 pb-2.5 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-7 sm:py-4">
             <DialogHeader className="space-y-2">
               <div className="inline-flex w-fit rounded-lg border border-border/70 bg-background/80 px-2.5 py-0.75 text-[0.58rem] uppercase tracking-[0.2em] text-muted-foreground sm:rounded-full sm:px-3 sm:text-[0.64rem] sm:tracking-[0.22em]">
@@ -1310,15 +1410,16 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             </DialogHeader>
           </div>
 
-          <div className="space-y-3 px-4 py-3 sm:space-y-3.5 sm:px-7 sm:py-4">
-            {formError ? (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
-                {formError}
-              </div>
-            ) : null}
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-7 sm:py-4">
+            <div className="space-y-3 sm:space-y-3.5">
+              {formError ? (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                  {formError}
+                </div>
+              ) : null}
 
             {isChoosingLoanType ? (
-              <div className="space-y-3.5 rounded-2xl border border-border/70 bg-background/60 p-4 sm:p-5">
+              <div className="space-y-3.5 rounded-2xl border border-border/70 bg-background p-4 sm:p-5">
                 <div className="space-y-1">
                   <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     Step 1 of 2
@@ -1333,12 +1434,12 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                 <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   Loan type
                 </p>
-                <div className="grid gap-2.5 sm:grid-cols-2">
+                <div className="grid gap-2.5">
                   <button
                     type="button"
                     className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
                       draft.setupPath === "personal_flexible"
-                        ? "border-primary/45 bg-primary/[0.08] shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_20%,transparent)]"
+                        ? "border-primary/45 bg-background shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_20%,transparent)]"
                         : "border-border/70 bg-background hover:bg-muted/35"
                     }`}
                     onClick={() =>
@@ -1372,7 +1473,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                     type="button"
                     className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
                       draft.setupPath === "institution_app"
-                        ? "border-primary/45 bg-primary/[0.08] shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_20%,transparent)]"
+                        ? "border-primary/45 bg-background shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary)_20%,transparent)]"
                         : "border-border/70 bg-background hover:bg-muted/35"
                     }`}
                     onClick={() =>
@@ -1409,10 +1510,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
 
             {!isCreateMode || loanTypeStepComplete ? (
             <>
-            <div className="space-y-2.5 rounded-xl border border-border/70 bg-background/60 p-3 sm:p-4">
+            <div className="space-y-2 rounded-xl border border-border/70 bg-background/60 p-2.5 sm:p-4">
               <div className="flex items-center justify-between">
                 <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                  Basics
+                  Basic details
                 </p>
                 {isCreateMode ? (
                   <Button
@@ -1426,111 +1527,34 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                   </Button>
                 ) : null}
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <label className={loanLabelClassName}>
-                    Loan name{isPersonalFlow ? " (optional)" : ""}
-                  </label>
-                  <Input
-                    value={draft.name}
-                    onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-                    placeholder={isPersonalFlow ? "Optional label" : "e.g. Atome Cash Loan"}
-                    className={loanFieldClassName}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className={loanLabelClassName}>Lender</label>
-                  <Input
-                    value={draft.lenderName}
-                    onChange={(event) => setDraft((current) => ({ ...current, lenderName: event.target.value }))}
-                    placeholder="e.g. Atome"
-                    className={loanFieldClassName}
-                  />
-                </div>
-              </div>
-              {isInstitutionFlow ? (
-                <div className="grid gap-3 sm:grid-cols-2">
+              {isPersonalFlow ? (
+                <div className="space-y-2.5">
                   <div className="space-y-1.5">
-                    <label className={loanLabelClassName}>Application / Loan ID (optional)</label>
+                    <label className={loanLabelClassName}>Lender name</label>
                     <Input
-                      value={draft.applicationId}
+                      value={draft.lenderName}
                       onChange={(event) =>
-                        setDraft((current) => ({ ...current, applicationId: event.target.value }))
+                        setDraft((current) => ({ ...current, lenderName: event.target.value }))
                       }
-                      placeholder="Lender reference"
+                      placeholder="e.g. Mom, friend, colleague"
                       className={loanFieldClassName}
                     />
                   </div>
-                </div>
-              ) : null}
-              <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                <div className="space-y-1.5">
-                  <label className={loanLabelClassName}>Currency</label>
-                  <Select
-                    value={draft.currency}
-                    onValueChange={(value) =>
-                      setDraft((current) => ({
-                        ...current,
-                        currency: value as LoanDraft["currency"],
-                      }))
-                    }
-                  >
-                    <SelectTrigger className={loanFieldClassName}>
-                      <SelectValue placeholder="Currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {supportedCurrencies.map((currency) => (
-                        <SelectItem key={currency} value={currency}>
-                          {currency}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className={loanLabelClassName}>Disbursed at</label>
-                  <DatePickerField
-                    value={draft.disbursedAt}
-                    onChange={(value) =>
-                      setDraft((current) => ({
-                        ...current,
-                        disbursedAt: value,
-                      }))
-                    }
-                    placeholder="Choose date"
-                    className={loanFieldClassName}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-3 rounded-xl border border-border/70 bg-background/60 p-3 sm:p-4">
-              <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Amounts and accounts
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                <label className={loanLabelClassName}>Loan amount</label>
-                <Input
-                  value={draft.principalAmount}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, principalAmount: event.target.value }))
-                  }
-                  inputMode="decimal"
-                  placeholder="0.00"
-                  className={loanFieldClassName}
-                />
-              </div>
-              </div>
-
-              {isInstitutionFlow ? (
-                <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label className={loanLabelClassName}>Processing fees</label>
+                    <label className={loanLabelClassName}>Loan name (optional)</label>
                     <Input
-                      value={draft.processingFees}
+                      value={draft.name}
+                      onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="Optional label"
+                      className={loanFieldClassName}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={loanLabelClassName}>Loan amount</label>
+                    <Input
+                      value={draft.principalAmount}
                       onChange={(event) =>
-                        setDraft((current) => ({ ...current, processingFees: event.target.value }))
+                        setDraft((current) => ({ ...current, principalAmount: event.target.value }))
                       }
                       inputMode="decimal"
                       placeholder="0.00"
@@ -1538,85 +1562,209 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className={loanLabelClassName}>Interest rate % (optional)</label>
-                    <Input
-                      value={draft.interestRatePercent}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, interestRatePercent: event.target.value }))
+                    <label className={loanLabelClassName}>Disbursement account (optional)</label>
+                    <Select
+                      value={draft.destinationAccountId || "__none__"}
+                      onValueChange={(value) =>
+                        setDraft((current) => ({
+                          ...current,
+                          destinationAccountId: value === "__none__" ? "" : value,
+                        }))
                       }
-                      inputMode="decimal"
-                      placeholder="e.g. 2.5"
+                    >
+                      <SelectTrigger className={loanFieldClassName}>
+                        <SelectValue placeholder="Where proceeds were received" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Clear selection</SelectItem>
+                        {liquidAccounts.map((account) => (
+                          <SelectItem key={account.id} value={account.id}>
+                            {account.name} · {getAccountTypeLabel(account.type)} · {account.currency}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className={loanLabelClassName}>Disbursement date</label>
+                    <DatePickerField
+                      value={draft.disbursedAt}
+                      onChange={(value) =>
+                        setDraft((current) => ({
+                          ...current,
+                          disbursedAt: value,
+                        }))
+                      }
+                      placeholder="Choose date"
                       className={loanFieldClassName}
                     />
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <>
+                  <p className="text-[0.72rem] leading-5 text-muted-foreground">
+                    Capture lender reference and contract identity first, then set amounts and repayment terms.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className={loanLabelClassName}>Lender name</label>
+                      <Input
+                        value={draft.lenderName}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, lenderName: event.target.value }))
+                        }
+                        placeholder="e.g. Atome"
+                        className={loanFieldClassName}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={loanLabelClassName}>Loan name</label>
+                      <Input
+                        value={draft.name}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, name: event.target.value }))
+                        }
+                        placeholder="e.g. Atome loan"
+                        className={loanFieldClassName}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <label className={loanLabelClassName}>Application / Loan ID</label>
+                      <Input
+                        value={draft.applicationId}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, applicationId: event.target.value }))
+                        }
+                        placeholder="Lender reference"
+                        className={loanFieldClassName}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={loanLabelClassName}>Currency</label>
+                      <Select
+                        value={draft.currency}
+                        onValueChange={(value) =>
+                          setDraft((current) => ({
+                            ...current,
+                            currency: value as LoanDraft["currency"],
+                          }))
+                        }
+                      >
+                        <SelectTrigger className={loanFieldClassName}>
+                          <SelectValue placeholder="Currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {supportedCurrencies.map((currency) => (
+                            <SelectItem key={currency} value={currency}>
+                              {currency}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:[grid-template-columns:minmax(0,0.86fr)_minmax(0,1.14fr)]">
+                    <div className="space-y-1.5">
+                      <label className={loanLabelClassName}>Disbursement date</label>
+                      <DatePickerField
+                        value={draft.disbursedAt}
+                        onChange={(value) =>
+                          setDraft((current) => ({
+                            ...current,
+                            disbursedAt: value,
+                          }))
+                        }
+                        placeholder="Choose date"
+                        className={loanFieldClassName}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className={loanLabelClassName}>Disbursement account</label>
+                      <Select
+                        value={draft.destinationAccountId || undefined}
+                        onValueChange={(value) =>
+                          setDraft((current) => ({
+                            ...current,
+                            destinationAccountId: value === "__none__" ? "" : value,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className={loanFieldClassName}>
+                          <SelectValue placeholder="Select account" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Clear selection</SelectItem>
+                          {liquidAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name} · {getAccountTypeLabel(account.type)} · {account.currency}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
 
+            {isInstitutionFlow ? (
+            <div className="space-y-3 rounded-xl border border-border/70 bg-background/60 p-3 sm:p-4">
+              <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Contract amounts
+              </p>
+              <p className="text-[0.72rem] leading-5 text-muted-foreground">
+                Track approved principal and deductions so amount received and finance preview stay accurate.
+              </p>
               <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label className={loanLabelClassName}>
-                  Disbursement account{isPersonalFlow ? " (optional)" : ""}
-                </label>
-                <Select
-                  value={draft.destinationAccountId}
-                  onValueChange={(value) =>
-                    setDraft((current) => ({ ...current, destinationAccountId: value }))
-                  }
-                >
-                  <SelectTrigger className={loanFieldClassName}>
-                    <SelectValue placeholder="Where proceeds were received" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {liquidAccounts.map((account) => (
-                      <SelectItem key={account.id} value={account.id}>
-                        {account.name} · {getAccountTypeLabel(account.type)} · {account.currency}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-1.5">
+                  <label className={loanLabelClassName}>Approved principal</label>
+                  <Input
+                    value={draft.principalAmount}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, principalAmount: event.target.value }))
+                    }
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    className={loanFieldClassName}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={loanLabelClassName}>Processing fees</label>
+                  <Input
+                    value={draft.processingFees}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, processingFees: event.target.value }))
+                    }
+                    inputMode="decimal"
+                    placeholder="0.00"
+                    className={loanFieldClassName}
+                  />
+                </div>
               </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className={loanLabelClassName}>Derived finance view</label>
-                <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-[0.76rem] leading-5 text-muted-foreground sm:px-3.5 sm:text-[0.8rem]">
-                  {isInstitutionFlow ? (
-                    <>
-                      <p>
-                        Amount received:{" "}
-                        <span className="font-semibold text-foreground">
-                          {formatCurrencyMiliunits(amountReceivedPreview, draft.currency)}
-                        </span>
-                      </p>
-                      <p>
-                        Maturity date:{" "}
-                        <span className="font-semibold text-foreground">
-                          {maturityDatePreview ? formatDate(maturityDatePreview) : "Add first due + duration"}
-                        </span>
-                      </p>
-                    </>
-                  ) : null}
-                  <p>
-                    Total payable:{" "}
-                    <span className="font-semibold text-foreground">
-                      {formatCurrencyMiliunits(
-                        isInstitutionFlow ? totalPayablePreview : repaymentPlanTotal,
-                        draft.currency,
-                      )}
-                    </span>
-                  </p>
-                  <p>
-                    Interest & fees:{" "}
-                    <span className="font-semibold text-foreground">
-                      {formatCurrencyMiliunits(
-                        isInstitutionFlow ? interestAndFeesPreview : financeChargePreview,
-                        draft.currency,
-                      )}
-                    </span>
-                  </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className={loanLabelClassName}>Interest rate % (optional)</label>
+                  <Input
+                    value={draft.interestRatePercent}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, interestRatePercent: event.target.value }))
+                    }
+                    inputMode="decimal"
+                    placeholder="e.g. 2.5"
+                    className={loanFieldClassName}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={loanLabelClassName}>Amount received</label>
+                  <div className="rounded-[0.75rem] border border-border/70 bg-muted/35 px-2.5 py-1.5 text-[0.78rem] font-medium text-foreground sm:rounded-[0.85rem] sm:px-3 sm:py-[0.5rem] sm:text-[0.84rem]">
+                    {formatCurrencyMiliunits(amountReceivedPreview, draft.currency)}
+                  </div>
                 </div>
               </div>
             </div>
+            ) : null}
             </>
             ) : null}
 
@@ -1652,10 +1800,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                   <p className="text-[0.72rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                     Payment schedule
                   </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="grid gap-2">
                     <button
                       type="button"
-                      className={`rounded-lg border px-3 py-2 text-left text-[0.82rem] ${
+                      className={`flex h-8 items-center rounded-lg border px-3 text-left text-[0.78rem] ${
                         draft.personalScheduleStyle === "flexible"
                           ? "border-primary/45 bg-primary/10"
                           : "border-border/70 hover:bg-muted/40"
@@ -1672,7 +1820,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                     </button>
                     <button
                       type="button"
-                      className={`rounded-lg border px-3 py-2 text-left text-[0.82rem] ${
+                      className={`flex h-8 items-center rounded-lg border px-3 text-left text-[0.78rem] ${
                         draft.personalScheduleStyle === "scheduled"
                           ? "border-primary/45 bg-primary/10"
                           : "border-border/70 hover:bg-muted/40"
@@ -1697,9 +1845,9 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                     No schedule selected. You can create this loan now and optionally add a note.
                   </div>
                 ) : isCreateMode && isPersonalFlow && draft.personalScheduleStyle === "scheduled" ? (
-                  <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="space-y-2.5 sm:grid sm:grid-cols-2 sm:gap-3 sm:space-y-0">
                     <div className="space-y-1.5">
-                      <label className="text-[0.7rem] font-medium text-muted-foreground sm:text-[0.76rem]">
+                      <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
                         Duration
                       </label>
                       <Input
@@ -1717,7 +1865,24 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[0.7rem] font-medium text-muted-foreground sm:text-[0.76rem]">
+                      <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
+                        Installment amount
+                      </label>
+                      <Input
+                        inputMode="decimal"
+                        value={draft.autoMonthlyPayment}
+                        onChange={(event) =>
+                          setDraft((current) => ({
+                            ...current,
+                            autoMonthlyPayment: event.target.value,
+                          }))
+                        }
+                        placeholder="0.00"
+                        className={loanFieldClassName}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
                         Cadence
                       </label>
                       <Select
@@ -1737,8 +1902,8 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[0.7rem] font-medium text-muted-foreground sm:text-[0.76rem]">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
                         First payment due
                       </label>
                       <DatePickerField
@@ -1753,10 +1918,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                   </div>
                 ) : draft.repaymentMode === "auto" ? (
                   <>
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <label className="text-[0.7rem] font-medium text-muted-foreground sm:text-[0.76rem]">
-                          Monthly installment
+                        <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
+                          Monthly payment
                         </label>
                       <Input
                         inputMode="decimal"
@@ -1769,8 +1934,8 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[0.7rem] font-medium text-muted-foreground sm:text-[0.76rem]">
-                          No. of installments
+                        <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
+                          Duration (months)
                         </label>
                         <Input
                           inputMode="numeric"
@@ -1787,8 +1952,8 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[0.7rem] font-medium text-muted-foreground sm:text-[0.76rem]">
-                          First due date
+                        <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
+                          First payment due
                         </label>
                         <DatePickerField
                           value={draft.autoFirstDueDate}
@@ -1800,7 +1965,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[0.7rem] font-medium text-muted-foreground sm:text-[0.76rem]">
+                        <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
                           Monthly rate % (optional)
                         </label>
                         <Input
@@ -1813,24 +1978,6 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                           className={loanFieldClassName}
                         />
                       </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[0.7rem] font-medium text-muted-foreground sm:text-[0.76rem]">
-                        Total payable override (optional)
-                      </label>
-                      <Input
-                        inputMode="decimal"
-                        value={draft.autoTotalPayable}
-                        onChange={(event) =>
-                          setDraft((current) => ({ ...current, autoTotalPayable: event.target.value }))
-                        }
-                        placeholder="Leave blank to use monthly installment x number of installments"
-                        className={loanFieldClassName}
-                      />
-                      <p className="text-[0.68rem] text-muted-foreground">
-                        If monthly rate is empty, Veyra infers an effective rate from this total to
-                        produce declining interest and a realistic final payment.
-                      </p>
                     </div>
                     {autoGeneratedPlan.length === 0 ? (
                       <div className="rounded-xl border border-dashed border-border/70 px-3 py-3 text-[0.78rem] text-muted-foreground sm:px-4 sm:text-[0.82rem]">
@@ -1971,6 +2118,67 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             ) : null}
 
             {!isCreateMode || loanTypeStepComplete ? (
+            <div className="space-y-2 rounded-xl border border-border/70 bg-background/60 p-3 sm:p-4">
+              <label className={loanLabelClassName}>Preview (read-only)</label>
+              <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-[0.76rem] leading-5 text-muted-foreground sm:px-3.5 sm:text-[0.8rem]">
+                {isPersonalFlow ? (
+                  <>
+                    <p>
+                      Total payable:{" "}
+                      <span className="font-semibold text-foreground">
+                        {formatCurrencyMiliunits(personalPreviewTotalPayable, draft.currency)}
+                      </span>
+                    </p>
+                    <p>
+                      Interest & fees:{" "}
+                      <span className="font-semibold text-foreground">
+                        {formatCurrencyMiliunits(personalPreviewInterestAndFees, draft.currency)}
+                      </span>
+                    </p>
+                    <p>
+                      Maturity date:{" "}
+                      <span className="font-semibold text-foreground">
+                        {personalPreviewMaturityDate
+                          ? formatDate(personalPreviewMaturityDate)
+                          : draft.personalScheduleStyle === "flexible"
+                            ? "Flexible (no fixed maturity)"
+                            : "Add due date + duration"}
+                      </span>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      Amount received:{" "}
+                      <span className="font-semibold text-foreground">
+                        {formatCurrencyMiliunits(amountReceivedPreview, draft.currency)}
+                      </span>
+                    </p>
+                    <p>
+                      Total payable:{" "}
+                      <span className="font-semibold text-foreground">
+                        {formatCurrencyMiliunits(totalPayablePreview, draft.currency)}
+                      </span>
+                    </p>
+                    <p>
+                      Interest & fees:{" "}
+                      <span className="font-semibold text-foreground">
+                        {formatCurrencyMiliunits(interestAndFeesPreview, draft.currency)}
+                      </span>
+                    </p>
+                    <p>
+                      Maturity date:{" "}
+                      <span className="font-semibold text-foreground">
+                        {maturityDatePreview ? formatDate(maturityDatePreview) : "Add first due + duration"}
+                      </span>
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+            ) : null}
+
+            {!isCreateMode || loanTypeStepComplete ? (
             <details className="rounded-xl border border-border/70 bg-background/60 p-3 sm:p-4">
               <summary className="cursor-pointer select-none text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Optional details
@@ -1988,9 +2196,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
               </div>
             </details>
             ) : null}
+            </div>
           </div>
 
-          <DialogFooter className="!mx-0 !mb-0 flex-row items-center justify-end gap-2 rounded-b-[1.45rem] border-t border-border/60 bg-background/85 px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))] pt-2.5 sm:rounded-b-[2rem] sm:px-8 sm:py-5 [&>button]:w-auto">
+          <DialogFooter className="sticky bottom-0 z-10 !mx-0 !mb-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-background/85 px-4 pb-[max(0.7rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-8 sm:py-5 [&>button]:w-auto">
             <Button
               type="button"
               variant="outline"
@@ -2035,21 +2244,21 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       >
         <DialogContent
           mobileBehavior="modal"
-          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/96 p-0 sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.75rem]"
+          className="max-h-[calc(84dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-sm overflow-x-hidden overflow-y-auto rounded-[1.2rem] border-border/70 bg-background/96 p-0 sm:max-h-[88vh] sm:max-w-[34rem] sm:rounded-[1.45rem]"
         >
-          <DialogHeader className="border-b border-border/60 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-4 sm:pt-7 sm:pr-16">
-            <DialogTitle className="text-[1.12rem] tracking-tight sm:text-[1.45rem]">Delete loan?</DialogTitle>
-            <DialogDescription className="pt-1 text-[0.82rem] leading-6 sm:text-[0.93rem] sm:leading-7">
+          <DialogHeader className="border-b border-border/60 px-4 pb-3 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-6 sm:pb-3.5 sm:pt-6 sm:pr-14">
+            <DialogTitle className="text-[1.05rem] tracking-tight sm:text-[1.28rem]">Delete loan?</DialogTitle>
+            <DialogDescription className="pt-1 text-[0.8rem] leading-6 sm:text-[0.88rem] sm:leading-6.5">
               {deleteTarget
                 ? `Remove "${deleteTarget.name}" from Loans? This only removes the loan record and does not delete underlying account or transaction history.`
                 : "Remove this loan from Loans? This only removes the loan record and does not delete underlying account or transaction history."}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="!mx-0 !-mb-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-transparent px-4 py-4 sm:px-7 sm:py-6 [&>button]:w-auto">
+          <DialogFooter className="!mx-0 !-mb-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-transparent px-4 py-3.5 sm:px-6 sm:py-4 [&>button]:w-auto">
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-lg px-4 text-sm sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
+              className="h-8 rounded-lg px-3.5 text-sm sm:h-9 sm:rounded-full sm:px-4"
               onClick={() => setDeleteTarget(null)}
               disabled={removeLoan.isPending}
             >
@@ -2057,7 +2266,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             </Button>
             <Button
               type="button"
-              className="h-9 rounded-lg bg-destructive px-4 text-sm text-white hover:bg-destructive/90 sm:h-11 sm:rounded-full sm:px-5 sm:text-base"
+              className="h-8 rounded-lg bg-destructive px-3.5 text-sm text-white hover:bg-destructive/90 sm:h-9 sm:rounded-full sm:px-4"
               onClick={() => deleteTarget && removeLoan.mutate({ id: deleteTarget.id })}
               disabled={removeLoan.isPending}
             >
@@ -2080,16 +2289,29 @@ function LoanRow({
   onDelete: (target: DeleteTarget) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-background/80 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold text-foreground">{loan.name}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
+    <div className="rounded-2xl border border-border/70 bg-background/80 p-4 sm:p-5">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto] md:items-center">
+        <div className="min-w-0">
+          <p className="truncate text-[1.08rem] font-semibold tracking-tight text-foreground">{loan.name}</p>
+          <p className="mt-1 truncate text-[0.82rem] text-muted-foreground">
             {loan.kind === "institution" ? "Institution" : "Personal"} · {loan.lenderName}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid gap-2 text-[0.78rem] sm:grid-cols-2 md:gap-3">
+          <div className="space-y-0.5">
+            <p className="text-[0.66rem] uppercase tracking-[0.13em] text-muted-foreground/85">Outstanding</p>
+            <p className="text-[0.98rem] font-semibold text-foreground/95">
+              {formatCurrencyMiliunits(loan.outstandingAmount, loan.currency)}
+            </p>
+          </div>
+          <div className="space-y-0.5">
+            <p className="text-[0.66rem] uppercase tracking-[0.13em] text-muted-foreground/85">Next due</p>
+            <p className="text-[0.86rem] font-medium text-foreground/90">{formatDate(loan.nextDueDate)}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 md:justify-end">
           <Button asChild type="button" variant="outline" className="h-8 rounded-full px-3 text-xs">
             <Link href={`/loans/${loan.id}`}>View details</Link>
           </Button>
@@ -2124,30 +2346,6 @@ function LoanRow({
             <Trash2 className="size-4" />
             <span className="sr-only">Delete loan</span>
           </Button>
-        </div>
-      </div>
-
-      <div className="mt-3 grid gap-3 text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
-        <div className="flex items-center gap-2">
-          <HandCoins className="size-3.5" />
-          <span>
-            Outstanding: {formatCurrencyMiliunits(loan.outstandingAmount, loan.currency)}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Landmark className="size-3.5" />
-          <span>Principal: {formatCurrencyMiliunits(loan.principalAmount, loan.currency)}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Landmark className="size-3.5" />
-          <span>Total payable: {formatCurrencyMiliunits(loan.totalPayable, loan.currency)}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <CalendarClock className="size-3.5" />
-          <span>
-            Finance: {formatCurrencyMiliunits(loan.financeCharge, loan.currency)} · Next due:{" "}
-            {formatDate(loan.nextDueDate)}
-          </span>
         </div>
       </div>
     </div>

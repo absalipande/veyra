@@ -243,8 +243,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
       await Promise.all([
         utils.budgets.list.invalidate(),
         utils.budgets.summary.invalidate(),
+        utils.transactions.list.invalidate(),
+        utils.transactions.summary.invalidate(),
         utils.ai.dashboardInsight.invalidate(),
         utils.ai.budgetsInsight.invalidate(),
+        utils.ai.transactionsInsight.invalidate(),
       ]);
       toast.success("Budget created.");
       setOpen(false);
@@ -260,8 +263,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
       await Promise.all([
         utils.budgets.list.invalidate(),
         utils.budgets.summary.invalidate(),
+        utils.transactions.list.invalidate(),
+        utils.transactions.summary.invalidate(),
         utils.ai.dashboardInsight.invalidate(),
         utils.ai.budgetsInsight.invalidate(),
+        utils.ai.transactionsInsight.invalidate(),
       ]);
       toast.success("Budget updated.");
       setOpen(false);
@@ -278,8 +284,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
       await Promise.all([
         utils.budgets.list.invalidate(),
         utils.budgets.summary.invalidate(),
+        utils.transactions.list.invalidate(),
+        utils.transactions.summary.invalidate(),
         utils.ai.dashboardInsight.invalidate(),
         utils.ai.budgetsInsight.invalidate(),
+        utils.ai.transactionsInsight.invalidate(),
       ]);
       toast.success("Budget deleted.");
       setDeleteTarget(null);
@@ -795,7 +804,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                     </Select>
                   </div>
 
-                  <Button type="button" onClick={startCreate} className="h-12 rounded-2xl px-5">
+                  <Button
+                    type="button"
+                    onClick={startCreate}
+                    className="h-10 rounded-full px-4 text-[0.92rem]"
+                  >
                     Create budget
                   </Button>
                 </div>
@@ -820,7 +833,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                     the ledger flow, this workspace will begin reading real spend against each
                     window.
                   </p>
-                  <Button type="button" onClick={startCreate} className="mt-7 rounded-2xl px-5">
+                  <Button
+                    type="button"
+                    onClick={startCreate}
+                    className="mt-7 h-10 rounded-full px-4 text-[0.92rem]"
+                  >
                     Create your first budget
                   </Button>
                 </div>
@@ -844,60 +861,60 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   return (
                     <div
                       key={budget.id}
-                      className="rounded-[1.55rem] border border-border/70 bg-white px-4 py-4 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.12)] dark:bg-[#12191b] sm:px-5 sm:py-5"
+                      className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3.5 shadow-[0_18px_38px_-34px_rgba(15,23,42,0.12)] dark:bg-[#12191b] sm:rounded-[1.55rem] sm:px-5 sm:py-5"
                     >
-                      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1.45fr)_110px_minmax(0,1fr)_120px] lg:items-start lg:gap-4">
-                        <div className="min-w-0 space-y-2.5 pr-1">
+                      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1.45fr)_110px_minmax(0,1fr)_120px] lg:items-start lg:gap-4">
+                        <div className="min-w-0 space-y-2 pr-1">
                           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                            <h3 className="text-[1.22rem] font-semibold tracking-tight sm:text-[1.35rem]">
+                            <h3 className="text-[1.08rem] font-semibold tracking-tight sm:text-[1.35rem]">
                               {budget.name}
                             </h3>
                             <span
-                              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium ${tone}`}
+                              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.75 text-[0.72rem] font-medium sm:gap-2 sm:px-3 sm:py-1 sm:text-xs ${tone}`}
                             >
-                              <Icon className="size-3.5" />
+                              <Icon className="size-3 sm:size-3.5" />
                               {getStatusLabel(budget.status)}
                             </span>
-                            <span className="rounded-full border border-border/70 px-3 py-1 text-xs uppercase tracking-[0.18em] text-muted-foreground lg:hidden">
+                            <span className="rounded-full border border-border/70 px-2.5 py-0.75 text-[0.68rem] uppercase tracking-[0.16em] text-muted-foreground sm:px-3 sm:py-1 sm:text-xs sm:tracking-[0.18em] lg:hidden">
                               {getPeriodLabel(budget.period)}
                             </span>
                           </div>
 
-                          <div className="space-y-1.5">
-                            <p className="text-[0.9rem] leading-7 text-muted-foreground lg:max-w-[32ch]">
+                          <div className="space-y-1">
+                            <p className="text-[0.84rem] leading-6 text-muted-foreground sm:text-[0.9rem] sm:leading-7 lg:max-w-[32ch]">
                               Window {formatDate(budget.periodStart)} to{" "}
                               {formatDate(budget.periodEnd)}
                             </p>
                             {childBudgets.length > 0 ? (
-                              <p className="text-[0.8rem] leading-6 text-muted-foreground">
+                              <p className="text-[0.74rem] leading-5 text-muted-foreground sm:text-[0.8rem] sm:leading-6">
                                 {childBudgets.length} child budget
                                 {childBudgets.length === 1 ? "" : "s"} included
                               </p>
                             ) : null}
                           </div>
 
-                          <div className="grid grid-cols-3 gap-4 rounded-[1.15rem] bg-muted/25 px-4 py-3.5 lg:hidden">
+                          <div className="grid grid-cols-3 gap-2.5 rounded-[1rem] bg-muted/25 px-3 py-2.5 sm:gap-4 sm:rounded-[1.15rem] sm:px-4 sm:py-3.5 lg:hidden">
                             <div>
-                              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                              <p className="text-[0.66rem] uppercase tracking-[0.18em] text-muted-foreground sm:text-xs sm:tracking-[0.25em]">
                                 Budgeted
                               </p>
-                              <p className="mt-1.5 text-[1.02rem] font-semibold tracking-tight">
+                              <p className="mt-1 text-[0.9rem] font-semibold tracking-tight sm:mt-1.5 sm:text-[1.02rem]">
                                 {formatBudgetMoney(budget.amount)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                              <p className="text-[0.66rem] uppercase tracking-[0.18em] text-muted-foreground sm:text-xs sm:tracking-[0.25em]">
                                 Spent
                               </p>
-                              <p className="mt-1.5 text-[1.02rem] font-semibold tracking-tight">
+                              <p className="mt-1 text-[0.9rem] font-semibold tracking-tight sm:mt-1.5 sm:text-[1.02rem]">
                                 {formatBudgetMoney(budget.totalSpent)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">
+                              <p className="text-[0.66rem] uppercase tracking-[0.18em] text-muted-foreground sm:text-xs sm:tracking-[0.25em]">
                                 Remaining
                               </p>
-                              <p className="mt-1.5 text-[1.02rem] font-semibold tracking-tight">
+                              <p className="mt-1 text-[0.9rem] font-semibold tracking-tight sm:mt-1.5 sm:text-[1.02rem]">
                                 {formatBudgetMoney(budget.remaining)}
                               </p>
                             </div>
@@ -913,8 +930,8 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                           </p>
                         </div>
 
-                        <div className="min-w-0 max-w-full space-y-2 pt-1">
-                          <div className="flex items-center justify-between gap-3 text-[0.82rem] text-muted-foreground">
+                        <div className="min-w-0 max-w-full space-y-1.5 pt-0.5 sm:pt-1">
+                          <div className="flex items-center justify-between gap-2.5 text-[0.74rem] text-muted-foreground sm:gap-3 sm:text-[0.8rem]">
                             <span>{budget.percentageUsed.toFixed(2)}% used</span>
                             <span className="lg:hidden">
                               {formatBudgetMoney(budget.totalSpent)} of{" "}
@@ -922,7 +939,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                             </span>
                           </div>
 
-                          <div className="h-3 overflow-hidden rounded-full bg-muted/70">
+                          <div className="h-1.5 overflow-hidden rounded-full bg-muted/70 sm:h-2">
                             <div
                               className={`h-full rounded-full ${
                                 budget.status === "safe"
@@ -937,22 +954,22 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                             />
                           </div>
 
-                          <p className="hidden max-w-[18ch] text-[0.78rem] leading-6 text-muted-foreground lg:block">
+                          <p className="hidden max-w-[18ch] text-[0.75rem] leading-5.5 text-muted-foreground lg:block">
                             {formatBudgetMoney(budget.totalSpent)} of{" "}
                             {formatBudgetMoney(budget.amount)}
                           </p>
                         </div>
 
-                        <div className="min-w-0 pt-1 text-left lg:text-right">
-                          <p className="truncate text-[0.98rem] font-semibold tracking-tight text-foreground">
+                        <div className="min-w-0 pt-0.5 text-left lg:pt-1 lg:text-right">
+                          <p className="truncate text-[0.86rem] font-medium tracking-tight text-foreground/92 sm:text-[0.92rem]">
                             {formatBudgetMoney(budget.remaining)}
                           </p>
-                          <p className="mt-1 text-[0.8rem] text-muted-foreground">Available</p>
+                          <p className="mt-0.5 text-[0.7rem] text-muted-foreground sm:mt-1 sm:text-[0.76rem]">Available</p>
                         </div>
                       </div>
 
-                      <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-4">
-                        <p className="text-[0.82rem] leading-6 text-muted-foreground">
+                      <div className="mt-3.5 flex items-center justify-between gap-2.5 border-t border-border/60 pt-3 sm:mt-4 sm:gap-3 sm:pt-4">
+                        <p className="text-[0.76rem] leading-5 text-muted-foreground sm:text-[0.82rem] sm:leading-6">
                           {budget.status === "safe"
                             ? "Cycle is currently healthy."
                             : budget.status === "warning"
@@ -961,12 +978,12 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                                 ? "Window is under pressure."
                                 : "Budget has been exceeded."}
                         </p>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1">
                           <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            className="h-8 bg-white rounded-full px-3 text-[0.78rem]"
+                            className="h-7.5 rounded-full bg-white px-2.5 text-[0.74rem] sm:h-8 sm:px-3 sm:text-[0.78rem]"
                             onClick={() => {
                               const record = budgets.find((entry) => entry.id === budget.id);
                               if (record) startEdit(record);
@@ -978,17 +995,17 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                             type="button"
                             variant="ghost"
                             size="icon-sm"
-                            className="size-8 rounded-full text-rose-600 hover:text-rose-700"
+                            className="size-7.5 rounded-full text-rose-600 hover:text-rose-700 sm:size-8"
                             onClick={() => setDeleteTarget({ id: budget.id, name: budget.name })}
                           >
-                            <Trash2 className="size-4" />
+                            <Trash2 className="size-3.5 sm:size-4" />
                             <span className="sr-only">Delete budget</span>
                           </Button>
                         </div>
                       </div>
 
                       {childBudgets.length > 0 ? (
-                        <div className="mt-5 rounded-[1.2rem] border border-border/60 bg-card/70 px-3.5 py-3.5 sm:px-4 sm:py-4">
+                        <div className="mt-4 rounded-[1rem] border border-border/60 bg-card/70 px-3 py-3 sm:mt-5 sm:rounded-[1.2rem] sm:px-4 sm:py-4">
                           <div className="flex items-center justify-between gap-4">
                             <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">
                               Child budgets
@@ -1175,37 +1192,37 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
           mobileBehavior="adaptive"
           className="h-[100dvh] overflow-hidden border border-border/70 bg-white p-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))]"
         >
-          <div className="sticky top-0 z-10 shrink-0 border-b border-border/60 bg-white px-4 py-4 sm:px-6 sm:py-5 dark:bg-[#1a2325]">
-            <div className="inline-flex rounded-lg border border-border/70 bg-white px-3 py-1 text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground sm:rounded-full sm:px-4 sm:text-xs sm:tracking-[0.28em]">
+          <div className="sticky top-0 z-10 shrink-0 border-b border-border/60 bg-white px-3.5 py-3.5 sm:px-6 sm:py-5 dark:bg-[#1a2325]">
+            <div className="inline-flex rounded-lg border border-border/70 bg-white px-2.5 py-0.75 text-[0.58rem] uppercase tracking-[0.16em] text-muted-foreground sm:rounded-full sm:px-4 sm:py-1 sm:text-xs sm:tracking-[0.28em]">
               Budget setup
             </div>
-            <DialogHeader className="mt-3 space-y-2 sm:mt-3.5 sm:space-y-2">
-              <DialogTitle className="text-[1.2rem] font-semibold tracking-tight sm:text-[2rem]">
+            <DialogHeader className="mt-2.5 space-y-1.5 sm:mt-3.5 sm:space-y-2">
+              <DialogTitle className="text-[1.08rem] font-semibold tracking-tight sm:text-[2rem]">
                 {editingBudgetId ? "Edit budget" : "Create a budget"}
               </DialogTitle>
-              <DialogDescription className="max-w-[42rem] text-[0.82rem] leading-6 sm:text-[0.92rem] sm:leading-6.5">
+              <DialogDescription className="max-w-[42rem] text-[0.76rem] leading-5.25 sm:text-[0.92rem] sm:leading-6.5">
                 Define the amount, cadence, and optional roll-up parent first. Budget assignment
                 inside transactions can come next once the structure is in place.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3.5 sm:px-6 sm:py-4">
-            <div className="space-y-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-6 sm:py-4">
+            <div className="space-y-3">
               {formError ? (
                 <div className="rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
                   {formError}
                 </div>
               ) : null}
 
-              <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
-                <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
+              <div className="rounded-[1.15rem] border border-border/70 bg-white px-3 py-2.5 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:rounded-[1.35rem] sm:px-4 sm:py-4">
+                <div className="mb-2.5 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-0.75 text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground sm:mb-3 sm:py-1 sm:text-[0.66rem] sm:tracking-[0.24em]">
                   Primary details
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div className="space-y-2">
-                    <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-sm">
                       Budget name
                     </label>
                     <Input
@@ -1215,13 +1232,13 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                         setDraft((current) => ({ ...current, name: event.target.value }));
                       }}
                       placeholder="e.g. Household operating budget"
-                      className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                      className="h-8.5 rounded-lg border-border/70 bg-white px-3 text-[0.8rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-base"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-2.5">
                     <div className="space-y-2">
-                      <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-sm">
                         Budget amount
                       </label>
                       <Input
@@ -1232,11 +1249,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                         }}
                         placeholder="0.00"
                         inputMode="decimal"
-                        className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                        className="h-8.5 rounded-lg border-border/70 bg-white px-3 text-[0.8rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-base"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-sm">
                         Budget window starts
                       </label>
                       <Input
@@ -1245,23 +1262,23 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                         onChange={(event) =>
                           setDraft((current) => ({ ...current, startDate: event.target.value }))
                         }
-                        className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                        className="h-8.5 rounded-lg border-border/70 bg-white px-3 text-[0.8rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-base"
                       />
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
-                <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
+              <div className="rounded-[1.15rem] border border-border/70 bg-white px-3 py-2.5 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:rounded-[1.35rem] sm:px-4 sm:py-4">
+                <div className="mb-2.5 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-0.75 text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground sm:mb-3 sm:py-1 sm:text-[0.66rem] sm:tracking-[0.24em]">
                   Budget cadence
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                <div className="space-y-2.5">
+                  <label className="text-[0.88rem] font-semibold text-foreground sm:text-sm">
                     Period
                   </label>
-                  <div className="grid grid-cols-1 gap-3">
+                  <div className="grid grid-cols-1 gap-2.5">
                     {periodOptions.map((option) => (
                       <button
                         key={option.value}
@@ -1270,17 +1287,17 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                           setFormError(null);
                           setDraft((current) => ({ ...current, period: option.value }));
                         }}
-                        className={`min-h-[76px] rounded-lg border px-3 py-3 text-left transition sm:min-h-[90px] sm:rounded-[1.2rem] sm:px-4 sm:py-4 ${
+                        className={`min-h-[66px] rounded-lg border px-3 py-2.5 text-left transition sm:min-h-[90px] sm:rounded-[1.2rem] sm:px-4 sm:py-4 ${
                           draft.period === option.value
                             ? "border-[#17393c] bg-[#17393c] text-white shadow-[0_18px_40px_-30px_rgba(23,57,60,0.7)]"
                             : "border-border/70 bg-white text-foreground hover:bg-muted/50"
                         }`}
                       >
-                        <div className="text-[0.9rem] font-medium sm:text-[0.98rem]">
+                        <div className="text-[0.84rem] font-medium sm:text-[0.98rem]">
                           {option.label}
                         </div>
                         <div
-                          className={`mt-1.5 text-[0.78rem] leading-5 sm:mt-2 sm:text-[0.86rem] sm:leading-6 ${draft.period === option.value ? "text-white/78" : "text-muted-foreground"}`}
+                          className={`mt-1 text-[0.72rem] leading-4.75 sm:mt-2 sm:text-[0.86rem] sm:leading-6 ${draft.period === option.value ? "text-white/78" : "text-muted-foreground"}`}
                         >
                           {option.description}
                         </div>
@@ -1290,9 +1307,9 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                 </div>
 
                 {draft.period === "bi-weekly" ? (
-                  <div className="mt-4 grid grid-cols-1 gap-4">
+                  <div className="mt-3 grid grid-cols-1 gap-2.5 sm:mt-4 sm:gap-4">
                     <div className="space-y-2">
-                      <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-sm">
                         Salary date 1
                       </label>
                       <Input
@@ -1305,11 +1322,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                           }));
                         }}
                         placeholder="e.g. 15"
-                        className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                        className="h-8.5 rounded-lg border-border/70 bg-white px-3 text-[0.8rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-base"
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-sm">
                         Salary date 2
                       </label>
                       <Input
@@ -1322,21 +1339,21 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                           }));
                         }}
                         placeholder="e.g. 30"
-                        className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                        className="h-8.5 rounded-lg border-border/70 bg-white px-3 text-[0.8rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-base"
                       />
                     </div>
                   </div>
                 ) : null}
               </div>
 
-              <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
-                <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
+              <div className="rounded-[1.15rem] border border-border/70 bg-white px-3 py-2.5 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:rounded-[1.35rem] sm:px-4 sm:py-4">
+                <div className="mb-2.5 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-0.75 text-[0.62rem] uppercase tracking-[0.18em] text-muted-foreground sm:mb-3 sm:py-1 sm:text-[0.66rem] sm:tracking-[0.24em]">
                   Optional structure
                 </div>
 
-                <div className="grid gap-4">
+                <div className="grid gap-3 sm:gap-4">
                   <div className="grid content-start gap-2">
-                    <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-sm">
                       Parent budget
                     </label>
                     <Select
@@ -1346,7 +1363,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                         setDraft((current) => ({ ...current, parentBudgetId: value }));
                       }}
                     >
-                      <SelectTrigger className="h-9 w-full rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base">
+                      <SelectTrigger className="h-8.5 w-full rounded-lg border-border/70 bg-white px-3 text-[0.8rem] sm:h-11 sm:rounded-xl sm:px-4 sm:text-base">
                         <SelectValue placeholder="No parent budget" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1364,7 +1381,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   </div>
 
                   <div className="grid content-start gap-2">
-                    <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-sm">
                       Status
                     </label>
                     <button
@@ -1372,7 +1389,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                       onClick={() =>
                         setDraft((current) => ({ ...current, isActive: !current.isActive }))
                       }
-                      className={`flex h-9 w-full items-center justify-between rounded-lg border px-3 text-left text-sm font-medium transition sm:h-11 sm:rounded-xl sm:px-4 ${
+                      className={`flex h-8.5 w-full items-center justify-between rounded-lg border px-3 text-left text-[0.8rem] font-medium transition sm:h-11 sm:rounded-xl sm:px-4 sm:text-sm ${
                         draft.isActive
                           ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
                           : "border-border/70 bg-white text-muted-foreground"
@@ -1394,18 +1411,18 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
             </div>
           </div>
 
-          <DialogFooter className="sticky bottom-0 z-10 !-mx-0 !-mb-0 shrink-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-white px-4 py-3.5 sm:px-6 sm:py-3.5 dark:bg-[#1a2325] [&>button]:w-auto">
+          <DialogFooter className="sticky bottom-0 z-10 !-mx-0 !-mb-0 shrink-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-white px-3.5 py-3 sm:px-6 sm:py-3.5 dark:bg-[#1a2325] [&>button]:w-auto">
             <Button
               type="button"
               variant="outline"
-              className="h-9 rounded-lg bg-white px-4 text-sm sm:h-10 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
+              className="h-8.5 rounded-lg bg-white px-3.5 text-[0.84rem] sm:h-10 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
               onClick={resetDialog}
             >
               Cancel
             </Button>
             <Button
               type="button"
-              className="h-9 rounded-lg px-4 text-sm sm:h-10 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
+              className="h-8.5 rounded-lg px-3.5 text-[0.84rem] sm:h-10 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
               onClick={submitBudget}
               disabled={isSubmitting}
             >
@@ -1421,37 +1438,37 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
       >
         <DialogContent
           mobileBehavior="modal"
-          className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-md overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-white p-0 sm:max-h-[92vh] sm:max-w-lg sm:rounded-[1.75rem]"
+          className="max-h-[calc(84dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1rem] border-border/70 bg-white p-0 sm:max-h-[92vh] sm:w-auto sm:max-w-[30rem] sm:rounded-[1.35rem]"
         >
-          <div className="px-4 py-4 sm:px-7 sm:py-7">
-            <DialogHeader className="space-y-3">
-              <DialogTitle className="text-[1.15rem] font-semibold tracking-tight sm:text-3xl">
+          <div className="px-4 py-3.5 sm:px-6 sm:py-5">
+            <DialogHeader className="space-y-2">
+              <DialogTitle className="text-[1rem] font-semibold tracking-tight sm:text-[1.4rem]">
                 Delete budget?
               </DialogTitle>
-              <DialogDescription className="text-[0.82rem] leading-6 sm:text-base">
+              <DialogDescription className="text-[0.76rem] leading-5 sm:text-[0.9rem] sm:leading-6.5">
                 Remove {deleteTarget?.name ? `"${deleteTarget.name}"` : "this budget"} from your
                 workspace? This does not remove existing transactions, but it does remove the budget
                 structure and roll-up.
               </DialogDescription>
             </DialogHeader>
           </div>
-          <DialogFooter className="border-t border-border/60 bg-transparent px-4 py-4 sm:px-7 sm:py-6">
-            <div className="flex w-full justify-end gap-3">
+          <DialogFooter className="border-t border-border/60 bg-transparent px-4 py-3 sm:px-6 sm:py-4">
+            <div className="grid w-full grid-cols-2 gap-2.5 sm:flex sm:justify-end">
               <Button
                 type="button"
-                className="h-9 rounded-lg bg-rose-600 px-4 text-sm text-white hover:bg-rose-700 sm:h-10 sm:min-w-32 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
+                variant="outline"
+                className="h-8.5 rounded-full bg-white px-3.5 text-[0.84rem] sm:h-10 sm:w-auto sm:px-4.5 sm:text-[0.92rem]"
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="h-8.5 rounded-full bg-rose-600 px-3.5 text-[0.84rem] text-white hover:bg-rose-700 sm:h-10 sm:w-auto sm:px-4.5 sm:text-[0.92rem]"
                 onClick={() => deleteTarget && removeBudget.mutate({ id: deleteTarget.id })}
                 disabled={removeBudget.isPending}
               >
                 Delete
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9 bg-white rounded-lg px-4 text-sm sm:h-10 sm:min-w-32 sm:rounded-full sm:px-5 sm:text-[0.95rem]"
-                onClick={() => setDeleteTarget(null)}
-              >
-                Cancel
               </Button>
             </div>
           </DialogFooter>

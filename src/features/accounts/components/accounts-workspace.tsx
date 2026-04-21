@@ -78,10 +78,13 @@ function getInitialState(defaultCurrency: CreateState["currency"] = "PHP"): Crea
 }
 
 const accountFieldClassName =
-  "h-10.5 w-full rounded-[0.9rem] border-border/70 bg-white px-3.5 text-[0.9rem] shadow-none transition-colors dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/20";
+  "h-10 w-full rounded-[0.8rem] border-border/70 bg-white px-3.5 text-[0.88rem] shadow-none transition-colors dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/20";
+
+const accountInputClassName =
+  "h-10 w-full rounded-[0.8rem] border-border/70 bg-white px-3.5 py-2 text-[0.88rem] leading-none shadow-none transition-colors md:h-9.5 md:px-3 md:py-1.5 md:text-[0.8rem] dark:bg-[#162022] focus-visible:border-[#8db8b3] focus-visible:ring-2 focus-visible:ring-[#8db8b3]/20";
 
 const accountFieldLabelClassName =
-  "block text-[0.88rem] font-semibold leading-none tracking-tight text-foreground";
+  "block text-[0.84rem] font-semibold leading-none tracking-tight text-foreground";
 
 const accountDialogContentClassName =
   "h-[100dvh] overflow-hidden border border-border/70 bg-white px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&_[data-slot='dialog-close']]:right-4 [&_[data-slot='dialog-close']]:top-4 [&_[data-slot='dialog-close']]:h-10 [&_[data-slot='dialog-close']]:w-10 [&_[data-slot='dialog-close']]:rounded-full [&_[data-slot='dialog-close']]:border [&_[data-slot='dialog-close']]:border-border/70 [&_[data-slot='dialog-close']]:bg-background/92 [&_[data-slot='dialog-close']]:shadow-sm";
@@ -95,7 +98,7 @@ const accountDialogBodyClassName =
 const accountDialogFooterClassName =
   "sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-white px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-6 sm:py-3 dark:bg-[#1a2325]";
 const accountConfirmDialogContentClassName =
-  "max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/98 px-0 py-0 ring-0 sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-lg sm:rounded-[1.6rem]";
+  "max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.2rem] border-border/70 bg-background/98 px-0 py-0 ring-0 sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-[30rem] sm:rounded-[1.35rem]";
 
 type AccountDialogShellProps = {
   badge: ReactNode;
@@ -391,7 +394,7 @@ function AccountSection({
                         <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                           {formatAccountBalanceLabel(account)}
                         </p>
-                        <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                        <p className="mt-1 text-[0.84rem] font-medium tracking-tight text-[#17393c] dark:text-foreground/90">
                           {formatCurrencyMiliunits(account.balance, account.currency)}
                         </p>
                         {formatAccountBalanceDetail(account) ? (
@@ -440,7 +443,7 @@ function AccountSection({
                       </div>
 
                       <div className="text-right">
-                        <p className="text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                        <p className="text-[0.86rem] font-medium tracking-tight text-[#17393c] dark:text-foreground/90">
                           {formatCurrencyMiliunits(account.balance, account.currency)}
                         </p>
                         {formatAccountBalanceDetail(account) ? (
@@ -543,6 +546,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     await Promise.all([
       utils.accounts.list.invalidate(),
       utils.accounts.summary.invalidate(),
+      utils.loans.list.invalidate(),
+      utils.loans.summary.invalidate(),
       utils.ai.accountsInsight.invalidate(),
       utils.ai.dashboardInsight.invalidate(),
     ]);
@@ -953,8 +958,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     </p>
                   }
                   body={
-                    <div className="space-y-4 sm:space-y-4.5">
-                      <section className="space-y-3 border-b border-border/50 pb-4">
+                    <div className="space-y-3.5 sm:space-y-4">
+                      <section className="space-y-2.5 border-b border-border/50 pb-3.5">
                         <div className="space-y-1">
                           <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
                             Account basics
@@ -965,7 +970,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           </p>
                         </div>
 
-                        <div className="space-y-3.5">
+                        <div className="space-y-3">
                           <div className="space-y-2">
                             <label className={accountFieldLabelClassName}>Account name</label>
                             <Input
@@ -974,7 +979,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                 setForm((current) => ({ ...current, name: event.target.value }))
                               }
                               placeholder="e.g. Emergency fund"
-                              className={accountFieldClassName}
+                              className={accountInputClassName}
                             />
                           </div>
 
@@ -989,7 +994,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                     onClick={() =>
                                       setForm((current) => ({ ...current, type: option.value }))
                                     }
-                                    className={`h-10 rounded-[0.9rem] border px-3 text-[0.88rem] font-medium transition ${
+                                    className={`h-9.5 rounded-[0.8rem] border px-3 text-[0.86rem] font-medium transition ${
                                       form.type === option.value
                                         ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
                                         : "border-border/80 bg-background text-foreground hover:bg-muted/70"
@@ -1029,7 +1034,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                       </section>
 
                       {form.type !== "credit" ? (
-                        <section className="space-y-3">
+                        <section className="space-y-2.5">
                           <div className="space-y-1">
                             <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
                               Balance setup
@@ -1039,7 +1044,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                             </p>
                           </div>
 
-                          <div className="space-y-2.5">
+                          <div className="space-y-2">
                             <div className="space-y-2">
                               <label className={accountFieldLabelClassName}>
                                 {form.type === "loan" ? "Current loan balance" : "Opening balance"}
@@ -1055,11 +1060,11 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                   }))
                                 }
                                 placeholder="0.00"
-                                className={accountFieldClassName}
+                                className={accountInputClassName}
                               />
                             </div>
 
-                            <p className="max-w-[420px] rounded-[0.95rem] border border-dashed border-border/70 bg-white px-4 py-3 text-[0.8rem] leading-6 text-muted-foreground dark:bg-[#162022]">
+                            <p className="max-w-[420px] rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
                               Balances are stored in each account’s native currency. Cross-currency
                               rollups can be layered on later.
                             </p>
@@ -1068,7 +1073,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                       ) : null}
 
                       {form.type === "credit" ? (
-                        <section className="space-y-3">
+                        <section className="space-y-2.5">
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
@@ -1083,7 +1088,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                             </p>
                           </div>
 
-                          <div className="space-y-3 rounded-[1rem] border border-border/70 bg-white/60 p-4 dark:bg-[#182123]">
+                          <div className="space-y-2.5 rounded-[0.95rem] border border-border/70 bg-white/60 p-3.5 dark:bg-[#182123]">
                             <div className="grid gap-3">
                               <div className="space-y-2">
                                 <label className={accountFieldLabelClassName}>Credit limit</label>
@@ -1093,7 +1098,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                   value={form.creditLimit}
                                   onChange={(event) => setCreditLimitValue(event.target.value)}
                                   placeholder="0.00"
-                                  className={accountFieldClassName}
+                                  className={accountInputClassName}
                                 />
                               </div>
 
@@ -1113,7 +1118,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                           creditInputMode: option.value,
                                         }))
                                       }
-                                      className={`flex h-10 items-center justify-center rounded-[0.9rem] border px-3 text-center text-[0.84rem] font-medium transition ${
+                                      className={`flex h-9.5 items-center justify-center rounded-[0.8rem] border px-3 text-center text-[0.82rem] font-medium transition ${
                                         form.creditInputMode === option.value
                                           ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
                                           : "border-border/80 bg-background text-foreground hover:bg-muted/70"
@@ -1145,7 +1150,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                       : setCreditBalanceValue(event.target.value)
                                   }
                                   placeholder="0.00"
-                                  className={accountFieldClassName}
+                                  className={accountInputClassName}
                                 />
                               </div>
 
@@ -1155,7 +1160,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                                     ? "Computed balance"
                                     : "Computed available"}
                                 </label>
-                                <div className="flex h-10.5 items-center rounded-[0.9rem] border border-border/80 bg-muted/45 px-3.5 text-[0.9rem] font-medium text-muted-foreground">
+                                <div className="flex h-10 items-center rounded-[0.8rem] border border-border/80 bg-muted/45 px-3.5 text-[0.88rem] font-medium text-muted-foreground">
                                   {form.creditInputMode === "available"
                                     ? formatCurrencyMiliunits(parsedBalance, form.currency)
                                     : formatCurrencyMiliunits(parsedAvailableCredit, form.currency)}
@@ -1163,7 +1168,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                               </div>
                             </div>
 
-                            <p className="rounded-[0.95rem] border border-dashed border-border/70 bg-white px-4 py-3 text-[0.8rem] leading-6 text-muted-foreground dark:bg-[#162022]">
+                            <p className="rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
                               For credit cards, credit limit stays fixed while current balance
                               tracks what you owe. If you only know the available credit from your
                               banking app, Veyra can derive the balance for you.
@@ -1218,25 +1223,25 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
         }}
       >
         <DialogContent mobileBehavior="modal" className={accountConfirmDialogContentClassName}>
-          <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
+          <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-3.5 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pb-4 sm:pt-5 sm:pr-16">
             <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
               Confirm delete
             </div>
-            <DialogTitle className="pt-2 text-[1.35rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.7rem]">
+            <DialogTitle className="pt-1.5 text-[1.2rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-2.5 sm:text-[1.45rem]">
               Remove this account?
             </DialogTitle>
-            <p className="max-w-md text-[0.92rem] leading-6 text-muted-foreground sm:text-[0.95rem] sm:leading-7">
+            <p className="max-w-md text-[0.88rem] leading-6 text-muted-foreground sm:text-[0.92rem] sm:leading-6.5">
               {deleteTarget
                 ? `Delete "${deleteTarget.name}" from your Veyra workspace? This action cannot be undone.`
                 : "Delete this account from your Veyra workspace? This action cannot be undone."}
             </p>
           </DialogHeader>
 
-          <div className="grid shrink-0 grid-cols-2 gap-3 px-5 pb-[max(0.85rem,env(safe-area-inset-bottom))] pt-3 sm:flex sm:justify-end sm:px-7 sm:py-6">
+          <div className="grid shrink-0 grid-cols-2 gap-2.5 px-5 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 sm:flex sm:justify-end sm:px-6 sm:py-4">
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-full rounded-full px-5 sm:h-11 sm:w-auto"
+              className="h-9.5 w-full rounded-full px-4.5 sm:h-10 sm:w-auto"
               onClick={() => setDeleteTarget(null)}
               disabled={isDeleting}
             >
@@ -1244,7 +1249,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             </Button>
             <Button
               type="button"
-              className="h-10 w-full rounded-full bg-destructive px-5 text-white hover:bg-destructive/90 sm:h-11 sm:w-auto"
+              className="h-9.5 w-full rounded-full bg-destructive px-4.5 text-white hover:bg-destructive/90 sm:h-10 sm:w-auto"
               onClick={onConfirmDelete}
               disabled={isDeleting}
             >

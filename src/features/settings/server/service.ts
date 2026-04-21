@@ -7,6 +7,9 @@ import {
   budgets,
   categories,
   ledgerEntries,
+  loanInstallments,
+  loanPayments,
+  loans,
   transactionEvents,
   userPreferences,
 } from "@/db/schema";
@@ -118,6 +121,9 @@ export async function clearWorkspaceData(
 
   await ctx.db.delete(ledgerEntries).where(eq(ledgerEntries.clerkUserId, userId));
   await ctx.db.delete(transactionEvents).where(eq(transactionEvents.clerkUserId, userId));
+  await ctx.db.delete(loanPayments).where(eq(loanPayments.clerkUserId, userId));
+  await ctx.db.delete(loanInstallments).where(eq(loanInstallments.clerkUserId, userId));
+  await ctx.db.delete(loans).where(eq(loans.clerkUserId, userId));
   await ctx.db.delete(budgets).where(eq(budgets.clerkUserId, userId));
   await ctx.db.delete(categories).where(eq(categories.clerkUserId, userId));
   await ctx.db.delete(accounts).where(eq(accounts.clerkUserId, userId));

@@ -47,7 +47,7 @@ const items = [
     label: "Loans",
     href: "/loans",
     icon: HandCoins,
-    available: false,
+    available: true,
   },
   {
     label: "Categories",

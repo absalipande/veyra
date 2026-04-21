@@ -1130,6 +1130,10 @@ export async function deleteLoan(
 ) {
   const existing = await requireLoan(ctx, input.id);
   const userId = assertUserId(ctx.userId);
+  const linkedLoanAccountIds = new Set<string>();
+  if (existing.underlyingLoanAccountId) {
+    linkedLoanAccountIds.add(existing.underlyingLoanAccountId);
+  }
 
   const openingDisbursementDescription = `Loan disbursement · ${existing.name}`;
   const openingEvents = await ctx.db.query.transactionEvents.findMany({
@@ -1149,21 +1153,28 @@ export async function deleteLoan(
       ),
     });
 
+    const eventLoanAccountIds = entries
+      .filter((entry) => entry.role === "loan_account")
+      .map((entry) => entry.accountId);
+    const hasDestinationLink = entries.some(
+      (entry) =>
+        entry.role === "disbursement_account" &&
+        entry.accountId === existing.destinationAccountId
+    );
+    const hasExplicitUnderlyingLink = existing.underlyingLoanAccountId
+      ? eventLoanAccountIds.includes(existing.underlyingLoanAccountId)
+      : false;
+    const hasLoanAccountEntry = eventLoanAccountIds.length > 0;
     const hasLoanLink =
-      entries.some(
-        (entry) =>
-          entry.role === "loan_account" &&
-          existing.underlyingLoanAccountId &&
-          entry.accountId === existing.underlyingLoanAccountId
-      ) &&
-      entries.some(
-        (entry) =>
-          entry.role === "disbursement_account" &&
-          entry.accountId === existing.destinationAccountId
-      );
+      hasDestinationLink &&
+      (hasExplicitUnderlyingLink || (!existing.underlyingLoanAccountId && hasLoanAccountEntry));
 
     if (!hasLoanLink) {
       continue;
+    }
+
+    for (const loanAccountId of eventLoanAccountIds) {
+      linkedLoanAccountIds.add(loanAccountId);
     }
 
     for (const entry of entries) {
@@ -1182,6 +1193,18 @@ export async function deleteLoan(
   }
 
   await ctx.db.delete(loans).where(and(eq(loans.id, existing.id), eq(loans.clerkUserId, userId)));
+
+  for (const loanAccountId of linkedLoanAccountIds) {
+    await ctx.db
+      .delete(accounts)
+      .where(
+        and(
+          eq(accounts.id, loanAccountId),
+          eq(accounts.clerkUserId, userId),
+          eq(accounts.type, "loan")
+        )
+      );
+  }
 
   return {
     success: true,
