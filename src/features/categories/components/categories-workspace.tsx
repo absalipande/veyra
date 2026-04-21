@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import { Pencil, Plus, Search, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { Pencil, Search, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import type { AppRouter } from "@/server/api/root";
@@ -621,8 +621,11 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
           }
         }}
       >
-        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-white/80 bg-white px-0 py-0 dark:border-white/8 dark:bg-[#182123] sm:max-h-[92vh] sm:max-w-xl sm:rounded-[1.9rem]">
-          <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
+        <DialogContent
+          mobileBehavior="adaptive"
+          className="h-[100dvh] overflow-hidden border border-border/70 bg-white px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))]"
+        >
+          <DialogHeader className="sticky top-0 z-10 shrink-0 border-b border-border/70 bg-white px-4 pb-3.5 pt-[max(0.85rem,env(safe-area-inset-top))] pr-12 sm:px-6 sm:pb-5 sm:pt-7 sm:pr-16 dark:bg-[#1a2325]">
             <div className="inline-flex w-fit rounded-lg border border-[#17393c]/10 bg-[#17393c]/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary sm:rounded-full sm:px-3 sm:text-[0.68rem] sm:tracking-[0.22em]">
               Category setup
             </div>
@@ -635,43 +638,51 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-7 sm:py-6">
-            <div className="space-y-3">
-              <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                Category name
-              </label>
-              <Input
-                value={draft.name}
-                onChange={(event) => setDraft((current) => ({ ...current, name: event.target.value }))}
-                placeholder="e.g. Groceries"
-                className="h-9 rounded-lg border-border/80 bg-white px-3 text-sm sm:h-13 sm:rounded-[1.35rem] sm:px-5 sm:text-base"
-              />
-            </div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+            <div className="space-y-4 sm:space-y-5">
+              <div className="space-y-3">
+                <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                  Category name
+                </label>
+                <Input
+                  value={draft.name}
+                  onChange={(event) =>
+                    setDraft((current) => ({ ...current, name: event.target.value }))
+                  }
+                  placeholder="e.g. Groceries"
+                  className="h-9 rounded-lg border-border/80 bg-white px-3 text-sm sm:h-11 sm:rounded-xl sm:px-4 sm:text-[0.98rem]"
+                />
+              </div>
 
-            <div className="space-y-3">
-              <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                Type
-              </label>
-              <Select
-                value={draft.kind}
-                onValueChange={(value) => setDraft((current) => ({ ...current, kind: value as CategoryKind }))}
-              >
-                <SelectTrigger className="h-9 rounded-lg border-border/80 bg-white px-3 text-sm sm:h-13 sm:rounded-[1.35rem] sm:px-5 sm:text-base">
-                  <SelectValue placeholder="Category type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="expense">Expense</SelectItem>
-                  <SelectItem value="income">Income</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-3">
+                <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                  Type
+                </label>
+                <Select
+                  value={draft.kind}
+                  onValueChange={(value) =>
+                    setDraft((current) => ({ ...current, kind: value as CategoryKind }))
+                  }
+                >
+                  <SelectTrigger className="h-9 rounded-lg border-border/80 bg-white px-3 text-sm sm:h-11 sm:rounded-xl sm:px-4 sm:text-[0.98rem]">
+                    <SelectValue placeholder="Category type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expense">Expense</SelectItem>
+                    <SelectItem value="income">Income</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="rounded-xl border border-border/70 bg-white px-3.5 py-3 text-[0.76rem] leading-5 text-muted-foreground dark:bg-[#162022] sm:rounded-[1.3rem] sm:px-4 sm:text-[0.83rem] sm:leading-6">
-              Categories show up as dropdown choices inside the transaction composer. Start narrow
-              and expand only when a new label would genuinely change how you review spending.
+              <div className="rounded-xl border border-border/70 bg-white px-3.5 py-3 text-[0.76rem] leading-5 text-muted-foreground dark:bg-[#162022] sm:rounded-[1.3rem] sm:px-4 sm:text-[0.83rem] sm:leading-6">
+                Categories show up as dropdown choices inside the transaction composer. Start narrow
+                and expand only when a new label would genuinely change how you review spending.
+              </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-2 border-t border-border/60 pt-3 sm:flex sm:items-center sm:justify-end sm:border-t-0 sm:pt-2">
+          <div className="sticky bottom-0 z-10 shrink-0 border-t border-border/60 bg-white px-4 py-4 dark:bg-[#1a2325] sm:px-6 sm:py-4">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:justify-end sm:pt-0">
               <Button
                 type="button"
                 variant="outline"

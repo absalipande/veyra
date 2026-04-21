@@ -109,8 +109,14 @@ export function LoanDetailsWorkspace({ loanId }: { loanId: string }) {
         utils.loans.get.invalidate({ id: loanId }),
         utils.loans.list.invalidate(),
         utils.loans.summary.invalidate(),
+        utils.ai.loansInsight.invalidate(),
+        utils.ai.dashboardInsight.invalidate(),
+        utils.ai.accountsInsight.invalidate(),
+        utils.ai.transactionsInsight.invalidate(),
         utils.accounts.list.invalidate(),
         utils.accounts.summary.invalidate(),
+        utils.transactions.list.invalidate(),
+        utils.transactions.summary.invalidate(),
       ]);
       toast.success("Loan payment recorded.");
       setPaymentDraft(null);

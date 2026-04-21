@@ -6,10 +6,10 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
+  Keyboard,
   LogOut,
   Moon,
   Shield,
-  SlidersHorizontal,
   UserCircle2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -23,10 +23,8 @@ import {
   settingsCurrencyOptions,
   settingsDateFormatLabels,
   settingsDateFormatOptions,
-  settingsTimezoneLabels,
-  settingsTimezoneOptions,
-  settingsWeekStartLabels,
-  settingsWeekStartOptions,
+  settingsLocaleLabels,
+  settingsLocaleOptions,
 } from "@/features/settings/lib/options";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -43,8 +41,6 @@ type ControlCenterContextValue = {
 };
 
 const ControlCenterContext = createContext<ControlCenterContextValue | null>(null);
-
-const COMPACT_DENSITY_KEY = "veyra.ui.compact-density";
 const KEYBOARD_HINTS_KEY = "veyra.ui.keyboard-hints";
 
 function toDraft(settings: SettingsItem): UpdateSettingsInput {
@@ -92,15 +88,10 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
   const settingsQuery = trpc.settings.get.useQuery();
 
   const [draftOverride, setDraftOverride] = useState<UpdateSettingsInput | null>(null);
-  const [compactDensity, setCompactDensity] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(COMPACT_DENSITY_KEY) === "1";
-  });
   const [keyboardHints, setKeyboardHints] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     return window.localStorage.getItem(KEYBOARD_HINTS_KEY) !== "0";
   });
-  const [showAdvancedMobile, setShowAdvancedMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   const settings = settingsQuery.data;
@@ -112,25 +103,12 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
     if (!baseDraft || !draft) return false;
     return (
       baseDraft.defaultCurrency !== draft.defaultCurrency ||
+      baseDraft.locale !== draft.locale ||
       baseDraft.weekStartsOn !== draft.weekStartsOn ||
       baseDraft.dateFormat !== draft.dateFormat ||
       baseDraft.timezone !== draft.timezone
     );
   }, [baseDraft, draft]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    window.localStorage.setItem(COMPACT_DENSITY_KEY, compactDensity ? "1" : "0");
-    document.documentElement.dataset.compactDensity = compactDensity ? "on" : "off";
-  }, [compactDensity]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    window.localStorage.setItem(KEYBOARD_HINTS_KEY, keyboardHints ? "1" : "0");
-    document.documentElement.dataset.keyboardHints = keyboardHints ? "on" : "off";
-  }, [keyboardHints]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -142,6 +120,12 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
 
     return () => media.removeEventListener("change", onChange);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(KEYBOARD_HINTS_KEY, keyboardHints ? "1" : "0");
+    document.documentElement.dataset.keyboardHints = keyboardHints ? "on" : "off";
+  }, [keyboardHints]);
 
   const updateSettings = trpc.settings.update.useMutation({
     onSuccess: async (result) => {
@@ -171,12 +155,12 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
       .join("") || displayName.slice(0, 2).toUpperCase();
 
   const actionRowClassName =
-    "flex h-10 w-full items-center gap-3 rounded-xl px-2.5 text-[0.98rem] font-medium text-[#183436] transition hover:bg-muted/45 dark:text-foreground dark:hover:bg-white/6 sm:h-11 sm:text-[1rem]";
+    "flex h-10 w-full items-center gap-3 rounded-xl px-2.5 text-[0.98rem] font-medium text-foreground transition hover:bg-muted/45 dark:hover:bg-white/6 sm:h-11 sm:text-[1rem]";
 
   const content = (
     <>
       <DialogHeader className="border-b border-border/70 px-4 pb-3.5 pt-4 sm:px-6 sm:pb-5 sm:pt-6">
-        <DialogTitle className="text-[1.22rem] tracking-tight text-[#122f33] sm:text-[1.6rem]">Control center</DialogTitle>
+        <DialogTitle className="text-[1.22rem] tracking-tight text-foreground sm:text-[1.6rem]">Control center</DialogTitle>
       </DialogHeader>
 
       <div className="space-y-2.5 px-3.5 py-3 sm:space-y-4 sm:px-6 sm:py-5">
@@ -192,39 +176,33 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
               <span className="absolute bottom-0.5 right-0.5 size-3.5 rounded-full border-2 border-white bg-emerald-400" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[1.1rem] font-semibold tracking-tight text-[#122f33] sm:text-[1.25rem]">{displayName}</p>
+              <p className="truncate text-[1.1rem] font-semibold tracking-tight text-foreground sm:text-[1.25rem]">{displayName}</p>
               <p className="truncate text-[0.88rem] text-muted-foreground sm:text-[0.95rem]">{primaryEmail || "Signed in"}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 rounded-xl border border-border/70 bg-white">
-            <div className="px-3 py-2">
-              <p className="text-[0.72rem] text-muted-foreground">Plan</p>
-              <p className="mt-0.5 text-[0.88rem] font-semibold text-[#153236]">Personal</p>
-            </div>
-            <div className="border-x border-border/70 px-3 py-2">
-              <p className="text-[0.72rem] text-muted-foreground">Workspace</p>
-              <p className="mt-0.5 text-[0.88rem] font-semibold text-[#153236]">veyra</p>
-            </div>
-            <div className="px-3 py-2">
-              <p className="text-[0.72rem] text-muted-foreground">Last sync</p>
-              <p className="mt-0.5 text-[0.88rem] font-semibold text-[#153236]">Just now</p>
-            </div>
+          <div className="rounded-xl border border-border/70 bg-white px-3 py-2.5 dark:bg-[#141d1f]">
+            <p className="text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground">
+              Settings scope
+            </p>
+            <p className="mt-1 text-[0.88rem] text-foreground/90">
+              These defaults are used across dashboard, transactions, budgets, and account views.
+            </p>
           </div>
 
           <section className="space-y-1 border-t border-border/70 pt-2.5">
             <p className="px-1 text-[0.74rem] font-semibold uppercase tracking-[0.08em] text-muted-foreground">Account</p>
             <button
               type="button"
-              className="flex h-11 w-full items-center gap-3 rounded-xl border border-[#8ebfbc] px-2.5 text-[1rem] font-medium text-[#183436] transition hover:bg-muted/45"
+              className="flex h-11 w-full items-center gap-3 rounded-xl border border-border/70 px-2.5 text-[1rem] font-medium text-foreground transition hover:bg-muted/45"
               onClick={() => clerk.openUserProfile()}
             >
-              <UserCircle2 className="size-4.5 text-[#20484b]" />
+              <UserCircle2 className="size-4.5 text-muted-foreground" />
               <span className="flex-1 text-left">Manage account</span>
               <ChevronRight className="size-4 text-muted-foreground" />
             </button>
             <button type="button" className={actionRowClassName} onClick={() => clerk.openUserProfile({ __experimental_startPath: "/security" })}>
-              <Shield className="size-4.5 text-[#20484b]" />
+              <Shield className="size-4.5 text-muted-foreground" />
               <span className="flex-1 text-left">Security & sessions</span>
               <ChevronRight className="size-4 text-muted-foreground" />
             </button>
@@ -265,7 +243,7 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
                   }
                   disabled={!draft}
                 >
-                  <SelectTrigger className="h-9 rounded-xl bg-white">
+                  <SelectTrigger className="h-9 rounded-xl bg-background">
                     <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
@@ -279,72 +257,31 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
               </div>
 
               <div className="space-y-1.5">
-                <p className="text-[0.82rem] font-medium text-foreground">Timezone</p>
+                <p className="text-[0.82rem] font-medium text-foreground">Locale</p>
                 <Select
-                  value={draft?.timezone ?? undefined}
+                  value={draft?.locale ?? undefined}
                   onValueChange={(value) =>
                     setDraftOverride((current) => ({
                       ...(current ?? (draft as UpdateSettingsInput)),
-                      timezone: value as UpdateSettingsInput["timezone"],
+                      locale: value as UpdateSettingsInput["locale"],
                     }))
                   }
                   disabled={!draft}
                 >
-                  <SelectTrigger className="h-9 rounded-xl bg-white">
-                    <SelectValue placeholder="Select timezone" />
+                  <SelectTrigger className="h-9 rounded-xl bg-background">
+                    <SelectValue placeholder="Select locale" />
                   </SelectTrigger>
                   <SelectContent>
-                    {settingsTimezoneOptions.map((timezone) => (
-                      <SelectItem key={timezone} value={timezone}>
-                        {settingsTimezoneLabels[timezone]}
+                    {settingsLocaleOptions.map((locale) => (
+                      <SelectItem key={locale} value={locale}>
+                        {settingsLocaleLabels[locale]}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-            </div>
-
-            <button
-              type="button"
-              className="flex h-8.5 w-full items-center justify-between rounded-xl border border-border/70 px-3 text-[0.82rem] font-medium text-[#1c3a3d] transition hover:bg-muted/35 sm:hidden"
-              onClick={() => setShowAdvancedMobile((current) => !current)}
-            >
-              <span>{showAdvancedMobile ? "Hide advanced defaults" : "More defaults"}</span>
-              <ChevronDown
-                className={`size-4 text-muted-foreground transition-transform ${
-                  showAdvancedMobile ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            <div className={`${showAdvancedMobile ? "grid" : "hidden"} gap-2.5 sm:grid sm:grid-cols-2`}>
-              <div className="space-y-1.5">
-                <p className="text-[0.82rem] font-medium text-foreground">Week starts on</p>
-                <Select
-                  value={draft?.weekStartsOn ?? undefined}
-                  onValueChange={(value) =>
-                    setDraftOverride((current) => ({
-                      ...(current ?? (draft as UpdateSettingsInput)),
-                      weekStartsOn: value as UpdateSettingsInput["weekStartsOn"],
-                    }))
-                  }
-                  disabled={!draft}
-                >
-                  <SelectTrigger className="h-9 rounded-xl bg-white">
-                    <SelectValue placeholder="Week start" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {settingsWeekStartOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {settingsWeekStartLabels[option]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <p className="text-[0.82rem] font-medium text-foreground">Date format</p>
                 <Select
                   value={draft?.dateFormat ?? undefined}
@@ -356,7 +293,7 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
                   }
                   disabled={!draft}
                 >
-                  <SelectTrigger className="h-9 rounded-xl bg-white">
+                  <SelectTrigger className="h-9 rounded-xl bg-background">
                     <SelectValue placeholder="Date format" />
                   </SelectTrigger>
                   <SelectContent>
@@ -371,9 +308,9 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
             </div>
 
             <div className="space-y-1">
-              <div className="flex h-10 items-center gap-3 rounded-xl px-2.5 text-[0.98rem] font-medium text-[#183436] sm:h-11 sm:text-[1rem]">
-                <Moon className="size-4.5 text-[#20484b]" />
-                <span className="flex-1">Dark mode</span>
+              <div className="flex h-10 items-center gap-3 rounded-xl px-2.5 text-[0.98rem] font-medium text-foreground sm:h-11 sm:text-[1rem]">
+                <Moon className="size-4.5 text-muted-foreground" />
+                <span className="flex-1">Theme</span>
                 <TogglePill
                   checked={isDark}
                   onToggle={() => setTheme(isDark ? "light" : "dark")}
@@ -381,18 +318,8 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
                 />
               </div>
 
-              <div className="flex h-10 items-center gap-3 rounded-xl px-2.5 text-[0.98rem] font-medium text-[#183436] sm:h-11 sm:text-[1rem]">
-                <SlidersHorizontal className="size-4.5 text-[#20484b]" />
-                <span className="flex-1">Compact density</span>
-                <TogglePill
-                  checked={compactDensity}
-                  onToggle={() => setCompactDensity((current) => !current)}
-                  label="Toggle compact density"
-                />
-              </div>
-
-              <div className="flex h-10 items-center gap-3 rounded-xl px-2.5 text-[0.98rem] font-medium text-[#183436] sm:h-11 sm:text-[1rem]">
-                <SlidersHorizontal className="size-4.5 text-[#20484b]" />
+              <div className="flex h-10 items-center gap-3 rounded-xl px-2.5 text-[0.98rem] font-medium text-foreground sm:h-11 sm:text-[1rem]">
+                <Keyboard className="size-4.5 text-muted-foreground" />
                 <span className="flex-1">Keyboard hints</span>
                 <TogglePill
                   checked={keyboardHints}
@@ -414,7 +341,9 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
                 <LogOut className="size-4.5" />
                 <span className="ml-3 flex-1 text-left">Sign out</span>
                 {keyboardHints ? (
-                  <span className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-0.5 text-[0.72rem] text-rose-500">⇧ ⌘ Q</span>
+                  <span className="keyboard-hint rounded-lg border border-rose-200 bg-rose-50 px-2 py-0.5 text-[0.72rem] text-rose-500">
+                    ⇧ ⌘ Q
+                  </span>
                 ) : null}
               </Button>
             </SignOutButton>
@@ -428,7 +357,7 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="h-[84dvh] rounded-t-[1.15rem] border border-border/70 bg-white p-0"
+          className="h-[84dvh] rounded-t-[1.15rem] border border-border/70 bg-card p-0"
         >
           <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-border" />
           <div className="h-[calc(84dvh-0.5rem)] overflow-y-auto">
@@ -441,7 +370,7 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] overflow-y-auto rounded-[1.5rem] border-border/70 bg-white p-0 sm:max-w-2xl">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1rem)] overflow-y-auto rounded-[1.5rem] border-border/70 bg-card p-0 sm:max-w-2xl">
         {content}
       </DialogContent>
     </Dialog>

@@ -497,7 +497,7 @@ export function GlobalQuickCapture() {
               <div className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[0.68rem] font-medium text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200">
                 AI assist
               </div>
-              <div className="hidden rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
+              <div className="keyboard-hint hidden rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
                 ⌘/Ctrl ⇧ K
               </div>
             </div>

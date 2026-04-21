@@ -39,7 +39,7 @@ function DialogOverlay({
       <DialogPrimitive.Overlay
       data-slot="dialog-overlay"
       className={cn(
-        "fixed inset-0 isolate z-50 bg-black/20 duration-100 supports-backdrop-filter:backdrop-blur-xs dark:bg-black/50 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
+        "fixed inset-0 isolate z-50 bg-black/20 supports-backdrop-filter:backdrop-blur-xs dark:bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:duration-300 data-[state=open]:duration-500",
         className
       )}
       {...props}
@@ -55,7 +55,7 @@ function DialogContent({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
-  mobileBehavior?: "drawer" | "modal"
+  mobileBehavior?: "drawer" | "modal" | "adaptive"
 }) {
   return (
     <DialogPortal>
@@ -64,10 +64,12 @@ function DialogContent({
         data-slot="dialog-content"
         data-mobile-behavior={mobileBehavior}
         className={cn(
-          "fixed z-50 flex flex-col bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none",
+          "fixed z-50 flex flex-col bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500 outline-none",
           mobileBehavior === "drawer"
-            ? "inset-y-0 right-0 h-[100dvh] w-screen max-w-none rounded-none translate-x-0 translate-y-0 data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-right-10 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-right-10 md:inset-y-auto md:left-1/2 md:right-auto md:top-[50svh] md:h-auto md:w-auto md:translate-x-[-50%] md:translate-y-[-50%] md:data-open:slide-in-from-right-0 md:data-closed:slide-out-to-right-0 md:data-open:zoom-in-95 md:data-closed:zoom-out-95"
-            : "left-1/2 top-[50svh] max-h-[calc(100svh-1.5rem)] w-full max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 sm:max-h-[calc(100svh-2rem)] sm:max-w-sm",
+            ? "inset-y-0 right-0 h-[100dvh] w-screen max-w-none rounded-none translate-x-0 translate-y-0 data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-right-10 data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-right-10 md:inset-y-auto md:left-1/2 md:right-auto md:top-[50svh] md:h-auto md:w-auto md:translate-x-[-50%] md:translate-y-[-50%] md:data-[state=open]:slide-in-from-right-0 md:data-[state=closed]:slide-out-to-right-0 md:data-[state=open]:zoom-in-95 md:data-[state=closed]:zoom-out-95"
+            : mobileBehavior === "adaptive"
+              ? "inset-x-0 bottom-0 top-auto h-[min(94dvh,calc(100dvh-0.5rem))] w-full max-w-none rounded-b-none rounded-t-[1.1rem] translate-x-0 translate-y-0 data-[state=open]:fade-in-0 data-[state=open]:slide-in-from-bottom-10 data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-bottom-10 md:inset-y-0 md:left-auto md:right-0 md:top-0 md:h-[100dvh] md:w-full md:max-w-[23.75rem] lg:max-w-[26.25rem] md:rounded-none md:rounded-l-[1.1rem] md:border-l md:border-border/70 md:shadow-[-8px_0_24px_rgba(0,0,0,0.08)] md:data-[state=open]:slide-in-from-right-10 md:data-[state=closed]:slide-out-to-right-10"
+              : "left-1/2 top-[50svh] max-h-[calc(100svh-1.5rem)] w-full max-w-[calc(100%-1rem)] -translate-x-1/2 -translate-y-1/2 rounded-xl data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 sm:max-h-[calc(100svh-2rem)] sm:max-w-sm",
           className
         )}
         {...props}

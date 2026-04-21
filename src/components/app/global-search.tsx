@@ -159,7 +159,7 @@ export function GlobalSearch() {
         <span className="min-w-0 flex-1 truncate text-left tracking-[-0.01em]">
           Search accounts and transactions
         </span>
-        <span className="rounded-full border border-border/70 bg-background/80 px-2 py-0.5 text-[0.68rem] font-medium text-muted-foreground">
+        <span className="keyboard-hint rounded-full border border-border/70 bg-background/80 px-2 py-0.5 text-[0.68rem] font-medium text-muted-foreground">
           ⌘K
         </span>
       </button>
@@ -200,7 +200,7 @@ export function GlobalSearch() {
                 <div className="inline-flex rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
                   Global search
                 </div>
-                <div className="hidden items-center rounded-full border border-border/70 bg-white px-2 py-0.5 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
+                <div className="keyboard-hint hidden items-center rounded-full border border-border/70 bg-white px-2 py-0.5 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
                   ⌘ K
                 </div>
               </div>
@@ -239,7 +239,7 @@ export function GlobalSearch() {
                   placeholder="Search accounts, transactions, notes, or events..."
                   className="h-auto border-0 bg-transparent px-0 py-0 text-[0.94rem] leading-[1.25] shadow-none placeholder:text-muted-foreground/90 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent sm:text-[0.95rem]"
                 />
-                <div className="ml-3 hidden shrink-0 items-center rounded-full border border-border/70 bg-white px-2 py-0.5 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
+                <div className="keyboard-hint ml-3 hidden shrink-0 items-center rounded-full border border-border/70 bg-white px-2 py-0.5 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
                   ⌘ K
                 </div>
               </div>

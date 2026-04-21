@@ -4,7 +4,7 @@ import { supportedCurrencies } from "@/lib/currencies";
 
 export const loanKinds = ["institution", "personal"] as const;
 export const loanStatuses = ["active", "closed"] as const;
-export const loanCadences = ["weekly", "bi-weekly", "monthly"] as const;
+export const loanCadences = ["daily", "weekly", "bi-weekly", "monthly"] as const;
 export const loanInstallmentSchema = z.object({
   dueDate: z.coerce.date(),
   amount: z.number().int().positive(),

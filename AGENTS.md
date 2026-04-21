@@ -613,6 +613,56 @@ Loan v2 create flow guidance:
 - this first-step chooser should reduce cognitive load and avoid showing institution-heavy fields
   to users adding informal personal debt
 
+Loan v2 Mynt-reference create flow contract (April 2026):
+- the modal should follow the same high-level sequence:
+  - open `New loan`
+  - choose one of two setup paths
+- supported setup paths:
+  - `Personal flexible loan`
+  - `Digital / traditional bank / loan app`
+
+Personal flexible loan path:
+- fields:
+  - `lenderName` (required)
+  - `loanName` (optional)
+  - `disbursementAccountId` (optional in UX)
+  - `loanAmount` (required)
+- repayment choice:
+  - `No, I will pay whenever I can`
+  - `Yes, there is a payment schedule/deadline`
+- when repayment choice is flexible:
+  - no schedule rows required
+  - `notes` remains optional
+- when repayment choice is scheduled:
+  - collect `duration`, `monthlyPayment`, and `firstPaymentDue`
+  - generate schedule from those values
+
+Institution loan path:
+- fields:
+  - `lenderName` (required)
+  - `loanName` (required)
+  - `disbursementAccountId` (required)
+  - `applicationId` / `loanIdFromLender` (optional)
+  - `loanAmount` (required)
+  - `processingFees` (default 0)
+  - `interestRate` (optional)
+  - `durationMonths` (required)
+  - `monthlyPayment` (required)
+  - `disbursementDate` (required)
+  - `firstPaymentDue` (required)
+  - `notes` (optional)
+- computed read-only fields:
+  - `amountReceived = loanAmount - processingFees`
+  - `totalPayable = monthlyPayment * durationMonths` (or explicit override when present)
+  - `interestAndFees = totalPayable - loanAmount`
+  - `maturityDate = firstPaymentDue + (durationMonths - 1 months)`
+
+UI and behavior notes:
+- preserve Veyra visual language but keep Mynt workflow structure
+- computed values should update immediately while typing
+- when a new loan is created from this flow, keep metadata for lender-specific fields
+  (application ID, processing fees, computed snapshot) so detail and AI surfaces can reference it later
+
 Loan v2 copy guidance for type chooser:
 - `Personal flexible loan`:
   - borrowed from friends, family, or someone who paid on your behalf (including personal card use)
@@ -1886,6 +1936,15 @@ Every change should move Veyra toward:
 
 ## AI Roadmap (Current Direction)
 
+AI insights integration baseline is now complete (April 21, 2026):
+- dashboard insight is live
+- transactions habit-coaching insight is live
+- budgets pacing insight is live
+- accounts watchdog insight is live
+- quick capture AI parsing + low-confidence confirmation gating is live
+
+Roadmap work now focuses on signal quality, confidence calibration, versioning/history, and future Loans intelligence.
+
 Veyra will introduce AI in two tracks:
 
 1. `AI Insights`
@@ -2044,7 +2103,7 @@ Primary goal:
 - deliver one useful cross-surface AI loop with strict safety and cost control
 
 Must ship:
-- Dashboard `What to watch next` AI guidance (already scaffolded)
+- Dashboard `What to watch next` AI guidance (live)
 - budget-linked insight statements with:
   - insight
   - projected impact
@@ -2078,7 +2137,7 @@ Current implementation status (as of April 21, 2026):
     - router registration: `src/server/api/root.ts`
   - per-user AI limiter is active with burst + daily limits and `429` behavior
   - dashboard AI guidance is connected with fallback behavior when AI data is unavailable
-  - quick capture AI parsing is connected and editable:
+- quick capture AI parsing is connected and editable:
     - intent/amount/description/date/category/budget hints
     - draft persistence on accidental modal close
     - budget selection in quick capture expense flow

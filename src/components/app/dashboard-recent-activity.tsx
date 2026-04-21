@@ -448,7 +448,7 @@ export function DashboardRecentActivity() {
   }
 
   return (
-    <section className="space-y-5 pb-4 md:space-y-6 md:pb-0">
+    <section className="flex flex-col gap-5 pb-4 md:gap-6 md:pb-0">
       <Card className="rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))]  text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
         <CardContent className="space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
           <div className="flex items-start justify-between gap-4">
@@ -569,6 +569,170 @@ export function DashboardRecentActivity() {
                 <p className="mt-1 text-[0.9rem] font-semibold text-white">
                   {trendMetrics.currentCount}
                 </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
+        <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
+          <div className="mb-4 flex flex-col gap-2.5 md:mb-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2">
+              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
+                What to watch next
+              </h3>
+              <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full border border-violet-200/90 bg-violet-50/85 px-2.5 text-[0.64rem] font-semibold uppercase tracking-[0.09em] leading-none text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/12 dark:text-violet-200">
+                <Sparkles className="size-3" />
+                AI insight
+              </span>
+            </div>
+            <div className="hidden text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground md:block">
+              Forward-looking guidance
+            </div>
+          </div>
+
+          <div className="grid gap-4 rounded-[1.1rem] border border-border/70 bg-white p-4 md:min-h-[11.5rem] md:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] md:items-stretch md:gap-5 md:p-5.5 dark:bg-[#141d1f]">
+            <div className="space-y-3.5">
+              <div className="flex items-start gap-3.5">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-[0.95rem] bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200 md:size-11 md:rounded-[0.95rem]">
+                  <Sparkles className="size-5 md:size-5" />
+                </div>
+                <div>
+                  <p className="text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
+                    {watchNextInsight.statement}
+                  </p>
+                  <p className="mt-1 text-[0.88rem] leading-6 text-muted-foreground md:text-[0.86rem]">
+                    {watchNextInsight.budgetStatusSummary}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-[0.9rem] border border-border/70 bg-white p-2.5 dark:bg-[#192325]">
+                <div className="space-y-0 sm:hidden">
+                  <div className="flex items-center justify-between gap-3 px-2 py-2">
+                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Projected impact
+                    </p>
+                    <p className="text-right text-[0.83rem] font-medium text-foreground">
+                      {watchNextInsight.projectedImpact}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-border/70 px-2 py-2">
+                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Confidence
+                    </p>
+                    <p className="text-right text-[0.83rem] font-medium text-foreground">
+                      {watchNextInsight.confidence}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-border/70 px-2 py-2">
+                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Time window
+                    </p>
+                    <p className="text-right text-[0.83rem] font-medium text-foreground">
+                      {watchNextInsight.window}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="hidden grid-cols-3 gap-2.5 sm:grid">
+                  <div className="space-y-1">
+                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Projected impact
+                    </p>
+                    <p className="text-[0.84rem] font-medium text-foreground">
+                      {watchNextInsight.projectedImpact}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Confidence
+                    </p>
+                    <p className="text-[0.84rem] font-medium text-foreground">
+                      {watchNextInsight.confidence}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Time window
+                    </p>
+                    <p className="text-[0.84rem] font-medium text-foreground">
+                      {watchNextInsight.window}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-[0.9rem] border border-border/70 bg-white/70 px-3 py-2.5 dark:bg-[#111a1c]">
+                <div>
+                  <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Recommended next step
+                  </p>
+                  <p className="mt-0.5 text-[0.86rem] font-medium text-foreground">
+                    {watchNextInsight.nextActionLabel}
+                  </p>
+                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-full bg-[#17393c] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white"
+                >
+                  <Link href={watchNextInsight.nextActionHref}>{watchNextInsight.nextActionLabel}</Link>
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-[0.95rem] border border-border/70 bg-white p-3.5 dark:bg-[#192325]">
+              <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                Budget status
+              </p>
+              <div className="mt-3 space-y-2.5 text-[0.84rem]">
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <span className="size-1.5 rounded-full bg-muted-foreground/60" />
+                    Total budgets
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {watchNextInsight.totalBudgets}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
+                  <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
+                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    On track
+                  </span>
+                  <span className="font-semibold text-emerald-700 dark:text-emerald-300">
+                    {watchNextInsight.onTrack}
+                  </span>
+                </div>
+                <div
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 dark:bg-[#111a1c] ${
+                    watchNextInsight.atRisk > 0
+                      ? "border-amber-300/60 bg-amber-50/60 dark:border-amber-500/25 dark:bg-amber-500/10"
+                      : "border-border/70 bg-white/70"
+                  }`}
+                >
+                  <span className="inline-flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                    <span className="size-1.5 rounded-full bg-amber-500" />
+                    At risk
+                  </span>
+                  <span className="font-semibold text-amber-700 dark:text-amber-300">
+                    {watchNextInsight.atRisk}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
+                  <span className="inline-flex items-center gap-2 text-muted-foreground">
+                    <span className="size-1.5 rounded-full bg-sky-500/80" />
+                    Remaining
+                  </span>
+                  <span className="font-semibold text-foreground">
+                    {watchNextInsight.totalBudgets > 0
+                      ? formatCurrencyMiliunits(watchNextInsight.totalRemaining, "PHP")
+                      : "—"}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -734,170 +898,6 @@ export function DashboardRecentActivity() {
           </CardContent>
         </Card>
       </div>
-
-      <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
-        <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
-          <div className="mb-4 flex flex-col gap-2.5 md:mb-5 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-2">
-              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
-                What to watch next
-              </h3>
-              <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full border border-violet-200/90 bg-violet-50/85 px-2.5 text-[0.64rem] font-semibold uppercase tracking-[0.09em] leading-none text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/12 dark:text-violet-200">
-                <Sparkles className="size-3" />
-                AI insight
-              </span>
-            </div>
-            <div className="hidden text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground md:block">
-              Forward-looking guidance
-            </div>
-          </div>
-
-          <div className="grid gap-4 rounded-[1.1rem] border border-border/70 bg-white p-4 md:min-h-[11.5rem] md:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)] md:items-stretch md:gap-5 md:p-5.5 dark:bg-[#141d1f]">
-            <div className="space-y-3.5">
-              <div className="flex items-start gap-3.5">
-                <div className="flex size-11 shrink-0 items-center justify-center rounded-[0.95rem] bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200 md:size-11 md:rounded-[0.95rem]">
-                  <Sparkles className="size-5 md:size-5" />
-                </div>
-                <div>
-                  <p className="text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
-                    {watchNextInsight.statement}
-                  </p>
-                  <p className="mt-1 text-[0.88rem] leading-6 text-muted-foreground md:text-[0.86rem]">
-                    {watchNextInsight.budgetStatusSummary}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-[0.9rem] border border-border/70 bg-white p-2.5 dark:bg-[#192325]">
-                <div className="space-y-0 sm:hidden">
-                  <div className="flex items-center justify-between gap-3 px-2 py-2">
-                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
-                      Projected impact
-                    </p>
-                    <p className="text-right text-[0.83rem] font-medium text-foreground">
-                      {watchNextInsight.projectedImpact}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-border/70 px-2 py-2">
-                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
-                      Confidence
-                    </p>
-                    <p className="text-right text-[0.83rem] font-medium text-foreground">
-                      {watchNextInsight.confidence}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 border-t border-border/70 px-2 py-2">
-                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
-                      Time window
-                    </p>
-                    <p className="text-right text-[0.83rem] font-medium text-foreground">
-                      {watchNextInsight.window}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="hidden grid-cols-3 gap-2.5 sm:grid">
-                  <div className="space-y-1">
-                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                      Projected impact
-                    </p>
-                    <p className="text-[0.84rem] font-medium text-foreground">
-                      {watchNextInsight.projectedImpact}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                      Confidence
-                    </p>
-                    <p className="text-[0.84rem] font-medium text-foreground">
-                      {watchNextInsight.confidence}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                      Time window
-                    </p>
-                    <p className="text-[0.84rem] font-medium text-foreground">
-                      {watchNextInsight.window}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between rounded-[0.9rem] border border-border/70 bg-white/70 px-3 py-2.5 dark:bg-[#111a1c]">
-                <div>
-                  <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Recommended next step
-                  </p>
-                  <p className="mt-0.5 text-[0.86rem] font-medium text-foreground">
-                    {watchNextInsight.nextActionLabel}
-                  </p>
-                </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="h-8 rounded-full bg-[#17393c] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white"
-                >
-                  <Link href={watchNextInsight.nextActionHref}>{watchNextInsight.nextActionLabel}</Link>
-                </Button>
-              </div>
-            </div>
-
-            <div className="rounded-[0.95rem] border border-border/70 bg-white p-3.5 dark:bg-[#192325]">
-              <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                Budget status
-              </p>
-              <div className="mt-3 space-y-2.5 text-[0.84rem]">
-                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
-                  <span className="inline-flex items-center gap-2 text-muted-foreground">
-                    <span className="size-1.5 rounded-full bg-muted-foreground/60" />
-                    Total budgets
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {watchNextInsight.totalBudgets}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
-                  <span className="inline-flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
-                    <span className="size-1.5 rounded-full bg-emerald-500" />
-                    On track
-                  </span>
-                  <span className="font-semibold text-emerald-700 dark:text-emerald-300">
-                    {watchNextInsight.onTrack}
-                  </span>
-                </div>
-                <div
-                  className={`flex items-center justify-between rounded-lg border px-3 py-2 dark:bg-[#111a1c] ${
-                    watchNextInsight.atRisk > 0
-                      ? "border-amber-300/60 bg-amber-50/60 dark:border-amber-500/25 dark:bg-amber-500/10"
-                      : "border-border/70 bg-white/70"
-                  }`}
-                >
-                  <span className="inline-flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                    <span className="size-1.5 rounded-full bg-amber-500" />
-                    At risk
-                  </span>
-                  <span className="font-semibold text-amber-700 dark:text-amber-300">
-                    {watchNextInsight.atRisk}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg border border-border/70 bg-white/70 px-3 py-2 dark:bg-[#111a1c]">
-                  <span className="inline-flex items-center gap-2 text-muted-foreground">
-                    <span className="size-1.5 rounded-full bg-sky-500/80" />
-                    Remaining
-                  </span>
-                  <span className="font-semibold text-foreground">
-                    {watchNextInsight.totalBudgets > 0
-                      ? formatCurrencyMiliunits(watchNextInsight.totalRemaining, "PHP")
-                      : "—"}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
     </section>
   );

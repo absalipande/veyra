@@ -96,7 +96,7 @@ export const loans = pgTable(
       onDelete: "set null",
     }),
     cadence: text("cadence", {
-      enum: ["weekly", "bi-weekly", "monthly"],
+      enum: ["daily", "weekly", "bi-weekly", "monthly"],
     }),
     nextDueDate: timestamp("next_due_date", { mode: "date" }),
     notes: text("notes"),

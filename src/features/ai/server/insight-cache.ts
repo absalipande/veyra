@@ -6,7 +6,7 @@ type InsightCacheEntry = {
 
 type GetOrComputeInsightInput<T> = {
   userId: string;
-  surface: "dashboard" | "accounts" | "transactions" | "budgets" | "quick-capture";
+  surface: "dashboard" | "accounts" | "transactions" | "budgets" | "loans" | "quick-capture";
   checkpoint: string;
   cooldownMs: number;
   compute: () => Promise<T> | T;

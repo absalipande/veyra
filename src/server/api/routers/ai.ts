@@ -12,6 +12,8 @@ import {
   getAiQuickCaptureDraft,
   getAiAccountsInsight,
   getAiAccountsInsightCheckpoint,
+  getAiLoansInsight,
+  getAiLoansInsightCheckpoint,
   getAiTransactionsInsightCheckpoint,
   getAiTransactionsInsight,
   generateMonthlyHabitCoachingInsight,
@@ -133,6 +135,27 @@ export const aiRouter = createTRPCRouter({
       return {
         headline: "AI accounts watchdog",
         summary: "Account pressure signals will appear here.",
+        confidence: "Initial estimate",
+        recommendations: ["No recommendation yet."],
+        metrics: [],
+      };
+    }
+  }),
+  loansInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
+    try {
+      const checkpoint = await getAiLoansInsightCheckpoint(ctx);
+      return getOrComputeInsight({
+        userId: ctx.userId,
+        surface: "loans",
+        checkpoint,
+        cooldownMs: 45_000,
+        compute: () => getAiLoansInsight(ctx),
+      });
+    } catch (error) {
+      console.error("[ai.loansInsight] failed", error);
+      return {
+        headline: "AI loan coach",
+        summary: "Repayment pacing and due-date guidance will appear here.",
         confidence: "Initial estimate",
         recommendations: ["No recommendation yet."],
         metrics: [],

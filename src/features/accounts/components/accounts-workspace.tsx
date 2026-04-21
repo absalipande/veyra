@@ -84,16 +84,16 @@ const accountFieldLabelClassName =
   "block text-[0.88rem] font-semibold leading-none tracking-tight text-foreground";
 
 const accountDialogContentClassName =
-  "h-[100dvh] w-screen max-w-none overflow-x-hidden overflow-y-hidden rounded-none border-0 bg-background px-0 py-0 ring-0 sm:h-auto sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-[56rem] sm:rounded-[1.45rem] sm:border sm:border-border/70 sm:bg-background/98 sm:shadow-[0_32px_90px_-58px_rgba(10,31,34,0.4)] [&_[data-slot='dialog-close']]:right-5 [&_[data-slot='dialog-close']]:top-5 [&_[data-slot='dialog-close']]:h-10 [&_[data-slot='dialog-close']]:w-10 [&_[data-slot='dialog-close']]:rounded-full [&_[data-slot='dialog-close']]:border [&_[data-slot='dialog-close']]:border-border/70 [&_[data-slot='dialog-close']]:bg-background/92 [&_[data-slot='dialog-close']]:shadow-sm";
+  "h-[100dvh] overflow-hidden border border-border/70 bg-white px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&_[data-slot='dialog-close']]:right-4 [&_[data-slot='dialog-close']]:top-4 [&_[data-slot='dialog-close']]:h-10 [&_[data-slot='dialog-close']]:w-10 [&_[data-slot='dialog-close']]:rounded-full [&_[data-slot='dialog-close']]:border [&_[data-slot='dialog-close']]:border-border/70 [&_[data-slot='dialog-close']]:bg-background/92 [&_[data-slot='dialog-close']]:shadow-sm";
 
 const accountDialogHeaderClassName =
-  "shrink-0 border-b border-border/70 px-4 pb-2.5 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-3 sm:pt-5.5 sm:pr-16";
+  "sticky top-0 z-10 shrink-0 border-b border-border/70 bg-white px-4 pb-2.5 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pb-3 sm:pt-5.5 sm:pr-16 dark:bg-[#1a2325]";
 
 const accountDialogBodyClassName =
-  "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2.5 sm:px-7 sm:py-3";
+  "min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 py-2.5 sm:px-6 sm:py-3";
 
 const accountDialogFooterClassName =
-  "shrink-0 border-t border-border/70 px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-7 sm:py-3";
+  "sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-white px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-6 sm:py-3 dark:bg-[#1a2325]";
 const accountConfirmDialogContentClassName =
   "max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/98 px-0 py-0 ring-0 sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-lg sm:rounded-[1.6rem]";
 
@@ -939,7 +939,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
 
       <section>
         <Dialog open={open} onOpenChange={resetDialogState}>
-          <DialogContent className={accountDialogContentClassName}>
+          <DialogContent mobileBehavior="adaptive" className={accountDialogContentClassName}>
                 <AccountDialogShell
                   badge={
                     <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-white px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
@@ -953,7 +953,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     </p>
                   }
                   body={
-                    <div className="mx-auto max-w-[840px] space-y-4 sm:space-y-4.5">
+                    <div className="space-y-4 sm:space-y-4.5">
                       <section className="space-y-3 border-b border-border/50 pb-4">
                         <div className="space-y-1">
                           <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
@@ -978,7 +978,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                             />
                           </div>
 
-                          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px] sm:items-start">
+                          <div className="grid gap-3">
                             <div className="space-y-2">
                               <label className={accountFieldLabelClassName}>Account type</label>
                               <div className="grid grid-cols-2 gap-2">
@@ -1084,7 +1084,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           </div>
 
                           <div className="space-y-3 rounded-[1rem] border border-border/70 bg-white/60 p-4 dark:bg-[#182123]">
-                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
+                            <div className="grid gap-3">
                               <div className="space-y-2">
                                 <label className={accountFieldLabelClassName}>Credit limit</label>
                                 <Input

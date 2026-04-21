@@ -2,7 +2,16 @@ import { and, desc, eq, gte, lt, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { accounts, aiInsights, budgets, categories, transactionEvents } from "@/db/schema";
+import {
+  accounts,
+  aiInsights,
+  budgets,
+  categories,
+  loanInstallments,
+  loanPayments,
+  loans,
+  transactionEvents,
+} from "@/db/schema";
 import { formatCurrencyMiliunits } from "@/lib/currencies";
 import { getQuickCaptureDraftSchema } from "@/features/ai/server/schema";
 import { getBudgetsSummary } from "@/features/budgets/server/service";
@@ -1041,5 +1050,185 @@ export async function getAiAccountsInsightCheckpoint(ctx: Pick<TRPCContext, "db"
   return [
     `ac:${checkpointValue(accountRow[0]?.value)}`,
     `tx:${checkpointValue(txnRow[0]?.value)}`,
+  ].join("|");
+}
+
+export async function getAiLoansInsight(ctx: Pick<TRPCContext, "db" | "userId">) {
+  const userId = assertUserId(ctx.userId);
+  const now = new Date();
+  const sevenDaysFromNow = new Date(now);
+  sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const [loanRows, installmentRows, paymentRows] = await Promise.all([
+    ctx.db.query.loans.findMany({
+      where: eq(loans.clerkUserId, userId),
+      columns: {
+        id: true,
+        name: true,
+        lenderName: true,
+        currency: true,
+        outstandingAmount: true,
+        status: true,
+        nextDueDate: true,
+      },
+    }),
+    ctx.db.query.loanInstallments.findMany({
+      where: eq(loanInstallments.clerkUserId, userId),
+      columns: {
+        loanId: true,
+        dueDate: true,
+        amount: true,
+        paidAmount: true,
+        status: true,
+      },
+    }),
+    ctx.db.query.loanPayments.findMany({
+      where: and(eq(loanPayments.clerkUserId, userId), gte(loanPayments.paidAt, thirtyDaysAgo)),
+      columns: {
+        amount: true,
+      },
+    }),
+  ]);
+
+  if (loanRows.length === 0) {
+    return {
+      headline: "AI loan coach",
+      summary: "No loans tracked yet. Add a loan to start repayment guidance.",
+      confidence: "Initial estimate",
+      recommendations: ["Add your first loan with a repayment plan to unlock due-date coaching."],
+      metrics: [
+        { label: "Active loans", value: "0", tone: "neutral" as const },
+        { label: "Due in 7d", value: "0", tone: "neutral" as const },
+        { label: "Overdue", value: "0", tone: "neutral" as const },
+        { label: "30d payments", value: formatCurrencyMiliunits(0, "PHP"), tone: "neutral" as const },
+      ],
+    };
+  }
+
+  const activeLoans = loanRows.filter((loan) => loan.status === "active");
+  const totalOutstanding = activeLoans.reduce((sum, loan) => sum + loan.outstandingAmount, 0);
+  const overdueLoans = activeLoans.filter(
+    (loan) => loan.nextDueDate && loan.nextDueDate < now && loan.outstandingAmount > 0
+  );
+  const dueSoonLoans = activeLoans.filter(
+    (loan) =>
+      loan.nextDueDate &&
+      loan.nextDueDate >= now &&
+      loan.nextDueDate <= sevenDaysFromNow &&
+      loan.outstandingAmount > 0
+  );
+  const monthlyPayments = paymentRows.reduce((sum, payment) => sum + payment.amount, 0);
+
+  const groupedOutstanding = new Map<string, number>();
+  for (const loan of activeLoans) {
+    groupedOutstanding.set(
+      loan.lenderName,
+      (groupedOutstanding.get(loan.lenderName) ?? 0) + loan.outstandingAmount
+    );
+  }
+
+  const topLender = [...groupedOutstanding.entries()].sort((a, b) => b[1] - a[1])[0] ?? null;
+  const topLenderShare =
+    topLender && totalOutstanding > 0 ? Math.round((topLender[1] / totalOutstanding) * 100) : 0;
+
+  const pendingInstallments = installmentRows.filter((installment) => installment.status !== "paid");
+  const remainingScheduled = pendingInstallments.reduce(
+    (sum, installment) => sum + Math.max(installment.amount - installment.paidAmount, 0),
+    0
+  );
+
+  const recommendations: string[] = [];
+  if (overdueLoans.length > 0) {
+    recommendations.push(
+      `${overdueLoans.length} loan${overdueLoans.length > 1 ? "s are" : " is"} overdue. Prioritize the oldest due loan first.`
+    );
+  }
+  if (dueSoonLoans.length > 0) {
+    recommendations.push(
+      `${dueSoonLoans.length} loan${dueSoonLoans.length > 1 ? "s are" : " is"} due within 7 days. Queue payment from your main liquid account.`
+    );
+  }
+  if (topLender && topLenderShare >= 55) {
+    recommendations.push(
+      `${topLender[0]} holds ${topLenderShare}% of active debt. Consider a focused paydown plan for this lender.`
+    );
+  }
+  if (recommendations.length === 0) {
+    recommendations.push("Loan pacing looks stable. Keep paying on schedule to reduce finance drag.");
+  }
+
+  let summary = "Loan posture is stable with manageable repayment pacing.";
+  if (overdueLoans.length > 0) {
+    summary = `${overdueLoans.length} loan${overdueLoans.length > 1 ? "s are" : " is"} overdue. Address overdue installments first.`;
+  } else if (dueSoonLoans.length > 0) {
+    summary = `${dueSoonLoans.length} loan${dueSoonLoans.length > 1 ? "s are" : " is"} due this week.`;
+  } else if (remainingScheduled > totalOutstanding && totalOutstanding > 0) {
+    summary = "Scheduled repayments exceed current outstanding, likely due to finance charges.";
+  }
+
+  return {
+    headline: "AI loan coach",
+    summary,
+    confidence: activeLoans.length >= 2 ? "Medium confidence" : "Initial estimate",
+    recommendations,
+    metrics: [
+      {
+        label: "Active loans",
+        value: String(activeLoans.length),
+        tone: activeLoans.length > 0 ? ("neutral" as const) : ("warning" as const),
+      },
+      {
+        label: "Due in 7d",
+        value: String(dueSoonLoans.length),
+        tone: dueSoonLoans.length > 0 ? ("warning" as const) : ("positive" as const),
+      },
+      {
+        label: "Overdue",
+        value: String(overdueLoans.length),
+        tone: overdueLoans.length > 0 ? ("warning" as const) : ("positive" as const),
+      },
+      {
+        label: "Outstanding",
+        value: formatCurrencyMiliunits(totalOutstanding, activeLoans[0]?.currency ?? "PHP"),
+        tone: "neutral" as const,
+      },
+      {
+        label: "30d payments",
+        value: formatCurrencyMiliunits(monthlyPayments, activeLoans[0]?.currency ?? "PHP"),
+        tone: monthlyPayments > 0 ? ("positive" as const) : ("neutral" as const),
+      },
+      {
+        label: "Unpaid schedule",
+        value: formatCurrencyMiliunits(remainingScheduled, activeLoans[0]?.currency ?? "PHP"),
+        tone: remainingScheduled > totalOutstanding ? ("warning" as const) : ("neutral" as const),
+      },
+    ],
+  };
+}
+
+export async function getAiLoansInsightCheckpoint(ctx: Pick<TRPCContext, "db" | "userId">) {
+  const userId = assertUserId(ctx.userId);
+
+  const [loanRow, installmentRow, paymentRow] = await Promise.all([
+    ctx.db
+      .select({ value: sql<Date | null>`max(${loans.updatedAt})` })
+      .from(loans)
+      .where(eq(loans.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${loanInstallments.updatedAt})` })
+      .from(loanInstallments)
+      .where(eq(loanInstallments.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${loanPayments.createdAt})` })
+      .from(loanPayments)
+      .where(eq(loanPayments.clerkUserId, userId)),
+  ]);
+
+  return [
+    `ln:${checkpointValue(loanRow[0]?.value)}`,
+    `li:${checkpointValue(installmentRow[0]?.value)}`,
+    `lp:${checkpointValue(paymentRow[0]?.value)}`,
   ].join("|");
 }

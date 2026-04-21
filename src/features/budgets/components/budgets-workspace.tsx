@@ -396,22 +396,22 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
     {
       label: "Active budgets",
       value: String(totalTracked),
-      detail: "Budget windows currently live in your workspace.",
+      detail: "Budget windows in workspace.",
     },
     {
       label: "Remaining to use",
       value: formatBudgetMoney(totalRemaining),
-      detail: "Remaining across parent budget windows this cycle.",
+      detail: "Remaining this active cycle.",
     },
     {
       label: "Spent this cycle",
       value: formatBudgetMoney(totalSpent),
-      detail: "Tracked from expense events already tied to budgets.",
+      detail: "Tracked from budget-linked expenses.",
     },
     {
       label: "Needs attention",
       value: String(attentionCount),
-      detail: "Budgets currently in warning, danger, or exceeded territory.",
+      detail: "Warning, danger, or exceeded.",
     },
   ];
 
@@ -580,16 +580,16 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
               data-summary-slide
               className="min-w-0 shrink-0 basis-full snap-center"
             >
-              <Card className="rounded-[1.5rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
-                <CardHeader className="px-5 pb-2 pt-5">
-                  <CardDescription className="text-xs uppercase tracking-[0.32em]">
+              <Card className="rounded-[1.35rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
+                <CardHeader className="px-4 pb-1.5 pt-4">
+                  <CardDescription className="text-[0.68rem] uppercase tracking-[0.24em]">
                     {card.label}
                   </CardDescription>
-                  <CardTitle className="text-[1.35rem] font-semibold tracking-tight">
+                  <CardTitle className="text-[1.15rem] font-semibold tracking-tight">
                     {card.value}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
+                <CardContent className="px-4 pb-4 text-[0.8rem] leading-5 text-muted-foreground">
                   {card.detail}
                 </CardContent>
               </Card>
@@ -642,7 +642,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
           </div>
         ) : null}
 
-        <div className="hidden gap-4 md:grid md:grid-cols-[repeat(3,minmax(0,1fr))_minmax(320px,1.05fr)] xl:grid-cols-[repeat(4,minmax(0,1fr))]">
+        <div className="hidden gap-3 md:grid md:grid-cols-[repeat(3,minmax(0,1fr))_minmax(300px,1fr)] xl:grid-cols-[repeat(4,minmax(0,1fr))]">
           {summaryCards.map((card) => {
             const icon =
               card.label === "Active budgets"
@@ -665,26 +665,26 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
             return (
               <Card
                 key={card.label}
-                className="rounded-[1.45rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]"
+                className="rounded-[1.25rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]"
               >
-                <CardHeader className="px-5 pb-2 pt-5">
+                <CardHeader className="px-4 pb-1.5 pt-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <CardDescription className="text-xs uppercase tracking-[0.32em]">
+                      <CardDescription className="text-[0.68rem] uppercase tracking-[0.24em]">
                         {card.label}
                       </CardDescription>
-                      <CardTitle className="mt-2 text-[1.3rem] font-semibold tracking-tight">
+                      <CardTitle className="mt-1.5 text-[1.1rem] font-semibold tracking-tight">
                         {card.value}
                       </CardTitle>
                     </div>
                     <span
-                      className={`flex size-10 items-center justify-center rounded-full ${iconTone}`}
+                      className={`flex size-8 items-center justify-center rounded-full ${iconTone}`}
                     >
-                      <Icon className="size-4.5" />
+                      <Icon className="size-4" />
                     </span>
                   </div>
                 </CardHeader>
-                <CardContent className="px-5 pb-5 text-sm leading-7 text-muted-foreground">
+                <CardContent className="px-4 pb-4 text-[0.8rem] leading-5 text-muted-foreground">
                   {card.detail}
                 </CardContent>
               </Card>
@@ -1171,8 +1171,11 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
       </section>
 
       <Dialog open={open} onOpenChange={(nextOpen) => (!nextOpen ? resetDialog() : setOpen(true))}>
-        <DialogContent className="max-h-[calc(86dvh-env(safe-area-inset-top))] w-[calc(100vw-1rem)] max-w-[980px] overflow-x-hidden overflow-y-auto rounded-[1.45rem] border-border/70 bg-white p-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur sm:max-h-[92vh] sm:w-[calc(100vw-3rem)] sm:rounded-[2rem]">
-          <div className="border-b border-border/60 px-4 py-4 sm:px-7 sm:py-5">
+        <DialogContent
+          mobileBehavior="adaptive"
+          className="h-[100dvh] overflow-hidden border border-border/70 bg-white p-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))]"
+        >
+          <div className="sticky top-0 z-10 shrink-0 border-b border-border/60 bg-white px-4 py-4 sm:px-6 sm:py-5 dark:bg-[#1a2325]">
             <div className="inline-flex rounded-lg border border-border/70 bg-white px-3 py-1 text-[0.62rem] uppercase tracking-[0.2em] text-muted-foreground sm:rounded-full sm:px-4 sm:text-xs sm:tracking-[0.28em]">
               Budget setup
             </div>
@@ -1187,210 +1190,211 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
             </DialogHeader>
           </div>
 
-          <div className="space-y-4 px-3.5 py-3.5 sm:space-y-4 sm:px-6 sm:py-4">
-            {formError ? (
-              <div className="rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
-                {formError}
-              </div>
-            ) : null}
-
-            <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
-            <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
-              Primary details
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
-                  Budget name
-                </label>
-                <Input
-                  value={draft.name}
-                  onChange={(event) => {
-                    setFormError(null);
-                    setDraft((current) => ({ ...current, name: event.target.value }));
-                  }}
-                  placeholder="e.g. Household operating budget"
-                  className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
-                    Budget amount
-                  </label>
-                  <Input
-                    value={draft.amount}
-                    onChange={(event) => {
-                      setFormError(null);
-                      setDraft((current) => ({ ...current, amount: event.target.value }));
-                    }}
-                    placeholder="0.00"
-                    inputMode="decimal"
-                    className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
-                  />
+          <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3.5 sm:px-6 sm:py-4">
+            <div className="space-y-4">
+              {formError ? (
+                <div className="rounded-[1.25rem] border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300">
+                  {formError}
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
-                    Budget window starts
-                  </label>
-                  <Input
-                    type="date"
-                    value={draft.startDate}
-                    onChange={(event) =>
-                      setDraft((current) => ({ ...current, startDate: event.target.value }))
-                    }
-                    className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
-                  />
+              ) : null}
+
+              <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
+                <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Primary details
                 </div>
-              </div>
-            </div>
-          </div>
 
-          <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
-            <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
-              Budget cadence
-            </div>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                      Budget name
+                    </label>
+                    <Input
+                      value={draft.name}
+                      onChange={(event) => {
+                        setFormError(null);
+                        setDraft((current) => ({ ...current, name: event.target.value }));
+                      }}
+                      placeholder="e.g. Household operating budget"
+                      className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                    />
+                  </div>
 
-            <div className="space-y-3">
-              <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
-                Period
-              </label>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {periodOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setFormError(null);
-                      setDraft((current) => ({ ...current, period: option.value }));
-                    }}
-                    className={`min-h-[76px] rounded-lg border px-3 py-3 text-left transition sm:min-h-[90px] sm:rounded-[1.2rem] sm:px-4 sm:py-4 ${
-                      draft.period === option.value
-                        ? "border-[#17393c] bg-[#17393c] text-white shadow-[0_18px_40px_-30px_rgba(23,57,60,0.7)]"
-                        : "border-border/70 bg-white text-foreground hover:bg-muted/50"
-                    }`}
-                  >
-                    <div className="text-[0.9rem] font-medium sm:text-[0.98rem]">
-                      {option.label}
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="space-y-2">
+                      <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                        Budget amount
+                      </label>
+                      <Input
+                        value={draft.amount}
+                        onChange={(event) => {
+                          setFormError(null);
+                          setDraft((current) => ({ ...current, amount: event.target.value }));
+                        }}
+                        placeholder="0.00"
+                        inputMode="decimal"
+                        className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                      />
                     </div>
-                    <div
-                      className={`mt-1.5 text-[0.78rem] leading-5 sm:mt-2 sm:text-[0.86rem] sm:leading-6 ${draft.period === option.value ? "text-white/78" : "text-muted-foreground"}`}
-                    >
-                      {option.description}
+                    <div className="space-y-2">
+                      <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                        Budget window starts
+                      </label>
+                      <Input
+                        type="date"
+                        value={draft.startDate}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, startDate: event.target.value }))
+                        }
+                        className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                      />
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {draft.period === "bi-weekly" ? (
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
-                    Salary date 1
-                  </label>
-                  <Input
-                    value={draft.salaryDatePrimary}
-                    onChange={(event) => {
-                      setFormError(null);
-                      setDraft((current) => ({
-                        ...current,
-                        salaryDatePrimary: event.target.value,
-                      }));
-                    }}
-                    placeholder="e.g. 15"
-                    className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
-                    Salary date 2
-                  </label>
-                  <Input
-                    value={draft.salaryDateSecondary}
-                    onChange={(event) => {
-                      setFormError(null);
-                      setDraft((current) => ({
-                        ...current,
-                        salaryDateSecondary: event.target.value,
-                      }));
-                    }}
-                    placeholder="e.g. 30"
-                    className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
-                  />
+                  </div>
                 </div>
               </div>
-            ) : null}
-          </div>
 
-          <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
-            <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
-              Optional structure
-            </div>
+              <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
+                <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Budget cadence
+                </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
-              <div className="grid content-start gap-2">
-                <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
-                  Parent budget
-                </label>
-                <Select
-                  value={draft.parentBudgetId}
-                  onValueChange={(value) => {
-                    setFormError(null);
-                    setDraft((current) => ({ ...current, parentBudgetId: value }));
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-full rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base">
-                    <SelectValue placeholder="No parent budget" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No parent budget</SelectItem>
-                    {parentBudgetOptions.map((budget) => (
-                      <SelectItem key={budget.id} value={budget.id}>
-                        {budget.name}
-                      </SelectItem>
+                <div className="space-y-3">
+                  <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                    Period
+                  </label>
+                  <div className="grid grid-cols-1 gap-3">
+                    {periodOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => {
+                          setFormError(null);
+                          setDraft((current) => ({ ...current, period: option.value }));
+                        }}
+                        className={`min-h-[76px] rounded-lg border px-3 py-3 text-left transition sm:min-h-[90px] sm:rounded-[1.2rem] sm:px-4 sm:py-4 ${
+                          draft.period === option.value
+                            ? "border-[#17393c] bg-[#17393c] text-white shadow-[0_18px_40px_-30px_rgba(23,57,60,0.7)]"
+                            : "border-border/70 bg-white text-foreground hover:bg-muted/50"
+                        }`}
+                      >
+                        <div className="text-[0.9rem] font-medium sm:text-[0.98rem]">
+                          {option.label}
+                        </div>
+                        <div
+                          className={`mt-1.5 text-[0.78rem] leading-5 sm:mt-2 sm:text-[0.86rem] sm:leading-6 ${draft.period === option.value ? "text-white/78" : "text-muted-foreground"}`}
+                        >
+                          {option.description}
+                        </div>
+                      </button>
                     ))}
-                  </SelectContent>
-                </Select>
-                <p className="min-h-[3.5rem] max-w-[34ch] text-[0.76rem] leading-5.5 text-muted-foreground sm:text-[0.82rem] sm:leading-5.5">
-                  Selecting a parent creates a child budget inside that parent budget.
-                </p>
+                  </div>
+                </div>
+
+                {draft.period === "bi-weekly" ? (
+                  <div className="mt-4 grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                        Salary date 1
+                      </label>
+                      <Input
+                        value={draft.salaryDatePrimary}
+                        onChange={(event) => {
+                          setFormError(null);
+                          setDraft((current) => ({
+                            ...current,
+                            salaryDatePrimary: event.target.value,
+                          }));
+                        }}
+                        placeholder="e.g. 15"
+                        className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                        Salary date 2
+                      </label>
+                      <Input
+                        value={draft.salaryDateSecondary}
+                        onChange={(event) => {
+                          setFormError(null);
+                          setDraft((current) => ({
+                            ...current,
+                            salaryDateSecondary: event.target.value,
+                          }));
+                        }}
+                        placeholder="e.g. 30"
+                        className="h-9 rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base"
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
-              <div className="grid content-start gap-2">
-                <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
-                  Status
-                </label>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDraft((current) => ({ ...current, isActive: !current.isActive }))
-                  }
-                  className={`flex h-9 w-full items-center justify-between rounded-lg border px-3 text-left text-sm font-medium transition sm:h-11 sm:rounded-xl sm:px-4 ${
-                    draft.isActive
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                      : "border-border/70 bg-white text-muted-foreground"
-                  }`}
-                >
-                  <span className="leading-none">{draft.isActive ? "Active" : "Inactive"}</span>
-                  <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                      draft.isActive ? "bg-emerald-500" : "bg-slate-400"
-                    }`}
-                  />
-                </button>
-                <p className="min-h-[3.5rem] max-w-[34ch] text-[0.76rem] leading-5.5 text-muted-foreground sm:text-[0.82rem] sm:leading-5.5">
-                  Inactive budgets are hidden from the active workspace until reactivated.
-                </p>
+              <div className="rounded-[1.35rem] border border-border/70 bg-white px-3.5 py-3 shadow-[0_10px_24px_-22px_rgba(15,23,42,0.12)] sm:px-4 sm:py-4">
+                <div className="mb-3 inline-flex rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.66rem] uppercase tracking-[0.24em] text-muted-foreground">
+                  Optional structure
+                </div>
+
+                <div className="grid gap-4">
+                  <div className="grid content-start gap-2">
+                    <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                      Parent budget
+                    </label>
+                    <Select
+                      value={draft.parentBudgetId}
+                      onValueChange={(value) => {
+                        setFormError(null);
+                        setDraft((current) => ({ ...current, parentBudgetId: value }));
+                      }}
+                    >
+                      <SelectTrigger className="h-9 w-full rounded-lg border-border/70 bg-white text-sm sm:h-11 sm:rounded-xl sm:text-base">
+                        <SelectValue placeholder="No parent budget" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No parent budget</SelectItem>
+                        {parentBudgetOptions.map((budget) => (
+                          <SelectItem key={budget.id} value={budget.id}>
+                            {budget.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="max-w-[34ch] text-[0.76rem] leading-5.5 text-muted-foreground sm:text-[0.82rem] sm:leading-5.5">
+                      Selecting a parent creates a child budget inside that parent budget.
+                    </p>
+                  </div>
+
+                  <div className="grid content-start gap-2">
+                    <label className="text-[0.86rem] font-medium text-foreground sm:text-sm">
+                      Status
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setDraft((current) => ({ ...current, isActive: !current.isActive }))
+                      }
+                      className={`flex h-9 w-full items-center justify-between rounded-lg border px-3 text-left text-sm font-medium transition sm:h-11 sm:rounded-xl sm:px-4 ${
+                        draft.isActive
+                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                          : "border-border/70 bg-white text-muted-foreground"
+                      }`}
+                    >
+                      <span className="leading-none">{draft.isActive ? "Active" : "Inactive"}</span>
+                      <span
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                          draft.isActive ? "bg-emerald-500" : "bg-slate-400"
+                        }`}
+                      />
+                    </button>
+                    <p className="max-w-[34ch] text-[0.76rem] leading-5.5 text-muted-foreground sm:text-[0.82rem] sm:leading-5.5">
+                      Inactive budgets are hidden from the active workspace until reactivated.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          </div>
-
-          <DialogFooter className="!-mx-0 !-mb-0 flex-row items-center justify-end gap-2 rounded-b-[1.45rem] border-t border-border/60 bg-white px-4 py-3.5 sm:rounded-b-[2rem] sm:px-6 sm:py-3.5 [&>button]:w-auto">
+          <DialogFooter className="sticky bottom-0 z-10 !-mx-0 !-mb-0 shrink-0 flex-row items-center justify-end gap-2 border-t border-border/60 bg-white px-4 py-3.5 sm:px-6 sm:py-3.5 dark:bg-[#1a2325] [&>button]:w-auto">
             <Button
               type="button"
               variant="outline"
