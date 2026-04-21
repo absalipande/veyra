@@ -389,6 +389,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       utils.budgets.list.invalidate(),
       utils.budgets.summary.invalidate(),
       utils.ai.dashboardInsight.invalidate(),
+      utils.ai.accountsInsight.invalidate(),
       utils.ai.transactionsInsight.invalidate(),
       utils.ai.budgetsInsight.invalidate(),
     ]);

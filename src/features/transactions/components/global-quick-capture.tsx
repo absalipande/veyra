@@ -256,6 +256,7 @@ export function GlobalQuickCapture() {
         utils.budgets.list.invalidate(),
         utils.budgets.summary.invalidate(),
         utils.ai.dashboardInsight.invalidate(),
+        utils.ai.accountsInsight.invalidate(),
         utils.ai.transactionsInsight.invalidate(),
         utils.ai.budgetsInsight.invalidate(),
       ]);
@@ -281,6 +282,7 @@ export function GlobalQuickCapture() {
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [selectedSourceAccountId, setSelectedSourceAccountId] = useState("");
   const [selectedDestinationAccountId, setSelectedDestinationAccountId] = useState("");
+  const [lowConfidenceConfirmed, setLowConfidenceConfirmed] = useState(false);
   const deferredInput = useDeferredValue(input.trim());
 
   const aiDraftQuery = trpc.ai.quickCaptureDraft.useQuery(
@@ -310,6 +312,7 @@ export function GlobalQuickCapture() {
   useEffect(() => {
     if (!input.trim()) {
       window.localStorage.removeItem(QUICK_CAPTURE_DRAFT_KEY);
+      setLowConfidenceConfirmed(false);
       return;
     }
 
@@ -366,6 +369,17 @@ export function GlobalQuickCapture() {
       sourceAccountId: aiDraft.sourceAccountId,
     } satisfies ParsedQuickCapture;
   }, [input, accounts, categories, datePreferences, aiDraftQuery.data]);
+  useEffect(() => {
+    setLowConfidenceConfirmed(false);
+  }, [
+    parsed.intent,
+    parsed.amountMiliunits,
+    parsed.description,
+    parsed.sourceAccountId,
+    parsed.destinationAccountId,
+    parsed.categoryId,
+    parsed.budgetId,
+  ]);
   const activeBudgetOptions = useMemo(
     () =>
       (budgetsQuery.data ?? [])
@@ -407,10 +421,17 @@ export function GlobalQuickCapture() {
       : parsed.intent === "transfer"
         ? Boolean(parsed.amountMiliunits && selectedSourceAccountId && selectedDestinationAccountId)
         : false;
+  const isLowConfidenceDraft = aiDraftQuery.data?.confidence === "low";
   const isSubmitting = createEvent.isPending;
 
   const submit = () => {
     if (!canSubmit || !parsed.amountMiliunits) return;
+    if (isLowConfidenceDraft && !lowConfidenceConfirmed) {
+      toast.warning("Low-confidence draft", {
+        description: "Review the fields, then confirm once before recording this transaction.",
+      });
+      return;
+    }
 
     const date = new Date(`${parsed.dateValue}T12:00:00`);
 
@@ -459,6 +480,9 @@ export function GlobalQuickCapture() {
         onOpenChange={(nextOpen) => {
           if (isSubmitting && !nextOpen) return;
           setOpen(nextOpen);
+          if (!nextOpen) {
+            setLowConfidenceConfirmed(false);
+          }
         }}
       >
         <DialogContent
@@ -516,6 +540,25 @@ export function GlobalQuickCapture() {
                   <span className="text-muted-foreground">
                     Draft is kept if you close this modal.
                   </span>
+                </div>
+              ) : null}
+
+              {input.trim() && isLowConfidenceDraft ? (
+                <div className="rounded-[0.9rem] border border-amber-200 bg-amber-50 px-3 py-2 text-[0.78rem] text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
+                  <p>
+                    AI confidence is low. Please verify amount, account, category, and budget before
+                    recording.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={lowConfidenceConfirmed ? "default" : "outline"}
+                    className="mt-2 h-8 rounded-full"
+                    onClick={() => setLowConfidenceConfirmed((current) => !current)}
+                    disabled={isSubmitting}
+                  >
+                    {lowConfidenceConfirmed ? "Confirmed" : "Confirm draft"}
+                  </Button>
                 </div>
               ) : null}
             </div>
@@ -808,7 +851,7 @@ export function GlobalQuickCapture() {
                 type="button"
                 className="h-10.5 w-full rounded-full bg-[#17393c] px-6 text-[0.94rem] text-white hover:bg-[#1d4a4d] hover:text-white disabled:opacity-65 disabled:text-white/85 sm:min-w-[12.5rem] sm:w-auto"
                 onClick={submit}
-                disabled={!canSubmit || isSubmitting}
+                disabled={!canSubmit || isSubmitting || (isLowConfidenceDraft && !lowConfidenceConfirmed)}
               >
                 {isSubmitting ? (
                   <>

@@ -9,6 +9,8 @@ import {
   Globe2,
   Landmark,
   Pencil,
+  Plus,
+  Sparkles,
   Search,
   Trash2,
   Wallet,
@@ -31,7 +33,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -246,6 +247,7 @@ type AccountSectionProps = {
   onFilterChange: (value: string) => void;
   onSortChange: (value: AccountSortOption) => void;
   sortValue: AccountSortOption;
+  totalBalanceLabel: string;
   title: string;
 };
 
@@ -260,17 +262,18 @@ function AccountSection({
   onFilterChange,
   onSortChange,
   sortValue,
+  totalBalanceLabel,
   title,
 }: AccountSectionProps) {
   return (
-    <Card className="border-white/75 bg-white/82 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
-      <CardHeader className="gap-3 pb-3.5">
-        <div className="space-y-1">
-          <CardTitle className="text-[1.14rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.18rem]">
+    <Card className="border-white/75 bg-white/82 shadow-[0_28px_75px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_32px_85px_-55px_rgba(0,0,0,0.62)]">
+          <CardHeader className="gap-2.5 pb-3.5">
+            <div className="space-y-1">
+          <CardTitle className="text-[1.02rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.08rem]">
             {title}
           </CardTitle>
-          <CardDescription className="max-w-[34rem] text-[0.88rem] leading-6 sm:text-[0.9rem]">
-            {description}
+          <CardDescription className="max-w-[34rem] text-[0.82rem] leading-5.5 sm:text-[0.84rem]">
+            {description} · Total {totalBalanceLabel}
           </CardDescription>
         </div>
 
@@ -323,69 +326,131 @@ function AccountSection({
               <p className="text-right">Actions</p>
             </div>
 
-            <div className="divide-y divide-border/70">
+            <div className="space-y-2.5 p-2.5 md:space-y-0 md:p-0 md:divide-y md:divide-border/70">
               {accounts.map((account) => {
                 const institutionDisplay = getInstitutionDisplay(
                   account.institution || account.name,
                 );
 
                 return (
-                  <div
-                    key={account.id}
-                    className="grid gap-3 px-5 py-4 md:grid-cols-[minmax(0,1.65fr)_220px_112px] md:items-center md:gap-4 md:px-6"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div
-                          className={`flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-white dark:bg-[#162022] ${
-                            institutionDisplay.logoPath ? "p-0" : institutionDisplay.tone
-                          }`}
-                        >
-                          {institutionDisplay.logoPath ? (
-                            <img
-                              src={institutionDisplay.logoPath}
-                              alt={`${institutionDisplay.label} logo`}
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <span className="text-[0.78rem] font-semibold tracking-tight">
-                              {institutionDisplay.initials || "AC"}
-                            </span>
-                          )}
+                  <div key={account.id}>
+                    <div className="rounded-[1.1rem] border border-border/70 bg-white/78 px-3.5 py-3 dark:bg-[#182123] md:hidden">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className={`flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-white dark:bg-[#162022] ${
+                              institutionDisplay.logoPath ? "p-0" : institutionDisplay.tone
+                            }`}
+                          >
+                            {institutionDisplay.logoPath ? (
+                              <img
+                                src={institutionDisplay.logoPath}
+                                alt={`${institutionDisplay.label} logo`}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="text-[0.76rem] font-semibold tracking-tight">
+                                {institutionDisplay.initials || "AC"}
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                              {account.name}
+                            </p>
+                            <p className="mt-1 text-[0.76rem] text-muted-foreground">
+                              <span className={`font-medium ${getAccountMetaTone(account.type)}`}>
+                                {getAccountTypeLabel(account.type)}
+                              </span>
+                              <span className="mx-1.5 text-border">·</span>
+                              <span>{getCurrencyLabel(account.currency)}</span>
+                            </p>
+                          </div>
                         </div>
-
-                        <div className="min-w-0">
-                          <p className="truncate text-[0.92rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                            {account.name}
-                          </p>
-                          <p className="mt-1 text-[0.78rem] text-muted-foreground">
-                            <span className={`font-medium ${getAccountMetaTone(account.type)}`}>
-                              {getAccountTypeLabel(account.type)}
-                            </span>
-                            <span className="mx-1.5 text-border">·</span>
-                            <span>{getCurrencyLabel(account.currency)}</span>
-                          </p>
+                        <div className="flex gap-1.5">
+                          <Button
+                            variant="outline"
+                            size="icon-sm"
+                            className="h-8 w-8 rounded-full"
+                            onClick={() => onEdit(account)}
+                          >
+                            <Pencil className="size-3.5" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon-sm"
+                            className="h-8 w-8 rounded-full text-destructive hover:text-destructive"
+                            onClick={() => onDelete(account.id, account.name)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-start justify-between gap-3 md:block md:text-right">
-                      <div>
-                        <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-muted-foreground md:hidden">
+                      <div className="mt-3 rounded-[0.9rem] border border-border/70 bg-background/75 px-3 py-2">
+                        <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                           {formatAccountBalanceLabel(account)}
                         </p>
-                        <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:mt-0">
+                        <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                           {formatCurrencyMiliunits(account.balance, account.currency)}
                         </p>
                         {formatAccountBalanceDetail(account) ? (
-                          <p className="mt-1 text-[0.68rem] leading-5 text-muted-foreground md:ml-auto md:max-w-[220px] md:text-right">
+                          <p className="mt-1 text-[0.68rem] leading-5 text-muted-foreground">
+                            {formatAccountBalanceDetail(account)}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_112px] items-center gap-4 px-6 py-4 md:grid">
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div
+                            className={`flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-white dark:bg-[#162022] ${
+                              institutionDisplay.logoPath ? "p-0" : institutionDisplay.tone
+                            }`}
+                          >
+                            {institutionDisplay.logoPath ? (
+                              <img
+                                src={institutionDisplay.logoPath}
+                                alt={`${institutionDisplay.label} logo`}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <span className="text-[0.78rem] font-semibold tracking-tight">
+                                {institutionDisplay.initials || "AC"}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="truncate text-[0.92rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                              {account.name}
+                            </p>
+                            <p className="mt-1 text-[0.78rem] text-muted-foreground">
+                              <span className={`font-medium ${getAccountMetaTone(account.type)}`}>
+                                {getAccountTypeLabel(account.type)}
+                              </span>
+                              <span className="mx-1.5 text-border">·</span>
+                              <span>{getCurrencyLabel(account.currency)}</span>
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p className="text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                          {formatCurrencyMiliunits(account.balance, account.currency)}
+                        </p>
+                        {formatAccountBalanceDetail(account) ? (
+                          <p className="mt-1 ml-auto max-w-[220px] text-[0.68rem] leading-5 text-muted-foreground">
                             {formatAccountBalanceDetail(account)}
                           </p>
                         ) : null}
                       </div>
 
-                      <div className="flex gap-2 md:hidden">
+                      <div className="flex gap-2 justify-end">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -414,35 +479,6 @@ function AccountSection({
                         </Tooltip>
                       </div>
                     </div>
-
-                    <div className="hidden gap-2 md:flex md:justify-end">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            className="rounded-full"
-                            onClick={() => onEdit(account)}
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Edit account</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            className="rounded-full text-destructive hover:text-destructive"
-                            onClick={() => onDelete(account.id, account.name)}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Delete account</TooltipContent>
-                      </Tooltip>
-                    </div>
                   </div>
                 );
               })}
@@ -462,6 +498,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery();
   const summaryQuery = trpc.accounts.summary.useQuery();
+  const aiInsightQuery = trpc.ai.accountsInsight.useQuery(undefined, {
+    staleTime: 45_000,
+  });
   const settingsQuery = trpc.settings.get.useQuery();
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
@@ -501,7 +540,12 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   }, [liabilitySort, sortsRestored]);
 
   const refreshAccounts = async () => {
-    await Promise.all([utils.accounts.list.invalidate(), utils.accounts.summary.invalidate()]);
+    await Promise.all([
+      utils.accounts.list.invalidate(),
+      utils.accounts.summary.invalidate(),
+      utils.ai.accountsInsight.invalidate(),
+      utils.ai.dashboardInsight.invalidate(),
+    ]);
   };
 
   const createAccount = trpc.accounts.create.useMutation({
@@ -584,6 +628,14 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
       ),
     };
   }, [accountsQuery.data]);
+  const liquidTotalBalance = useMemo(
+    () => accountGroups.liquid.reduce((sum, account) => sum + account.balance, 0),
+    [accountGroups.liquid],
+  );
+  const liabilitiesTotalBalance = useMemo(
+    () => accountGroups.liabilities.reduce((sum, account) => sum + account.balance, 0),
+    [accountGroups.liabilities],
+  );
 
   const visibleLiquidAccounts = useMemo(
     () => sortAccounts(filterAccounts(accountGroups.liquid, liquidFilter), liquidSort),
@@ -747,13 +799,13 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
             <div className="flex items-start justify-between gap-4">
               <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
-                Accounts workspace
+                Account posture
               </p>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
+                className="hidden h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white sm:inline-flex md:h-8 md:px-3.5 md:text-[0.79rem]"
                 onClick={startCreate}
               >
                 Add account
@@ -786,6 +838,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
                     {String(accountGroups.liquid.length)}
                   </p>
+                  <p className="text-[0.78rem] leading-5.5 text-white/64 md:text-[0.82rem] md:leading-6">
+                    {formatCurrencyMiliunits(liquidTotalBalance, "PHP")}
+                  </p>
                 </div>
 
                 <div className="space-y-2.5 border-l border-white/15 pl-4 pr-4 md:pr-5">
@@ -797,6 +852,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                   </div>
                   <p className="text-[0.96rem] font-semibold tracking-tight text-white md:text-[1.18rem] lg:text-[1.28rem]">
                     {String(accountGroups.liabilities.length)}
+                  </p>
+                  <p className="text-[0.78rem] leading-5.5 text-white/64 md:text-[0.82rem] md:leading-6">
+                    {formatCurrencyMiliunits(liabilitiesTotalBalance, "PHP")}
                   </p>
                 </div>
               </div>
@@ -821,28 +879,67 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
 
       <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
-          <CardHeader className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1.5">
-              <CardTitle className="text-[1.45rem] tracking-tight text-[#10292B] dark:text-foreground">
-                Account management
-              </CardTitle>
-              <CardDescription className="max-w-3xl text-[0.96rem] leading-7">
-                Add and maintain the accounts that feed balances, budgets, and the rest of your
-                workspace.
-              </CardDescription>
+          <CardContent className="space-y-3.5 px-5 py-5 sm:px-6 sm:py-5.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex size-8 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-200">
+                  <Sparkles className="size-3.5" />
+                </div>
+                <div>
+                  <p className="text-[0.68rem] uppercase tracking-[0.11em] text-muted-foreground">
+                    AI insight
+                  </p>
+                  <h3 className="text-[0.95rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                    {aiInsightQuery.data?.headline ?? "AI accounts watchdog"}
+                  </h3>
+                </div>
+              </div>
+              <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-[0.72rem] text-muted-foreground">
+                {aiInsightQuery.data?.confidence ?? "Initial estimate"}
+              </span>
             </div>
 
-            <Dialog open={open} onOpenChange={resetDialogState}>
-              <DialogTrigger asChild>
-                <Button
-                  onClick={startCreate}
-                  className="rounded-full bg-[#17393c] px-5 text-white hover:bg-[#1d4a4d] dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c]"
-                >
-                  Add account
-                </Button>
-              </DialogTrigger>
+            <p className="text-[0.86rem] leading-6 text-muted-foreground">
+              {aiInsightQuery.data?.summary ?? "Account pressure signals will appear here."}
+            </p>
 
-              <DialogContent className={accountDialogContentClassName}>
+            <div className="grid gap-2.5 md:grid-cols-4">
+              {(aiInsightQuery.data?.metrics ?? []).map((metric) => (
+                <div
+                  key={metric.label}
+                  className="rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f]"
+                >
+                  <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    {metric.label}
+                  </p>
+                  <p
+                    className={`mt-1 text-[0.9rem] font-semibold ${
+                      metric.tone === "positive"
+                        ? "text-emerald-700 dark:text-emerald-300"
+                        : metric.tone === "warning"
+                          ? "text-amber-700 dark:text-amber-300"
+                          : "text-foreground"
+                    }`}
+                  >
+                    {metric.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-border/70 bg-background px-3.5 py-2.5 dark:bg-[#141d1f]">
+              <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">Recommended next step</p>
+              <p className="mt-1 text-[0.88rem] text-foreground">
+                {aiInsightQuery.data?.recommendations?.[0] ?? "No recommendation yet."}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Dialog open={open} onOpenChange={resetDialogState}>
+          <DialogContent className={accountDialogContentClassName}>
                 <AccountDialogShell
                   badge={
                     <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-white px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
@@ -1108,10 +1205,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     </div>
                   }
                 />
-              </DialogContent>
-            </Dialog>
-          </CardHeader>
-        </Card>
+          </DialogContent>
+        </Dialog>
       </section>
 
       <Dialog
@@ -1173,6 +1268,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           <AccountSection
             title="Bank and wallet accounts"
             description={`${formatCount(accountGroups.liquid.length, "account")} connected for bank and wallet balances.`}
+            totalBalanceLabel={formatCurrencyMiliunits(liquidTotalBalance, "PHP")}
             filterValue={liquidFilter}
             onFilterChange={setLiquidFilter}
             sortValue={liquidSort}
@@ -1187,6 +1283,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           <AccountSection
             title="Credit and loans"
             description={`${formatCount(accountGroups.liabilities.length, "account")} connected for liabilities and borrowing.`}
+            totalBalanceLabel={formatCurrencyMiliunits(liabilitiesTotalBalance, "PHP")}
             filterValue={liabilityFilter}
             onFilterChange={setLiabilityFilter}
             sortValue={liabilitySort}
@@ -1199,6 +1296,18 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           />
         </section>
       )}
+
+      <div className="fixed bottom-[max(0.9rem,env(safe-area-inset-bottom))] right-4 z-30 md:hidden">
+        <Button
+          type="button"
+          size="icon"
+          className="h-12 w-12 rounded-full bg-[#17393c] text-white shadow-[0_22px_36px_-22px_rgba(10,31,34,0.45)] hover:bg-[#1d4a4d] hover:text-white"
+          onClick={startCreate}
+        >
+          <Plus className="size-5" />
+          <span className="sr-only">Add account</span>
+        </Button>
+      </div>
     </div>
   );
 }

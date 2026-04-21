@@ -6,7 +6,7 @@ type InsightCacheEntry = {
 
 type GetOrComputeInsightInput<T> = {
   userId: string;
-  surface: "dashboard" | "transactions" | "budgets" | "quick-capture";
+  surface: "dashboard" | "accounts" | "transactions" | "budgets" | "quick-capture";
   checkpoint: string;
   cooldownMs: number;
   compute: () => Promise<T> | T;
@@ -54,4 +54,3 @@ export async function getOrComputeInsight<T>(input: GetOrComputeInsightInput<T>)
 
   return computed;
 }
-

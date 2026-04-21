@@ -911,3 +911,135 @@ export async function getAiBudgetsInsightCheckpoint(ctx: Pick<TRPCContext, "db" 
     `bg:${checkpointValue(budgetRow[0]?.value)}`,
   ].join("|");
 }
+
+export async function getAiAccountsInsight(ctx: Pick<TRPCContext, "db" | "userId">) {
+  const userId = assertUserId(ctx.userId);
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const [accountRows, recentExpenseEvents] = await Promise.all([
+    ctx.db.query.accounts.findMany({
+      where: eq(accounts.clerkUserId, userId),
+      columns: {
+        id: true,
+        type: true,
+        name: true,
+        balance: true,
+        creditLimit: true,
+        currency: true,
+      },
+    }),
+    ctx.db.query.transactionEvents.findMany({
+      where: and(
+        eq(transactionEvents.clerkUserId, userId),
+        eq(transactionEvents.type, "expense"),
+        gte(transactionEvents.occurredAt, thirtyDaysAgo)
+      ),
+      columns: {
+        amount: true,
+      },
+    }),
+  ]);
+
+  const liquidAccounts = accountRows.filter(
+    (account) => account.type === "cash" || account.type === "wallet"
+  );
+  const creditAccounts = accountRows.filter((account) => account.type === "credit");
+  const loanAccounts = accountRows.filter((account) => account.type === "loan");
+
+  const totalLiquid = liquidAccounts.reduce((sum, account) => sum + account.balance, 0);
+  const totalCreditDebt = creditAccounts.reduce((sum, account) => sum + account.balance, 0);
+  const totalLoanDebt = loanAccounts.reduce((sum, account) => sum + account.balance, 0);
+  const totalLiabilities = totalCreditDebt + totalLoanDebt;
+
+  const totalCreditLimit = creditAccounts.reduce((sum, account) => sum + account.creditLimit, 0);
+  const utilizationPct =
+    totalCreditLimit > 0 ? Math.round((totalCreditDebt / totalCreditLimit) * 100) : 0;
+
+  const monthlyExpense = recentExpenseEvents.reduce((sum, event) => sum + event.amount, 0);
+  const runwayMonths = monthlyExpense > 0 ? totalLiquid / monthlyExpense : null;
+
+  const weakestLiquidAccount =
+    [...liquidAccounts].sort((left, right) => left.balance - right.balance)[0] ?? null;
+
+  const recommendations: string[] = [];
+  if (utilizationPct >= 70) {
+    recommendations.push("Credit utilization is elevated. Prioritize one extra card payment this cycle.");
+  }
+  if (runwayMonths !== null && runwayMonths < 1.5) {
+    recommendations.push("Liquid runway is tight. Delay non-essential spending until the next inflow.");
+  }
+  if (weakestLiquidAccount && weakestLiquidAccount.balance <= 0) {
+    recommendations.push(`Review ${weakestLiquidAccount.name} to avoid overdraft-style pressure.`);
+  }
+  if (recommendations.length === 0) {
+    recommendations.push("Account posture is stable. Keep balancing liquidity and debt paydown.");
+  }
+
+  let summary = "Accounts are stable with manageable liquidity and liabilities.";
+  if (utilizationPct >= 70) {
+    summary = `Credit utilization is at ${utilizationPct}%. Focus on paydown to recover margin.`;
+  } else if (runwayMonths !== null && runwayMonths < 1.5) {
+    summary = "Liquid runway is below six weeks based on recent expense pace.";
+  } else if (totalLiabilities > totalLiquid && totalLiabilities > 0) {
+    summary = "Liabilities are currently higher than liquid balances. Keep debt pacing visible.";
+  }
+
+  return {
+    headline: "AI accounts watchdog",
+    summary,
+    confidence: accountRows.length >= 3 ? "Medium confidence" : "Initial estimate",
+    recommendations,
+    metrics: [
+      {
+        label: "Liquid balance",
+        value: formatCurrencyMiliunits(totalLiquid, "PHP"),
+        tone: "neutral" as const,
+      },
+      {
+        label: "Liabilities",
+        value: formatCurrencyMiliunits(totalLiabilities, "PHP"),
+        tone: totalLiabilities > totalLiquid ? ("warning" as const) : ("neutral" as const),
+      },
+      {
+        label: "Credit utilization",
+        value: totalCreditLimit > 0 ? `${utilizationPct}%` : "No credit line",
+        tone:
+          totalCreditLimit > 0
+            ? utilizationPct >= 70
+              ? ("warning" as const)
+              : ("positive" as const)
+            : ("neutral" as const),
+      },
+      {
+        label: "Runway",
+        value: runwayMonths === null ? "Insufficient history" : `${runwayMonths.toFixed(1)} months`,
+        tone:
+          runwayMonths === null
+            ? ("neutral" as const)
+            : runwayMonths < 1.5
+              ? ("warning" as const)
+              : ("positive" as const),
+      },
+    ],
+  };
+}
+
+export async function getAiAccountsInsightCheckpoint(ctx: Pick<TRPCContext, "db" | "userId">) {
+  const userId = assertUserId(ctx.userId);
+  const [accountRow, txnRow] = await Promise.all([
+    ctx.db
+      .select({ value: sql<Date | null>`max(${accounts.updatedAt})` })
+      .from(accounts)
+      .where(eq(accounts.clerkUserId, userId)),
+    ctx.db
+      .select({ value: sql<Date | null>`max(${transactionEvents.updatedAt})` })
+      .from(transactionEvents)
+      .where(eq(transactionEvents.clerkUserId, userId)),
+  ]);
+
+  return [
+    `ac:${checkpointValue(accountRow[0]?.value)}`,
+    `tx:${checkpointValue(txnRow[0]?.value)}`,
+  ].join("|");
+}

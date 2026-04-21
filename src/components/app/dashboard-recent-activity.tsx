@@ -448,7 +448,7 @@ export function DashboardRecentActivity() {
   }
 
   return (
-    <section className="space-y-5 pb-24 md:space-y-6 md:pb-0">
+    <section className="space-y-5 pb-4 md:space-y-6 md:pb-0">
       <Card className="rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))]  text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
         <CardContent className="space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
           <div className="flex items-start justify-between gap-4">
@@ -525,28 +525,51 @@ export function DashboardRecentActivity() {
             </div>
           </div>
 
-          <div className="grid gap-2.5 border-t border-white/15 pt-3.5 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
-              <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">
-                7d net movement
-              </p>
-              <p className="mt-1 text-[0.9rem] font-semibold text-white">
-                {formatCurrencyMiliunits(trendMetrics.currentNet, "PHP")}
-              </p>
+          <div className="border-t border-white/15 pt-3.5">
+            <div className="grid grid-cols-3 overflow-hidden rounded-xl border border-white/12 bg-white/[0.05] sm:hidden">
+              <div className="px-2.5 py-2.5">
+                <p className="text-[0.62rem] uppercase tracking-[0.09em] text-white/62">7d net</p>
+                <p className="mt-1 truncate text-[0.83rem] font-semibold text-white">
+                  {formatCurrencyMiliunits(trendMetrics.currentNet, "PHP")}
+                </p>
+              </div>
+              <div className="border-x border-white/12 px-2.5 py-2.5">
+                <p className="text-[0.62rem] uppercase tracking-[0.09em] text-white/62">Trend</p>
+                <p className={`mt-1 truncate text-[0.83rem] font-semibold ${trendMetrics.trendTone}`}>
+                  {trendMetrics.trendLabel}
+                </p>
+              </div>
+              <div className="px-2.5 py-2.5">
+                <p className="text-[0.62rem] uppercase tracking-[0.09em] text-white/62">Events</p>
+                <p className="mt-1 text-[0.83rem] font-semibold text-white">
+                  {trendMetrics.currentCount}
+                </p>
+              </div>
             </div>
-            <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
-              <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">Trend</p>
-              <p className={`mt-1 text-[0.9rem] font-semibold ${trendMetrics.trendTone}`}>
-                {trendMetrics.trendLabel}
-              </p>
-            </div>
-            <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
-              <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">
-                Events (7d)
-              </p>
-              <p className="mt-1 text-[0.9rem] font-semibold text-white">
-                {trendMetrics.currentCount}
-              </p>
+
+            <div className="hidden gap-2.5 sm:grid sm:grid-cols-3">
+              <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
+                <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">
+                  7d net movement
+                </p>
+                <p className="mt-1 text-[0.9rem] font-semibold text-white">
+                  {formatCurrencyMiliunits(trendMetrics.currentNet, "PHP")}
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
+                <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">Trend</p>
+                <p className={`mt-1 text-[0.9rem] font-semibold ${trendMetrics.trendTone}`}>
+                  {trendMetrics.trendLabel}
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/12 bg-white/[0.05] px-3.5 py-2.5">
+                <p className="text-[0.72rem] uppercase tracking-[0.09em] text-white/62">
+                  Events (7d)
+                </p>
+                <p className="mt-1 text-[0.9rem] font-semibold text-white">
+                  {trendMetrics.currentCount}
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -714,16 +737,17 @@ export function DashboardRecentActivity() {
 
       <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
         <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
-          <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
-            <div className="flex items-center gap-2.5">
+          <div className="mb-4 flex flex-col gap-2.5 md:mb-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-2">
               <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
                 What to watch next
               </h3>
-              <span className="inline-flex h-6 items-center rounded-full bg-violet-100 px-2.5 text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+              <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full border border-violet-200/90 bg-violet-50/85 px-2.5 text-[0.64rem] font-semibold uppercase tracking-[0.09em] leading-none text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/12 dark:text-violet-200">
+                <Sparkles className="size-3" />
                 AI insight
               </span>
             </div>
-            <div className="text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
+            <div className="hidden text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground md:block">
               Forward-looking guidance
             </div>
           </div>
@@ -744,30 +768,59 @@ export function DashboardRecentActivity() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-2 rounded-[0.9rem] border border-border/70 bg-white p-3 dark:bg-[#192325] sm:grid-cols-3">
-                <div className="space-y-1">
-                  <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Projected impact
-                  </p>
-                  <p className="text-[0.84rem] font-medium text-foreground">
-                    {watchNextInsight.projectedImpact}
-                  </p>
+              <div className="rounded-[0.9rem] border border-border/70 bg-white p-2.5 dark:bg-[#192325]">
+                <div className="space-y-0 sm:hidden">
+                  <div className="flex items-center justify-between gap-3 px-2 py-2">
+                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Projected impact
+                    </p>
+                    <p className="text-right text-[0.83rem] font-medium text-foreground">
+                      {watchNextInsight.projectedImpact}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-border/70 px-2 py-2">
+                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Confidence
+                    </p>
+                    <p className="text-right text-[0.83rem] font-medium text-foreground">
+                      {watchNextInsight.confidence}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-border/70 px-2 py-2">
+                    <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Time window
+                    </p>
+                    <p className="text-right text-[0.83rem] font-medium text-foreground">
+                      {watchNextInsight.window}
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Confidence
-                  </p>
-                  <p className="text-[0.84rem] font-medium text-foreground">
-                    {watchNextInsight.confidence}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Time window
-                  </p>
-                  <p className="text-[0.84rem] font-medium text-foreground">
-                    {watchNextInsight.window}
-                  </p>
+
+                <div className="hidden grid-cols-3 gap-2.5 sm:grid">
+                  <div className="space-y-1">
+                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Projected impact
+                    </p>
+                    <p className="text-[0.84rem] font-medium text-foreground">
+                      {watchNextInsight.projectedImpact}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Confidence
+                    </p>
+                    <p className="text-[0.84rem] font-medium text-foreground">
+                      {watchNextInsight.confidence}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                      Time window
+                    </p>
+                    <p className="text-[0.84rem] font-medium text-foreground">
+                      {watchNextInsight.window}
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -846,37 +899,6 @@ export function DashboardRecentActivity() {
         </CardContent>
       </Card>
 
-      <div className="fixed inset-x-4 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 md:hidden">
-        <div className="grid grid-cols-3 gap-2 rounded-[1.75rem] border border-border/70 bg-white/94 p-2 shadow-[0_24px_50px_-38px_rgba(10,31,34,0.48)] backdrop-blur dark:bg-[#182123]/96">
-          <Button
-            asChild
-            variant="ghost"
-            className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none"
-          >
-            <Link href="/transactions">Add transaction</Link>
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none"
-          >
-            <Link href="/transactions">
-              <ArrowRightLeft className="size-4" />
-              Transfer
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="ghost"
-            className="h-12 flex-col gap-0.5 rounded-full border border-border/70 bg-background px-2 text-[0.72rem] font-medium shadow-none"
-          >
-            <Link href="/budgets">
-              <Wallet className="size-4" />
-              Create budget
-            </Link>
-          </Button>
-        </div>
-      </div>
     </section>
   );
 }

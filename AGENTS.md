@@ -1960,7 +1960,7 @@ Every page gets one primary AI responsibility so behavior stays predictable, tes
   - use budget period engine + linked expense events as source of truth
   - do not invent spend values outside tracked windows
 
-4. Accounts: `watchdog AI` (phase-next target)
+4. Accounts: `watchdog AI` (live v1)
 - job:
   - detect low runway, utilization pressure, and concentration risk
 - output:
@@ -2068,7 +2068,7 @@ Rate limiting (required in this phase):
 - clear `429` response with retry metadata
 - server-side logging for limiter hits and token/cost monitoring
 
-Current implementation status (as of April 20, 2026):
+Current implementation status (as of April 21, 2026):
 - completed:
   - AI server foundation is live with dedicated feature files:
     - `src/features/ai/server/schema.ts`
@@ -2082,8 +2082,8 @@ Current implementation status (as of April 20, 2026):
     - intent/amount/description/date/category/budget hints
     - draft persistence on accidental modal close
     - budget selection in quick capture expense flow
+    - low-confidence drafts now require explicit confirmation before submit
 - partially complete:
-  - confidence is surfaced in quick capture, but low-confidence explicit confirmation gating is not yet enforced
   - parser fallback behavior exists, but model-based output quality and merchant formatting still need deeper tuning
 
 #### Phase 2: Transactions + Budgets Operational Intelligence
@@ -2107,7 +2107,7 @@ Must ship:
 Design rule:
 - keep AI copy concise and product-native; avoid verbose analysis blocks
 
-Current implementation status (as of April 20, 2026):
+Current implementation status (as of April 21, 2026):
 - completed:
   - transactions AI insight panel is live in:
     - `src/features/transactions/components/transactions-workspace.tsx`
@@ -2118,22 +2118,32 @@ Current implementation status (as of April 20, 2026):
     - overwrite-latest behavior per user/surface
   - budgets AI insight panel is live in:
     - `src/features/budgets/components/budgets-workspace.tsx`
+  - accounts AI watchdog panel is live in:
+    - `src/features/accounts/components/accounts-workspace.tsx`
+    - route: `ai.accountsInsight`
+    - core metrics: liquid balance, liabilities, credit utilization, runway
+    - compact recommendation output + confidence label
   - dashboard + transactions + budgets + quick-capture now trigger cross-surface invalidation for AI refresh:
     - `ai.dashboardInsight`
+    - `ai.accountsInsight`
     - `ai.transactionsInsight`
     - `ai.budgetsInsight`
+  - quick capture low-confidence confirmation gating is now enforced:
+    - low-confidence drafts require explicit user confirmation before submit
+    - confirmation resets when draft inputs change
   - largest-shift metric copy is now currency/context-aware (`vs prior 7d`)
 - partially complete:
   - transactions insight is still heuristic and should evolve to richer anomaly/recurrence scoring
   - budgets overshoot forecasting exists but needs stronger pacing math and confidence calibration
-  - insight copy/visual hierarchy is usable but still needs final polish pass for premium readability
+  - insight copy/visual hierarchy is usable and improving, but still needs final polish pass for premium readability
   - insight history/versioning remains latest-snapshot only (no full timeline yet)
+  - dashboard mobile action model is intentionally simplified (no persistent quick-actions bar); revisit only if a drawer-based action launcher is reintroduced
 
 Resume checklist for next AI session:
-1. enforce low-confidence confirmation gating in quick capture submit flow
-2. add structured insight versioning + lightweight multi-entry audit/history persistence
-3. improve recurrence and category-shift signal quality with tighter thresholds
-4. add Accounts watchdog insight surface (Phase 3 start)
+1. add structured insight versioning + lightweight multi-entry audit/history persistence
+2. improve recurrence and category-shift signal quality with tighter thresholds
+3. strengthen budgets pacing/overshoot confidence calibration
+4. add Loans intelligence when Loan v2 flows reopen
 
 #### Phase 3: Accounts + Loans + Category Intelligence
 
