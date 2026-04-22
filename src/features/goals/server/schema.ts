@@ -20,3 +20,12 @@ export const updateGoalSchema = createGoalSchema.extend({
 export const deleteGoalSchema = z.object({
   id: z.string().uuid(),
 });
+
+export const contributeGoalSchema = z.object({
+  goalId: z.string().uuid(),
+  sourceAccountId: z.string().uuid(),
+  destinationAccountId: z.string().uuid().optional(),
+  amount: z.number().int().positive(),
+  date: z.coerce.date(),
+  notes: z.string().trim().max(500).optional().or(z.literal("")),
+});

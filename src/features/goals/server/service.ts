@@ -1,16 +1,22 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { budgets, goals } from "@/db/schema";
+import { accounts, budgets, goals, ledgerEntries, transactionEvents } from "@/db/schema";
 import { getCashflowForecast } from "@/features/forecast/server/service";
 import { logAuditEvent } from "@/features/trust/server/audit";
-import { createGoalSchema, deleteGoalSchema, updateGoalSchema } from "@/features/goals/server/schema";
+import {
+  contributeGoalSchema,
+  createGoalSchema,
+  deleteGoalSchema,
+  updateGoalSchema,
+} from "@/features/goals/server/schema";
 import type { TRPCContext } from "@/server/api/trpc";
 
 type CreateGoalInput = z.infer<typeof createGoalSchema>;
 type UpdateGoalInput = z.infer<typeof updateGoalSchema>;
 type DeleteGoalInput = z.infer<typeof deleteGoalSchema>;
+type ContributeGoalInput = z.infer<typeof contributeGoalSchema>;
 
 function assertUserId(userId: string | null | undefined): string {
   if (!userId) {
@@ -219,4 +225,257 @@ export async function removeGoal(
   });
 
   return { success: true };
+}
+
+export async function contributeToGoal(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  input: ContributeGoalInput
+) {
+  const userId = assertUserId(ctx.userId);
+
+  const goal = await ctx.db.query.goals.findFirst({
+    where: and(eq(goals.id, input.goalId), eq(goals.clerkUserId, userId)),
+  });
+  if (!goal) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Goal not found.",
+    });
+  }
+
+  const source = await ctx.db.query.accounts.findFirst({
+    where: and(eq(accounts.id, input.sourceAccountId), eq(accounts.clerkUserId, userId)),
+  });
+  if (!source) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Source account not found.",
+    });
+  }
+  if (source.type !== "cash" && source.type !== "wallet") {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Source account must be a bank or wallet account.",
+    });
+  }
+
+  let destination:
+    | {
+        id: string;
+        currency: string;
+      }
+    | null = null;
+  if (input.destinationAccountId) {
+    const destinationAccount = await ctx.db.query.accounts.findFirst({
+      where: and(eq(accounts.id, input.destinationAccountId), eq(accounts.clerkUserId, userId)),
+      columns: { id: true, currency: true, type: true },
+    });
+    if (!destinationAccount) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Destination account not found.",
+      });
+    }
+    if (destinationAccount.type !== "cash" && destinationAccount.type !== "wallet") {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Destination account must be a bank or wallet account.",
+      });
+    }
+    if (destinationAccount.id === source.id) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Source and destination accounts must be different.",
+      });
+    }
+    if (destinationAccount.currency !== source.currency) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Source and destination accounts must use the same currency.",
+      });
+    }
+    destination = destinationAccount;
+  }
+
+  let sourceApplied = false;
+  let destinationApplied = false;
+  let goalApplied = false;
+  let eventInserted = false;
+  const eventId = crypto.randomUUID();
+
+  try {
+    await ctx.db.insert(transactionEvents).values({
+      id: eventId,
+      clerkUserId: userId,
+      type: "transfer",
+      currency: source.currency,
+      amount: input.amount,
+      feeAmount: 0,
+      budgetId: null,
+      categoryId: null,
+      description: `Goal contribution · ${goal.name}`,
+      notes:
+        `${input.notes?.trim() ? `${input.notes.trim()} · ` : ""}Goal contribution` +
+        (destination ? "" : " · Set aside (no destination account)"),
+      occurredAt: input.date,
+    });
+    eventInserted = true;
+
+    await ctx.db.insert(ledgerEntries).values([
+      {
+        id: crypto.randomUUID(),
+        clerkUserId: userId,
+        eventId,
+        accountId: source.id,
+        role: "source",
+        amountDelta: -input.amount,
+        currency: source.currency,
+      },
+      ...(destination
+        ? [
+            {
+              id: crypto.randomUUID(),
+              clerkUserId: userId,
+              eventId,
+              accountId: destination.id,
+              role: "destination" as const,
+              amountDelta: input.amount,
+              currency: destination.currency,
+            },
+          ]
+        : []),
+    ]);
+
+    const [sourceUpdated] = await ctx.db
+      .update(accounts)
+      .set({
+        balance: sql`${accounts.balance} - ${input.amount}`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(accounts.id, source.id), eq(accounts.clerkUserId, userId)))
+      .returning({ id: accounts.id });
+
+    if (!sourceUpdated) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Could not update source account balance.",
+      });
+    }
+    sourceApplied = true;
+
+    if (destination) {
+      const [destinationUpdated] = await ctx.db
+        .update(accounts)
+        .set({
+          balance: sql`${accounts.balance} + ${input.amount}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(accounts.id, destination.id), eq(accounts.clerkUserId, userId)))
+        .returning({ id: accounts.id });
+
+      if (!destinationUpdated) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Could not update destination account balance.",
+        });
+      }
+      destinationApplied = true;
+    }
+
+    const [goalUpdated] = await ctx.db
+      .update(goals)
+      .set({
+        currentAmount: sql`${goals.currentAmount} + ${input.amount}`,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(goals.id, goal.id), eq(goals.clerkUserId, userId)))
+      .returning({
+        id: goals.id,
+        name: goals.name,
+        currentAmount: goals.currentAmount,
+        targetAmount: goals.targetAmount,
+      });
+
+    if (!goalUpdated) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Could not update goal progress.",
+      });
+    }
+    goalApplied = true;
+
+    await logAuditEvent(ctx, {
+      action: "goal.contribution.create",
+      entityType: "goal",
+      entityId: goalUpdated.id,
+      summary: `Contributed ${input.amount} to "${goalUpdated.name}"`,
+      metadata: {
+        goalId: goalUpdated.id,
+        transactionEventId: eventId,
+        sourceAccountId: source.id,
+        destinationAccountId: destination?.id ?? null,
+        amount: input.amount,
+        occurredAt: input.date.toISOString(),
+        notes: input.notes || null,
+        destinationMode: destination ? "internal_account" : "set_aside_no_destination",
+      },
+    });
+
+    return {
+      success: true,
+      goalId: goalUpdated.id,
+      currentAmount: goalUpdated.currentAmount,
+      targetAmount: goalUpdated.targetAmount,
+    };
+  } catch (error) {
+    if (goalApplied) {
+      await ctx.db
+        .update(goals)
+        .set({
+          currentAmount: sql`${goals.currentAmount} - ${input.amount}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(goals.id, goal.id), eq(goals.clerkUserId, userId)))
+        .catch(() => undefined);
+    }
+
+    if (destinationApplied && destination) {
+      await ctx.db
+        .update(accounts)
+        .set({
+          balance: sql`${accounts.balance} - ${input.amount}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(accounts.id, destination.id), eq(accounts.clerkUserId, userId)))
+        .catch(() => undefined);
+    }
+
+    if (sourceApplied) {
+      await ctx.db
+        .update(accounts)
+        .set({
+          balance: sql`${accounts.balance} + ${input.amount}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(accounts.id, source.id), eq(accounts.clerkUserId, userId)))
+        .catch(() => undefined);
+    }
+
+    if (eventInserted) {
+      await ctx.db
+        .delete(transactionEvents)
+        .where(and(eq(transactionEvents.id, eventId), eq(transactionEvents.clerkUserId, userId)))
+        .catch(() => undefined);
+    }
+
+    if (error instanceof TRPCError) {
+      throw error;
+    }
+
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Failed to record goal contribution.",
+      cause: error,
+    });
+  }
 }

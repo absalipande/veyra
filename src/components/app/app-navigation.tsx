@@ -61,7 +61,7 @@ const items = [
     label: "Goals",
     href: "/goals",
     icon: Target,
-    available: false,
+    available: true,
   },
   {
     label: "Categories",
@@ -96,7 +96,7 @@ function NavigationList({ onNavigate }: NavigationListProps) {
           return (
             <div
               key={item.label}
-              className="flex items-center justify-between rounded-[1.1rem] border border-transparent px-3 py-2.5 text-[0.95rem] text-muted-foreground"
+              className="flex items-center rounded-[1.1rem] border border-transparent px-3 py-2.5 text-[0.95rem] text-muted-foreground"
             >
               <div className="flex items-center gap-2.5">
                 <div className="flex size-8.5 items-center justify-center rounded-[0.95rem] bg-muted/65 text-muted-foreground">
@@ -104,9 +104,6 @@ function NavigationList({ onNavigate }: NavigationListProps) {
                 </div>
                 <span>{item.label}</span>
               </div>
-              <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]">
-                [Soon]
-              </span>
             </div>
           );
         }

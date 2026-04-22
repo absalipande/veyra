@@ -264,16 +264,26 @@ function getEventAccountsSummary(event: TransactionEventItem) {
     case "transfer": {
       const source = event.entries.find((entry) => entry.role === "source")?.account;
       const destination = event.entries.find((entry) => entry.role === "destination")?.account;
-      if (!source || !destination) {
+      if (!source && !destination) {
         return "Transfer accounts missing";
       }
+      if (source && !destination) {
+        return event.description.toLowerCase().includes("goal contribution")
+          ? `Set aside from ${source.name}`
+          : `Transfer from ${source.name}`;
+      }
+      if (!source && destination) {
+        return `Transfer to ${destination.name}`;
+      }
+      const sourceName = source!.name;
+      const destinationName = destination!.name;
 
       return event.feeAmount > 0
-        ? `${source.name} → ${destination.name} · Fee ${formatCurrencyMiliunits(
+        ? `${sourceName} → ${destinationName} · Fee ${formatCurrencyMiliunits(
             event.feeAmount,
             event.currency,
           )}`
-        : `${source.name} → ${destination.name}`;
+        : `${sourceName} → ${destinationName}`;
     }
     case "credit_payment": {
       const source = event.entries.find((entry) => entry.role === "payment_account")?.account;

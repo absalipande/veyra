@@ -2827,6 +2827,47 @@ Planned update path:
 - Phase 1: define requirements (`planning-only` vs `funded`) and acceptance checks.
 - Phase 2: add optional structured funding flow (with confirmation) and auditable updates.
 
+Goals v1 decision (locked guideline):
+- v1 should support `goal contribution` as the default funded-goal path.
+- contribution may be recorded without requiring a destination receiving account.
+- this is a first-class finance event and must not be treated as a generic note.
+
+Goal contribution ledger behavior:
+- source account is always required.
+- posting a goal contribution must deduct from the source account balance.
+- destination account is optional:
+  - if provided: treat as transfer-like contribution.
+  - if omitted: treat as `set aside` / off-ledger destination contribution.
+- goal progress must increase by the contributed amount once confirmed.
+- contribution edits/deletes must reconcile both:
+  - source account balance
+  - goal progress
+
+Goal contribution event model guidance:
+- introduce a dedicated event type for clarity (recommended: `goal_contribution`).
+- do not classify goal contribution as `expense` by default.
+- do not mix contribution logic into unrelated event types without explicit mapping.
+
+Goal contribution UI guidance:
+- add a clear action label: `Contribute to goal`.
+- minimal required fields:
+  - `From account`
+  - `Goal`
+  - `Amount`
+  - `Date`
+- optional fields:
+  - `Destination account`
+  - `Notes`
+- if destination is omitted, UI must explicitly show:
+  - `No destination account` / `Set aside without destination account`
+- confirmation step is required before posting any contribution.
+
+Goal contribution audit requirements:
+- log create/update/delete for every contribution.
+- log whether destination account was provided.
+- log pre/post values for source account balance and goal progress when feasible.
+- keep metadata safe and minimal (no sensitive free-text dumps beyond necessary summaries).
+
 ### Trust, Privacy, and Audit (Current State + Planned)
 
 Current state:
