@@ -3,10 +3,13 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
+  ArrowDownRight,
+  ArrowUpRight,
   CalendarClock,
   CheckCircle2,
   Loader2,
   Pencil,
+  ShieldAlert,
   ReceiptText,
   Search,
   Trash2,
@@ -113,6 +116,25 @@ function getInitialDraft(): BillDraft {
   };
 }
 
+function buildProjectionPath(points: Array<{ balance: number }>, width: number, height: number) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M0 ${height / 2} L${width} ${height / 2}`;
+
+  const balances = points.map((point) => point.balance);
+  const min = Math.min(...balances);
+  const max = Math.max(...balances);
+  const span = Math.max(max - min, 1);
+
+  return points
+    .map((point, index) => {
+      const x = (index / (points.length - 1)) * width;
+      const normalized = (point.balance - min) / span;
+      const y = height - normalized * height;
+      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
 const billDialogContentClassName =
   "h-[100dvh] overflow-hidden border border-border/70 bg-white px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&_[data-slot='dialog-close']]:right-4 [&_[data-slot='dialog-close']]:top-4 [&_[data-slot='dialog-close']]:h-10 [&_[data-slot='dialog-close']]:w-10 [&_[data-slot='dialog-close']]:rounded-full [&_[data-slot='dialog-close']]:border [&_[data-slot='dialog-close']]:border-border/70 [&_[data-slot='dialog-close']]:bg-background/92 [&_[data-slot='dialog-close']]:shadow-sm";
 
@@ -162,6 +184,9 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
     includeInactive: false,
   });
   const summaryQuery = trpc.bills.summary.useQuery();
+  const forecastQuery = trpc.forecast.summary.useQuery({
+    days: 30,
+  });
 
   const invalidateBillsSurfaces = async () => {
     await Promise.all([
@@ -174,6 +199,7 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
       utils.accounts.summary.invalidate(),
       utils.budgets.list.invalidate(),
       utils.budgets.summary.invalidate(),
+      utils.forecast.summary.invalidate(),
       utils.ai.dashboardInsight.invalidate(),
       utils.ai.accountsInsight.invalidate(),
       utils.ai.transactionsInsight.invalidate(),
@@ -273,6 +299,26 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
   );
   const isSavingBill = createBill.isPending || updateBill.isPending;
   const isRecurringBill = draft.cadence !== "one_time";
+  const forecastRiskTone =
+    forecastQuery.data?.riskLevel === "shortfall"
+      ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200"
+      : forecastQuery.data?.riskLevel === "watch"
+        ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200"
+        : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200";
+  const forecastRiskLabel =
+    forecastQuery.data?.riskLevel === "shortfall"
+      ? "Shortfall risk"
+      : forecastQuery.data?.riskLevel === "watch"
+        ? "Watch"
+        : "Safe";
+  const forecastPath = useMemo(
+    () => buildProjectionPath(forecastQuery.data?.dailyProjection ?? [], 320, 64),
+    [forecastQuery.data?.dailyProjection],
+  );
+  const forecastTrendDirection =
+    forecastQuery.data && forecastQuery.data.projectedEndingBalance >= forecastQuery.data.startingBalance
+      ? "up"
+      : "down";
 
   const openCreateDialog = () => {
     setEditingBill(null);
@@ -769,6 +815,159 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card className="rounded-[1.4rem] border-white/80 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
+          <CardContent className="space-y-4 p-4 sm:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-[#eef6f7] text-[#14656B] dark:bg-[#203032] dark:text-primary">
+                    <ShieldAlert className="size-4" />
+                  </span>
+                  <p className="text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                    30-day cashflow lookahead
+                  </p>
+                </div>
+                <p className="text-[0.8rem] text-muted-foreground">
+                  Based on active bills, unpaid loan installments, and liquid accounts.
+                </p>
+              </div>
+              {forecastQuery.data ? (
+                <span
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.08em] ${forecastRiskTone}`}
+                >
+                  {forecastRiskLabel}
+                </span>
+              ) : null}
+            </div>
+
+            {forecastQuery.isLoading ? (
+              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background px-3 py-3 text-[0.86rem] text-muted-foreground dark:bg-[#141d1f]">
+                <Loader2 className="size-4 animate-spin" />
+                Forecasting cashflow...
+              </div>
+            ) : forecastQuery.data ? (
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+                <div className="space-y-3">
+                  <div className="grid gap-2.5 sm:grid-cols-3">
+                    <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
+                      <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                        Lowest point
+                      </p>
+                      <p className="mt-0.5 text-[1rem] font-semibold tracking-tight text-foreground">
+                        {formatCurrencyMiliunits(
+                          forecastQuery.data.lowestBalance,
+                          forecastQuery.data.currency,
+                        )}
+                      </p>
+                      <p className="text-[0.76rem] text-muted-foreground">
+                        {formatDateLabel(forecastQuery.data.lowestBalanceDate)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
+                      <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                        Due in 7 days
+                      </p>
+                      <p className="mt-0.5 text-[1rem] font-semibold tracking-tight text-foreground">
+                        {forecastQuery.data.dueSoonCount} obligations
+                      </p>
+                      <p className="text-[0.76rem] text-muted-foreground">
+                        {formatCurrencyMiliunits(
+                          forecastQuery.data.dueSoonAmount,
+                          forecastQuery.data.currency,
+                        )}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
+                      <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                        30-day outflow
+                      </p>
+                      <p className="mt-0.5 text-[1rem] font-semibold tracking-tight text-foreground">
+                        {formatCurrencyMiliunits(
+                          forecastQuery.data.obligationsTotal,
+                          forecastQuery.data.currency,
+                        )}
+                      </p>
+                      <p className="text-[0.76rem] text-muted-foreground">
+                        End balance{" "}
+                        {formatCurrencyMiliunits(
+                          forecastQuery.data.projectedEndingBalance,
+                          forecastQuery.data.currency,
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/70 bg-background p-3 dark:bg-[#141d1f]">
+                    <div className="mb-2 flex items-center justify-between text-[0.75rem] text-muted-foreground">
+                      <span>Projected liquid balance</span>
+                      <span className="inline-flex items-center gap-1">
+                        {forecastTrendDirection === "up" ? (
+                          <ArrowUpRight className="size-3.5 text-emerald-600 dark:text-emerald-300" />
+                        ) : (
+                          <ArrowDownRight className="size-3.5 text-rose-600 dark:text-rose-300" />
+                        )}
+                        {forecastQuery.data.days} days
+                      </span>
+                    </div>
+                    <svg
+                      viewBox="0 0 320 64"
+                      role="img"
+                      aria-label="Projected balance trend"
+                      className="h-14 w-full"
+                      preserveAspectRatio="none"
+                    >
+                      <path
+                        d={forecastPath}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        className="text-[#17393c] dark:text-[#6bd0c2]"
+                      />
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border/70 bg-background p-3 dark:bg-[#141d1f]">
+                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                    Upcoming obligations
+                  </p>
+                  {forecastQuery.data.topObligations.length > 0 ? (
+                    <div className="mt-2 space-y-1.5">
+                      {forecastQuery.data.topObligations.slice(0, 4).map((item) => (
+                        <div
+                          key={item.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-border/65 bg-white/70 px-2.5 py-2 dark:bg-[#111a1c]"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-[0.86rem] font-medium text-foreground">{item.name}</p>
+                            <p className="text-[0.75rem] text-muted-foreground">
+                              {formatDateLabel(item.dueDate)} ·{" "}
+                              {item.sourceType === "bill" ? "Bill" : "Loan installment"}
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-[0.88rem] font-semibold text-foreground">
+                            {formatCurrencyMiliunits(item.amount, forecastQuery.data.currency)}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="mt-2 rounded-lg border border-dashed border-border/70 px-3 py-3 text-[0.82rem] text-muted-foreground">
+                      No scheduled obligations in the current 30-day window.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-dashed border-border/80 bg-background px-3 py-3 text-[0.86rem] text-muted-foreground dark:bg-[#141d1f]">
+                Forecast data is not available yet.
+              </div>
+            )}
           </CardContent>
         </Card>
       </section>

@@ -359,13 +359,21 @@ async function applyBalanceEntries(
   const appliedEntries: BalanceEntry[] = [];
 
   for (const entry of entries) {
-    await tx
+    const [updatedAccount] = await tx
       .update(accounts)
       .set({
         balance: sql`${accounts.balance} + ${entry.amountDelta}`,
         updatedAt: new Date(),
       })
-      .where(and(eq(accounts.id, entry.accountId), eq(accounts.clerkUserId, userId)));
+      .where(and(eq(accounts.id, entry.accountId), eq(accounts.clerkUserId, userId)))
+      .returning({ id: accounts.id });
+
+    if (!updatedAccount) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to apply account balance update.",
+      });
+    }
 
     appliedEntries.push(entry);
   }

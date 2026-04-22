@@ -737,6 +737,95 @@ function normalizeInsightLines(lines: string[], fallback: string[]) {
   return normalized.length > 0 ? normalized : fallback;
 }
 
+function normalizeCategoryKey(name: string) {
+  return normalizeValue(name);
+}
+
+function categoryMatches(key: string, terms: string[]) {
+  return terms.some((term) => key.includes(term));
+}
+
+function getCategoryFocusNote(name: string, sharePct: number) {
+  const key = normalizeCategoryKey(name);
+  const highShare = sharePct >= 25;
+
+  if (categoryMatches(key, ["food", "dining", "restaurant", "eat"])) {
+    return highShare
+      ? "Food is taking a big share this month. Plan meals and limit delivery days each week."
+      : "Keep food spending steady by planning meals and reducing delivery orders.";
+  }
+
+  if (categoryMatches(key, ["clothing", "fashion", "apparel", "shopping"])) {
+    return highShare
+      ? "Clothing spend is high this month. Set a cap and use a 48-hour pause before buying."
+      : "Track clothing buys against a monthly cap to avoid impulse purchases.";
+  }
+
+  if (categoryMatches(key, ["bills", "utilities", "subscription", "rent", "internet"])) {
+    return highShare
+      ? "Bills are a large part of spending. Review subscriptions and remove one low-use service."
+      : "Keep bills predictable by checking recurring charges once a week.";
+  }
+
+  if (name === "Uncategorized") {
+    return "Many expenses are uncategorized. Add categories to get more useful coaching.";
+  }
+
+  return highShare
+    ? "This is a big part of your spending. Set a monthly cap and review weekly."
+    : "Steady category. Keep this within your monthly plan.";
+}
+
+function getCategoryActionPlan(name: string, amount: number, sharePct: number) {
+  const key = normalizeCategoryKey(name);
+  const suggestedCap = formatCurrencyMiliunits(Math.round(amount * 0.88), "PHP");
+
+  if (categoryMatches(key, ["food", "dining", "restaurant", "eat"])) {
+    return [
+      `Set a Food budget target of about ${suggestedCap} this month and check it every weekend.`,
+      "Try a simple meal plan this week and cap food delivery to 2 days.",
+    ];
+  }
+
+  if (categoryMatches(key, ["clothing", "fashion", "apparel", "shopping"])) {
+    return [
+      `Set a Clothing budget cap around ${suggestedCap} for this month.`,
+      "Use a 48-hour pause before non-essential clothing purchases.",
+    ];
+  }
+
+  if (categoryMatches(key, ["bills", "utilities", "subscription", "rent", "internet"])) {
+    return [
+      "Split bills into fixed costs and subscriptions, then set a monthly subscription cap.",
+      "Cancel or pause one low-use subscription this week.",
+    ];
+  }
+
+  if (name === "Uncategorized") {
+    return ["Categorize your latest expenses so recommendations can be more specific to your habits."];
+  }
+
+  return [
+    `Set a monthly limit for ${name} at around ${suggestedCap} and track progress weekly.`,
+    sharePct >= 25
+      ? `Since ${name} is a big share of spend, plan one small cut this week.`
+      : `Keep ${name} spending within plan and review once per week.`,
+  ];
+}
+
+function toFriendlyAdviceLine(line: string) {
+  return line
+    .replace(/\bguardrail\b/gi, "budget cap")
+    .replace(/\bpacing\b/gi, "spending pace")
+    .replace(/\bconcentration\b/gi, "high spend")
+    .replace(/\bnon-essential\b/gi, "optional")
+    .replace(/\btrim\b/gi, "reduce");
+}
+
+function normalizeAdviceLines(lines: string[], fallback: string[]) {
+  return normalizeInsightLines(lines, fallback).map((line) => toFriendlyAdviceLine(line));
+}
+
 function parseOpenAiChatContent(content: string | null | undefined): HabitInsightDraft | null {
   if (!content) return null;
   try {
@@ -844,7 +933,9 @@ async function generateInsightDraftFromOpenAi(input: {
           content:
             "You are a personal finance coaching assistant. Use only the provided budget and transaction data. " +
             "Return valid JSON only with keys: summary, keyFindings, advice, categoryNotes, budgetNote. " +
-            "Focus on concrete category concentration risks (e.g., food, clothing) and practical next steps.",
+            "Use plain, supportive language and avoid technical finance jargon. " +
+            "Focus on concrete category coaching (e.g., food, clothing), and give behavior-based actions " +
+            "like budget caps, cooking more, reducing delivery, or a waiting period before buying.",
         },
         {
           role: "user",
@@ -945,6 +1036,27 @@ function getMonthDateRange(reference: Date, shiftMonths: number) {
   return { start, end };
 }
 
+function getRollingDateRange(reference: Date, days: number) {
+  const end = new Date(reference);
+  const start = new Date(reference);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - Math.max(1, days - 1));
+  return { start, end };
+}
+
+function normalizeMerchantLabel(value: string | null | undefined) {
+  if (!value) return null;
+  const normalized = normalizeValue(value);
+  if (!normalized) return null;
+  if (normalized.length <= 2) return null;
+
+  return normalized
+    .split(" ")
+    .slice(0, 4)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1))
+    .join(" ");
+}
+
 export async function generateMonthlyHabitCoachingInsight(
   ctx: Pick<TRPCContext, "db" | "userId">
 ): Promise<HabitCoachingInsight> {
@@ -952,13 +1064,15 @@ export async function generateMonthlyHabitCoachingInsight(
   const now = new Date();
   const current = getMonthDateRange(now, 0);
   const previous = getMonthDateRange(now, -1);
+  const rolling = getRollingDateRange(now, 90);
+  const queryStart = rolling.start < previous.start ? rolling.start : previous.start;
 
   const [events, categoryRows, budgetSummary] = await Promise.all([
     ctx.db.query.transactionEvents.findMany({
       where: and(
         eq(transactionEvents.clerkUserId, userId),
         eq(transactionEvents.type, "expense"),
-        gte(transactionEvents.occurredAt, previous.start),
+        gte(transactionEvents.occurredAt, queryStart),
         lt(transactionEvents.occurredAt, current.end)
       ),
       columns: {
@@ -980,17 +1094,43 @@ export async function generateMonthlyHabitCoachingInsight(
   const budgetNameById = new Map(budgetSummary.budgets.map((budget) => [budget.id, budget.name]));
   const currentByCategory = new Map<string, number>();
   const previousByCategory = new Map<string, number>();
+  const rollingByCategory = new Map<string, number>();
+  const uncategorizedMerchantCurrent = new Map<string, number>();
+  const uncategorizedMerchantRolling = new Map<string, number>();
 
   for (const event of events) {
     const category = (event.categoryId ? categoryById.get(event.categoryId) : null) ?? "Uncategorized";
     const inCurrentMonth = event.occurredAt >= current.start;
+    const inRollingWindow = event.occurredAt >= rolling.start;
     const targetMap = inCurrentMonth ? currentByCategory : previousByCategory;
     targetMap.set(category, (targetMap.get(category) ?? 0) + event.amount);
+
+    if (inRollingWindow) {
+      rollingByCategory.set(category, (rollingByCategory.get(category) ?? 0) + event.amount);
+    }
+
+    if (!event.categoryId) {
+      const merchant = normalizeMerchantLabel(event.description);
+      if (merchant && inCurrentMonth) {
+        uncategorizedMerchantCurrent.set(
+          merchant,
+          (uncategorizedMerchantCurrent.get(merchant) ?? 0) + event.amount
+        );
+      }
+      if (merchant && inRollingWindow) {
+        uncategorizedMerchantRolling.set(
+          merchant,
+          (uncategorizedMerchantRolling.get(merchant) ?? 0) + event.amount
+        );
+      }
+    }
   }
 
   const currentTotal = Array.from(currentByCategory.values()).reduce((sum, value) => sum + value, 0);
   const previousTotal = Array.from(previousByCategory.values()).reduce((sum, value) => sum + value, 0);
+  const rollingTotal = Array.from(rollingByCategory.values()).reduce((sum, value) => sum + value, 0);
   const currentExpenseCount = events.filter((event) => event.occurredAt >= current.start).length;
+  const rollingExpenseCount = events.filter((event) => event.occurredAt >= rolling.start).length;
 
   const [topCategory, topAmount] =
     Array.from(currentByCategory.entries()).sort((a, b) => b[1] - a[1])[0] ?? ["No category yet", 0];
@@ -1015,6 +1155,40 @@ export async function generateMonthlyHabitCoachingInsight(
       : `${direction === "up" ? "+" : "-"}${formatCurrencyMiliunits(Math.abs(shiftAmount), "PHP")} vs last month`;
 
   const potentialSavings = topAmount > 0 ? Math.round(topAmount * 0.12) : 0;
+
+  const categoryStats = Array.from(
+    new Set([...currentByCategory.keys(), ...previousByCategory.keys()])
+  )
+    .map((name) => {
+      const currentAmount = currentByCategory.get(name) ?? 0;
+      const previousAmount = previousByCategory.get(name) ?? 0;
+      return {
+        name,
+        currentAmount,
+        previousAmount,
+        currentSharePct: currentTotal > 0 ? Math.round((currentAmount / currentTotal) * 100) : 0,
+      };
+    })
+    .sort((left, right) => right.currentAmount - left.currentAmount);
+
+  const topCategoryStats = categoryStats.filter((entry) => entry.currentAmount > 0).slice(0, 4);
+  const defaultMonthlyHighlights = topCategoryStats.slice(0, 3).map((entry) => ({
+    name: entry.name,
+    amountLabel: formatCurrencyMiliunits(entry.currentAmount, "PHP"),
+    sharePct: entry.currentSharePct,
+    note: getCategoryFocusNote(entry.name, entry.currentSharePct),
+  }));
+  const rollingCategoryStats = Array.from(rollingByCategory.entries())
+    .map(([name, amount]) => ({
+      name,
+      amount,
+      sharePct: rollingTotal > 0 ? Math.round((amount / rollingTotal) * 100) : 0,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+  const fallbackTopCategory = rollingCategoryStats[0] ?? null;
+  const fallbackTopCategoryName = topAmount > 0 ? topCategory : (fallbackTopCategory?.name ?? "No category yet");
+  const fallbackTopAmount = topAmount > 0 ? topAmount : (fallbackTopCategory?.amount ?? 0);
+  const fallbackTopSharePct = topAmount > 0 ? topSharePct : (fallbackTopCategory?.sharePct ?? 0);
   const defaultKeyFindings: string[] = [];
   if (topAmount > 0) {
     defaultKeyFindings.push(
@@ -1022,6 +1196,13 @@ export async function generateMonthlyHabitCoachingInsight(
         topAmount,
         "PHP"
       )} (${topSharePct}% of expenses).`
+    );
+  } else if (fallbackTopAmount > 0) {
+    defaultKeyFindings.push(
+      `${fallbackTopCategoryName} is your largest spend across the last 90 days at ${formatCurrencyMiliunits(
+        fallbackTopAmount,
+        "PHP"
+      )} (${fallbackTopSharePct}% share).`
     );
   }
   if (direction !== "flat" && shiftCategory !== "No major shift") {
@@ -1040,60 +1221,71 @@ export async function generateMonthlyHabitCoachingInsight(
 
   const defaultAdvice: string[] = [];
   if (topAmount > 0 && topCategory !== "No category yet") {
-    defaultAdvice.push(
-      `Set a monthly guardrail for ${topCategory} and review it weekly.`
-    );
-    defaultAdvice.push(
-      `If you cut ${topCategory} by 12%, you can free up about ${formatCurrencyMiliunits(
-        potentialSavings,
-        "PHP"
-      )} this month.`
-    );
+    defaultAdvice.push(...getCategoryActionPlan(topCategory, topAmount, topSharePct));
+    if (potentialSavings > 0) {
+      defaultAdvice.push(
+        `A 12% cut in ${topCategory} could free up around ${formatCurrencyMiliunits(
+          potentialSavings,
+          "PHP"
+        )} this month.`
+      );
+    }
+  } else if (fallbackTopAmount > 0 && fallbackTopCategoryName !== "No category yet") {
+    defaultAdvice.push(...getCategoryActionPlan(fallbackTopCategoryName, fallbackTopAmount, fallbackTopSharePct));
   } else {
-    defaultAdvice.push("Record more categorized expenses to unlock stronger coaching insights.");
+    defaultAdvice.push("Categorize more expenses so recommendations can match your real spending habits.");
   }
   if (direction === "up" && shiftCategory !== "No major shift") {
-    defaultAdvice.push(`Check recent ${shiftCategory} transactions and trim non-essential items first.`);
+    defaultAdvice.push(`Review recent ${shiftCategory} transactions and reduce optional spending first.`);
   }
   const budgetPosture = buildDefaultBudgetPosture(budgetSummary.summary);
 
-  const categoryStats = Array.from(
-    new Set([...currentByCategory.keys(), ...previousByCategory.keys()])
-  )
-    .map((name) => {
-      const currentAmount = currentByCategory.get(name) ?? 0;
-      const previousAmount = previousByCategory.get(name) ?? 0;
-      return {
-        name,
-        currentAmount,
-        previousAmount,
-        currentSharePct: currentTotal > 0 ? Math.round((currentAmount / currentTotal) * 100) : 0,
-      };
-    })
-    .sort((left, right) => right.currentAmount - left.currentAmount);
+  const defaultRollingHighlights = rollingCategoryStats
+    .filter((entry) => entry.amount > 0)
+    .slice(0, 3)
+    .map((entry) => ({
+      name: entry.name,
+      amountLabel: formatCurrencyMiliunits(entry.amount, "PHP"),
+      sharePct: entry.sharePct,
+      note: getCategoryFocusNote(entry.name, entry.sharePct),
+    }));
 
-  const topCategoryStats = categoryStats.filter((entry) => entry.currentAmount > 0).slice(0, 4);
-  const defaultCategoryHighlights = topCategoryStats.slice(0, 3).map((entry) => ({
-    name: entry.name,
-    amountLabel: formatCurrencyMiliunits(entry.currentAmount, "PHP"),
-    sharePct: entry.currentSharePct,
-    note:
-      entry.currentSharePct >= 25
-        ? "Large share of monthly spend. Set a guardrail and check weekly."
-        : "Steady category. Keep this within your planned range.",
-  }));
+  const strongestMerchantCurrent =
+    Array.from(uncategorizedMerchantCurrent.entries()).sort((a, b) => b[1] - a[1])[0] ?? null;
+  const strongestMerchantRolling =
+    Array.from(uncategorizedMerchantRolling.entries()).sort((a, b) => b[1] - a[1])[0] ?? null;
+  const hasCurrentMonthCategoryData = defaultMonthlyHighlights.length > 0;
+  const defaultCategoryHighlights = hasCurrentMonthCategoryData
+    ? defaultMonthlyHighlights
+    : defaultRollingHighlights;
+
+  const normalizedHighlights = defaultCategoryHighlights.map((entry) => {
+    if (entry.name !== "Uncategorized") return entry;
+
+    const strongestMerchant = strongestMerchantCurrent ?? strongestMerchantRolling;
+    if (!strongestMerchant) return entry;
+
+    return {
+      ...entry,
+      note: `Top uncategorized merchant: ${strongestMerchant[0]} (${formatCurrencyMiliunits(strongestMerchant[1], "PHP")}).`,
+    };
+  });
 
   const fallbackInsight: HabitCoachingInsight = {
     generatedAt: now.toISOString(),
-    periodLabel: "This month vs last month",
+    periodLabel: hasCurrentMonthCategoryData
+      ? "This month vs last month"
+      : "Last 90 days (insufficient current-month category data)",
     summary:
       topAmount > 0
         ? `${topCategory} leads your spending this month.`
-        : "Not enough categorized spending yet for coaching insights.",
+        : fallbackTopAmount > 0
+          ? `${fallbackTopCategoryName} is your top spend across the last 90 days.`
+          : "Not enough categorized spending yet for coaching insights.",
     topSpendCategory: {
-      name: topCategory,
-      amountLabel: formatCurrencyMiliunits(topAmount, "PHP"),
-      sharePct: topSharePct,
+      name: fallbackTopCategoryName,
+      amountLabel: formatCurrencyMiliunits(fallbackTopAmount, "PHP"),
+      sharePct: fallbackTopSharePct,
     },
     monthOverMonthShift: {
       category: shiftCategory,
@@ -1102,10 +1294,10 @@ export async function generateMonthlyHabitCoachingInsight(
     },
     keyFindings: defaultKeyFindings,
     advice: defaultAdvice,
-    categoryHighlights: defaultCategoryHighlights,
+    categoryHighlights: normalizedHighlights,
     budgetPosture,
     dataWindow: {
-      expensesAnalyzed: currentExpenseCount,
+      expensesAnalyzed: Math.max(currentExpenseCount, rollingExpenseCount),
       budgetsAnalyzed: budgetSummary.summary.totalBudgets,
     },
   };
@@ -1132,7 +1324,14 @@ export async function generateMonthlyHabitCoachingInsight(
       shiftCategory,
       shiftLabel,
       budgetSummary: budgetSummary.summary,
-      topCategories: topCategoryStats,
+      topCategories: hasCurrentMonthCategoryData
+        ? topCategoryStats
+        : rollingCategoryStats.slice(0, 4).map((entry) => ({
+            name: entry.name,
+            currentAmount: entry.amount,
+            previousAmount: 0,
+            currentSharePct: entry.sharePct,
+          })),
       recentExpenses,
     });
 
@@ -1145,7 +1344,7 @@ export async function generateMonthlyHabitCoachingInsight(
     );
     const categoryHighlights = (fallbackInsight.categoryHighlights.length
       ? fallbackInsight.categoryHighlights
-      : defaultCategoryHighlights
+      : normalizedHighlights
     ).map((entry) => ({
       ...entry,
       note: categoryNoteByName.get(normalizeValue(entry.name)) ?? entry.note,
@@ -1155,7 +1354,7 @@ export async function generateMonthlyHabitCoachingInsight(
       ...fallbackInsight,
       summary: aiDraft.summary.trim(),
       keyFindings: normalizeInsightLines(aiDraft.keyFindings, fallbackInsight.keyFindings),
-      advice: normalizeInsightLines(aiDraft.advice, fallbackInsight.advice),
+      advice: normalizeAdviceLines(aiDraft.advice, fallbackInsight.advice),
       categoryHighlights,
       budgetPosture: {
         ...fallbackInsight.budgetPosture,

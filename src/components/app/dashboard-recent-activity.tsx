@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import {
+  AlertTriangle,
   ArrowDownRight,
   ArrowRightLeft,
   ArrowUpRight,
@@ -141,6 +142,49 @@ function formatPrimaryTotal(totals: CurrencyTotals[]) {
   return `${formatCurrencyMiliunits(primary.total, primary.currency)} +${totals.length - 1} currency`;
 }
 
+function getForecastRiskMeta(risk: "safe" | "watch" | "shortfall") {
+  if (risk === "shortfall") {
+    return {
+      label: "Shortfall risk",
+      tone: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200",
+      dot: "bg-rose-500",
+    };
+  }
+
+  if (risk === "watch") {
+    return {
+      label: "Watch",
+      tone: "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200",
+      dot: "bg-amber-500",
+    };
+  }
+
+  return {
+    label: "Safe",
+    tone: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200",
+    dot: "bg-emerald-500",
+  };
+}
+
+function buildProjectionPath(points: Array<{ balance: number }>, width: number, height: number) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M0 ${height / 2} L${width} ${height / 2}`;
+
+  const balances = points.map((point) => point.balance);
+  const min = Math.min(...balances);
+  const max = Math.max(...balances);
+  const span = Math.max(max - min, 1);
+
+  return points
+    .map((point, index) => {
+      const x = (index / (points.length - 1)) * width;
+      const normalized = (point.balance - min) / span;
+      const y = height - normalized * height;
+      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+    })
+    .join(" ");
+}
+
 export function DashboardRecentActivity() {
   const accountsQuery = trpc.accounts.list.useQuery();
   const transactionsQuery = trpc.transactions.list.useQuery({
@@ -150,6 +194,9 @@ export function DashboardRecentActivity() {
     type: "all",
   });
   const budgetsSummaryQuery = trpc.budgets.summary.useQuery();
+  const forecastQuery = trpc.forecast.summary.useQuery({
+    days: 30,
+  });
   const aiDashboardInsightQuery = trpc.ai.dashboardInsight.useQuery(undefined, {
     staleTime: 60_000,
   });
@@ -366,6 +413,13 @@ export function DashboardRecentActivity() {
   }, [budgetSummary, transactions.length]);
 
   const watchNextInsight = aiDashboardInsightQuery.data ?? fallbackWatchNextInsight;
+  const forecastRiskMeta = forecastQuery.data
+    ? getForecastRiskMeta(forecastQuery.data.riskLevel)
+    : getForecastRiskMeta("safe");
+  const projectionPath = useMemo(
+    () => buildProjectionPath(forecastQuery.data?.dailyProjection ?? [], 320, 56),
+    [forecastQuery.data?.dailyProjection],
+  );
 
   const trendMetrics = useMemo(() => {
     const latestReferenceTime =
@@ -575,7 +629,8 @@ export function DashboardRecentActivity() {
         </CardContent>
       </Card>
 
-      <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] md:gap-6">
+      <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)] md:order-1">
         <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
           <div className="mb-4 flex flex-col gap-2.5 md:mb-5 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2">
@@ -739,8 +794,7 @@ export function DashboardRecentActivity() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
-        <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
+        <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)] md:order-3">
           <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
             <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
               <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
@@ -821,10 +875,139 @@ export function DashboardRecentActivity() {
                 )}
               </div>
             </div>
-          </CardContent>
-        </Card>
+        </CardContent>
+      </Card>
 
-        <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)]">
+      <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)] md:order-2">
+        <CardContent className="space-y-4 p-4 sm:p-5 md:p-6 lg:p-7">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="flex size-9 items-center justify-center rounded-full bg-[#eef6f7] text-[#14656B] dark:bg-[#203032] dark:text-primary">
+                  <Clock3 className="size-4.5" />
+                </span>
+                <h3 className="text-[1.12rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  30-day cashflow forecast
+                </h3>
+              </div>
+              <p className="text-[0.8rem] text-muted-foreground">
+                Uses liquid accounts, pending bills, and unpaid loan installments.
+              </p>
+            </div>
+            {forecastQuery.data ? (
+              <span
+                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-[0.08em] ${forecastRiskMeta.tone}`}
+              >
+                {forecastRiskMeta.label}
+              </span>
+            ) : null}
+          </div>
+
+          {forecastQuery.isLoading ? (
+            <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background px-4 py-4 text-[0.9rem] text-muted-foreground dark:bg-[#141d1f]">
+              <Clock3 className="size-4 animate-pulse" />
+              Building cashflow projection...
+            </div>
+          ) : forecastQuery.data ? (
+            <div className="space-y-3">
+              <div className="grid gap-2.5 sm:grid-cols-3">
+                <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
+                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Lowest point
+                  </p>
+                  <p className="mt-0.5 text-[0.98rem] font-semibold tracking-tight text-foreground">
+                    {formatCurrencyMiliunits(
+                      forecastQuery.data.lowestBalance,
+                      forecastQuery.data.currency,
+                    )}
+                  </p>
+                  <p className="text-[0.76rem] text-muted-foreground">
+                    {formatDateWithPreferences(
+                      forecastQuery.data.lowestBalanceDate,
+                      datePreferences,
+                      "date",
+                    )}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
+                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Due in 7 days
+                  </p>
+                  <p className="mt-0.5 text-[0.98rem] font-semibold tracking-tight text-foreground">
+                    {forecastQuery.data.dueSoonCount} items
+                  </p>
+                  <p className="text-[0.76rem] text-muted-foreground">
+                    {formatCurrencyMiliunits(
+                      forecastQuery.data.dueSoonAmount,
+                      forecastQuery.data.currency,
+                    )}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
+                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Ending balance
+                  </p>
+                  <p className="mt-0.5 text-[0.98rem] font-semibold tracking-tight text-foreground">
+                    {formatCurrencyMiliunits(
+                      forecastQuery.data.projectedEndingBalance,
+                      forecastQuery.data.currency,
+                    )}
+                  </p>
+                  <p className="text-[0.76rem] text-muted-foreground">
+                    Outflow{" "}
+                    {formatCurrencyMiliunits(
+                      forecastQuery.data.obligationsTotal,
+                      forecastQuery.data.currency,
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-background px-3 py-3 dark:bg-[#141d1f]">
+                <div className="mb-2 flex items-center justify-between text-[0.76rem] text-muted-foreground">
+                  <span>Projected liquid balance</span>
+                  <span>
+                    Upcoming obligations{" "}
+                    <span className="font-semibold text-foreground">
+                      {forecastQuery.data.topObligations.length}
+                    </span>
+                  </span>
+                </div>
+                <svg
+                  viewBox="0 0 320 56"
+                  role="img"
+                  aria-label="Projected balance trend"
+                  className="h-16 w-full"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d={projectionPath}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    className="text-[#17393c] dark:text-[#6bd0c2]"
+                  />
+                </svg>
+              </div>
+
+              {forecastQuery.data.riskLevel === "shortfall" ? (
+                <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-[0.8rem] text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-200">
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                  <span>
+                    Projected balance dips below zero. Prioritize upcoming obligations or move funds.
+                  </span>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border/80 bg-background px-4 py-4 text-[0.9rem] text-muted-foreground dark:bg-[#141d1f]">
+              Forecast data is unavailable right now.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)] md:order-4">
           <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
             <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
               <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">

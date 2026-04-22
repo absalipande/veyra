@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -122,13 +122,21 @@ async function applyBalanceEntries(
   const appliedEntries: BalanceEntry[] = [];
 
   for (const entry of entries) {
-    await ctx.db
+    const [updatedAccount] = await ctx.db
       .update(accounts)
       .set({
         balance: sql`${accounts.balance} + ${entry.amountDelta}`,
         updatedAt: new Date(),
       })
-      .where(and(eq(accounts.id, entry.accountId), eq(accounts.clerkUserId, userId)));
+      .where(and(eq(accounts.id, entry.accountId), eq(accounts.clerkUserId, userId)))
+      .returning({ id: accounts.id });
+
+    if (!updatedAccount) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to apply account balance update.",
+      });
+    }
 
     appliedEntries.push(entry);
   }
@@ -946,6 +954,34 @@ export async function recordLoanPayment(
       code: "NOT_FOUND",
       message: "Installment not found for this loan.",
     });
+  }
+
+  const duplicateWindowStart = new Date(Date.now() - 30 * 1000);
+  const duplicatePayment = await ctx.db.query.loanPayments.findFirst({
+    where: and(
+      eq(loanPayments.clerkUserId, userId),
+      eq(loanPayments.loanId, loan.id),
+      eq(loanPayments.sourceAccountId, input.sourceAccountId),
+      eq(loanPayments.amount, input.amount),
+      eq(loanPayments.paidAt, input.paidAt),
+      input.notes ? eq(loanPayments.notes, input.notes) : isNull(loanPayments.notes),
+      gte(loanPayments.createdAt, duplicateWindowStart)
+    ),
+    orderBy: [desc(loanPayments.createdAt)],
+  });
+
+  if (duplicatePayment) {
+    const updatedLoan = await requireLoan(ctx, loan.id, "Loan not found after payment.");
+    const installmentsMap = await getLoanInstallmentsMap(ctx, [loan.id]);
+    const paymentsMap = await getLoanPaymentsMap(ctx, [loan.id]);
+    const [enrichedLoan] = enrichLoanRecords([updatedLoan], installmentsMap, paymentsMap);
+    const allocatedToSchedule = duplicatePayment.principalAmount + duplicatePayment.interestAmount;
+    return {
+      loan: enrichedLoan ?? updatedLoan,
+      appliedAmount: duplicatePayment.appliedAmount,
+      allocatedToSchedule,
+      unappliedAmount: Math.max(duplicatePayment.amount - allocatedToSchedule, 0),
+    };
   }
 
   const outstandingBefore = Math.max(loan.outstandingAmount, 0);
