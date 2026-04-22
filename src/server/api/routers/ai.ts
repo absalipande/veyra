@@ -18,8 +18,11 @@ import {
   getAiTransactionsInsight,
   generateMonthlyHabitCoachingInsight,
   getStoredHabitInsight,
+  isAiCoachingEnabled,
   saveHabitInsight,
 } from "@/features/ai/server/service";
+import { logAuditEvent } from "@/features/trust/server/audit";
+import { trackUsageEvent } from "@/features/trust/server/usage-analytics";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 
 const aiRateLimitedProcedure = protectedProcedure.use(({ ctx, path, next }) => {
@@ -61,8 +64,110 @@ function getCooldownSecondsRemaining(generatedAtIso: string) {
   return Math.max(0, Math.ceil(remainingMs / 1000));
 }
 
+function getDisabledDashboardInsight() {
+  return {
+    statement: "AI coaching is currently disabled in settings.",
+    projectedImpact: "Enable AI coaching to view forecasts",
+    confidence: "Disabled in settings",
+    window: "Next 7 days",
+    nextActionLabel: "Open settings",
+    nextActionHref: "/settings",
+    budgetStatusSummary: "AI coaching disabled",
+    totalBudgets: 0,
+    atRisk: 0,
+    onTrack: 0,
+    totalRemaining: 0,
+  };
+}
+
+function getDisabledQuickCaptureDraft() {
+  return {
+    intent: null,
+    amountMiliunits: null,
+    description: null,
+    dateValue: new Date().toISOString().slice(0, 10),
+    sourceAccountId: null,
+    destinationAccountId: null,
+    categoryId: null,
+    budgetId: null,
+    confidence: "low" as const,
+    missing: ["intent", "amount", "description"] as Array<
+      "amount" | "description" | "intent" | "account" | "sourceAccount" | "destinationAccount"
+    >,
+  };
+}
+
+function getDisabledAccountsInsight() {
+  return {
+    headline: "AI accounts watchdog",
+    summary: "AI coaching is disabled in settings.",
+    confidence: "Disabled in settings",
+    recommendations: ["Enable AI coaching in Settings to see account guidance."],
+    metrics: [],
+  };
+}
+
+function getDisabledTransactionsInsight() {
+  return {
+    headline: "AI transaction intelligence",
+    summary: "AI coaching is disabled in settings.",
+    confidence: "Disabled in settings",
+    metrics: [],
+    recommendations: ["Enable AI coaching in Settings to see spending recommendations."],
+  };
+}
+
+function getDisabledBudgetsInsight() {
+  return {
+    headline: "AI budget intelligence",
+    summary: "AI coaching is disabled in settings.",
+    confidence: "Disabled in settings",
+    timeWindow: "Current budget cycle",
+    likelyOvershootDate: null,
+    recommendations: ["Enable AI coaching in Settings to restore budget insights."],
+    metrics: [],
+  };
+}
+
+function getDisabledLoansInsight() {
+  return {
+    headline: "AI loan coach",
+    summary: "AI coaching is disabled in settings.",
+    confidence: "Disabled in settings",
+    recommendations: ["Enable AI coaching in Settings to restore repayment guidance."],
+    metrics: [],
+  };
+}
+
+async function logAiBlockedByPolicy(
+  ctx: Parameters<typeof logAuditEvent>[0],
+  route: string
+) {
+  await logAuditEvent(ctx, {
+    action: "ai.request_blocked_by_policy",
+    entityType: "ai",
+    summary: `Blocked AI request for "${route}" because AI coaching is disabled`,
+    metadata: {
+      route,
+      reason: "allowAiCoaching=false",
+    },
+  });
+}
+
 export const aiRouter = createTRPCRouter({
   dashboardInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
+    await trackUsageEvent(ctx, {
+      eventName: "ai.dashboard_insight_requested",
+      surface: "ai",
+      metadata: { route: "dashboardInsight" },
+    });
+
+    const aiEnabled = await isAiCoachingEnabled(ctx);
+    if (!aiEnabled) {
+      await logAiBlockedByPolicy(ctx, "dashboardInsight");
+      return getDisabledDashboardInsight();
+    }
+
     try {
       const checkpoint = await getAiDashboardInsightCheckpoint(ctx);
       return getOrComputeInsight({
@@ -92,6 +197,18 @@ export const aiRouter = createTRPCRouter({
   quickCaptureDraft: aiRateLimitedProcedure
     .input(getQuickCaptureDraftSchema)
     .query(async ({ ctx, input }) => {
+      await trackUsageEvent(ctx, {
+        eventName: "ai.quick_capture_draft_requested",
+        surface: "ai",
+        metadata: { route: "quickCaptureDraft" },
+      });
+
+      const aiEnabled = await isAiCoachingEnabled(ctx);
+      if (!aiEnabled) {
+        await logAiBlockedByPolicy(ctx, "quickCaptureDraft");
+        return getDisabledQuickCaptureDraft();
+      }
+
       try {
         const checkpoint = await getAiQuickCaptureCheckpoint(ctx, input);
         return getOrComputeInsight({
@@ -103,24 +220,22 @@ export const aiRouter = createTRPCRouter({
         });
       } catch (error) {
         console.error("[ai.quickCaptureDraft] failed", error);
-        const fallbackMissing: Array<
-          "amount" | "description" | "intent" | "account" | "sourceAccount" | "destinationAccount"
-        > = ["intent", "amount", "description"];
-        return {
-          intent: null,
-          amountMiliunits: null,
-          description: null,
-          dateValue: new Date().toISOString().slice(0, 10),
-          sourceAccountId: null,
-          destinationAccountId: null,
-          categoryId: null,
-          budgetId: null,
-          confidence: "low" as const,
-          missing: fallbackMissing,
-        };
+        return getDisabledQuickCaptureDraft();
       }
     }),
   accountsInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
+    await trackUsageEvent(ctx, {
+      eventName: "ai.accounts_insight_requested",
+      surface: "ai",
+      metadata: { route: "accountsInsight" },
+    });
+
+    const aiEnabled = await isAiCoachingEnabled(ctx);
+    if (!aiEnabled) {
+      await logAiBlockedByPolicy(ctx, "accountsInsight");
+      return getDisabledAccountsInsight();
+    }
+
     try {
       const checkpoint = await getAiAccountsInsightCheckpoint(ctx);
       return getOrComputeInsight({
@@ -142,6 +257,18 @@ export const aiRouter = createTRPCRouter({
     }
   }),
   loansInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
+    await trackUsageEvent(ctx, {
+      eventName: "ai.loans_insight_requested",
+      surface: "ai",
+      metadata: { route: "loansInsight" },
+    });
+
+    const aiEnabled = await isAiCoachingEnabled(ctx);
+    if (!aiEnabled) {
+      await logAiBlockedByPolicy(ctx, "loansInsight");
+      return getDisabledLoansInsight();
+    }
+
     try {
       const checkpoint = await getAiLoansInsightCheckpoint(ctx);
       return getOrComputeInsight({
@@ -163,6 +290,18 @@ export const aiRouter = createTRPCRouter({
     }
   }),
   transactionsInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
+    await trackUsageEvent(ctx, {
+      eventName: "ai.transactions_insight_requested",
+      surface: "ai",
+      metadata: { route: "transactionsInsight" },
+    });
+
+    const aiEnabled = await isAiCoachingEnabled(ctx);
+    if (!aiEnabled) {
+      await logAiBlockedByPolicy(ctx, "transactionsInsight");
+      return getDisabledTransactionsInsight();
+    }
+
     try {
       const checkpoint = await getAiTransactionsInsightCheckpoint(ctx);
       return getOrComputeInsight({
@@ -184,6 +323,18 @@ export const aiRouter = createTRPCRouter({
     }
   }),
   budgetsInsight: aiRateLimitedProcedure.query(async ({ ctx }) => {
+    await trackUsageEvent(ctx, {
+      eventName: "ai.budgets_insight_requested",
+      surface: "ai",
+      metadata: { route: "budgetsInsight" },
+    });
+
+    const aiEnabled = await isAiCoachingEnabled(ctx);
+    if (!aiEnabled) {
+      await logAiBlockedByPolicy(ctx, "budgetsInsight");
+      return getDisabledBudgetsInsight();
+    }
+
     try {
       const checkpoint = await getAiBudgetsInsightCheckpoint(ctx);
       return getOrComputeInsight({
@@ -206,10 +357,37 @@ export const aiRouter = createTRPCRouter({
       };
     }
   }),
-  latestHabitInsight: protectedProcedure.query(({ ctx }) => {
+  latestHabitInsight: protectedProcedure.query(async ({ ctx }) => {
+    await trackUsageEvent(ctx, {
+      eventName: "ai.latest_habit_insight_requested",
+      surface: "ai",
+      metadata: { route: "latestHabitInsight" },
+    });
+
+    const aiEnabled = await isAiCoachingEnabled(ctx);
+    if (!aiEnabled) {
+      await logAiBlockedByPolicy(ctx, "latestHabitInsight");
+      return null;
+    }
     return getStoredHabitInsight(ctx);
   }),
   generateHabitInsight: aiRateLimitedProcedure.mutation(async ({ ctx }) => {
+    await trackUsageEvent(ctx, {
+      eventName: "ai.generate_habit_insight_requested",
+      surface: "ai",
+      metadata: { route: "generateHabitInsight" },
+      auditOnDrop: true,
+    });
+
+    const aiEnabled = await isAiCoachingEnabled(ctx);
+    if (!aiEnabled) {
+      await logAiBlockedByPolicy(ctx, "generateHabitInsight");
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "AI coaching is disabled in Settings.",
+      });
+    }
+
     try {
       const latest = await getStoredHabitInsight(ctx);
       if (latest) {

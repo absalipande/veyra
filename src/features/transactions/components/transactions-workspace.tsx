@@ -3,18 +3,25 @@
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import {
+  Activity,
   ArrowRightLeft,
+  ChevronRight,
   Clock3,
+  Copy,
   CreditCard,
+  FolderOpen,
   HandCoins,
   Landmark,
   Loader2,
   Pencil,
   Search,
+  ShieldAlert,
+  ShieldCheck,
   Sparkles,
   Trash2,
   TrendingDown,
   TrendingUp,
+  Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -333,6 +340,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const budgetsQuery = trpc.budgets.list.useQuery();
   const categoriesQuery = trpc.categories.list.useQuery();
   const summaryQuery = trpc.transactions.summary.useQuery();
+  const dataQualityQuery = trpc.dataQuality.transactions.useQuery(undefined, {
+    staleTime: 45_000,
+  });
   const habitInsightQuery = trpc.ai.latestHabitInsight.useQuery();
   const generateHabitInsight = trpc.ai.generateHabitInsight.useMutation({
     onSuccess: async () => {
@@ -355,6 +365,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
   const [open, setOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isDataQualityHelpOpen, setIsDataQualityHelpOpen] = useState(false);
   const [search, setSearch] = useState(initialQuery);
   const [typeFilter, setTypeFilter] = useState<"all" | TransactionEventType>("all");
   const [page, setPage] = useState(1);
@@ -398,6 +409,18 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const cooldownMinutes = Math.floor(cooldownRemainingMs / 60_000);
   const cooldownSeconds = Math.floor((cooldownRemainingMs % 60_000) / 1000);
   const cooldownLabel = `${cooldownMinutes}:${String(cooldownSeconds).padStart(2, "0")}`;
+  const dataQualityTotals = dataQualityQuery.data?.totals;
+  const isDataQualityClean =
+    !dataQualityQuery.isLoading &&
+    (dataQualityTotals?.uncategorizedCount ?? 0) === 0 &&
+    (dataQualityTotals?.duplicateCount ?? 0) === 0 &&
+    (dataQualityTotals?.oddCount ?? 0) === 0;
+  const qualityUncategorized = dataQualityTotals?.uncategorizedCount ?? 0;
+  const qualityDuplicates = dataQualityTotals?.duplicateCount ?? 0;
+  const qualityOdd = dataQualityTotals?.oddCount ?? 0;
+  const totalQualityIssues = qualityUncategorized + qualityDuplicates + qualityOdd;
+  const qualityScore = Math.max(0, 100 - qualityUncategorized * 8 - qualityDuplicates * 10 - qualityOdd * 6);
+  const qualityGrade = qualityScore >= 90 ? "Excellent" : qualityScore >= 75 ? "Good" : qualityScore >= 55 ? "Watch" : "Needs cleanup";
 
   const refreshTransactions = async () => {
     await Promise.all([
@@ -458,6 +481,42 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     },
     onError: (error) => {
       toast.error("Could not delete event", {
+        description: error.message,
+      });
+    },
+  });
+
+  const applyCategoryFix = trpc.dataQuality.applyCategoryFix.useMutation({
+    onSuccess: async () => {
+      await Promise.all([refreshTransactions(), utils.dataQuality.transactions.invalidate()]);
+      toast.success("Category applied");
+    },
+    onError: (error) => {
+      toast.error("Could not apply category", {
+        description: error.message,
+      });
+    },
+  });
+
+  const removeDuplicateFix = trpc.dataQuality.removeDuplicateFix.useMutation({
+    onSuccess: async () => {
+      await Promise.all([refreshTransactions(), utils.dataQuality.transactions.invalidate()]);
+      toast.success("Duplicate removed");
+    },
+    onError: (error) => {
+      toast.error("Could not remove duplicate", {
+        description: error.message,
+      });
+    },
+  });
+
+  const markOddReviewed = trpc.dataQuality.markOddReviewed.useMutation({
+    onSuccess: async () => {
+      await Promise.all([refreshTransactions(), utils.dataQuality.transactions.invalidate()]);
+      toast.success("Marked as reviewed");
+    },
+    onError: (error) => {
+      toast.error("Could not mark transaction", {
         description: error.message,
       });
     },
@@ -971,6 +1030,221 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
       </section>
 
       <section>
+        <Card className="border-white/75 bg-white/84 shadow-[0_20px_55px_-48px_rgba(10,31,34,0.24)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_70px_-52px_rgba(0,0,0,0.58)]">
+          <CardHeader className="gap-3 px-4 py-4 sm:px-5 sm:py-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200">
+                  <ShieldAlert className="size-4.5" />
+                </div>
+                <div>
+                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Data quality assistant
+                  </p>
+                  <h3 className="text-[1.06rem] leading-tight font-semibold tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.12rem]">
+                    Fix uncategorized, duplicates, and odd spend
+                  </h3>
+                  <p className="mt-0.5 text-[0.82rem] text-muted-foreground">
+                    Better transaction quality improves forecasts, budgets, and AI coaching.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 rounded-full border-violet-200 bg-violet-50 px-3 text-[0.78rem] text-violet-700 hover:bg-violet-100 hover:text-violet-800 dark:border-violet-500/35 dark:bg-violet-500/12 dark:text-violet-200 dark:hover:bg-violet-500/20"
+                onClick={() => dataQualityQuery.refetch()}
+                disabled={dataQualityQuery.isFetching}
+              >
+                {dataQualityQuery.isFetching ? (
+                  <>
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-1.5 size-3.5" />
+                    Run data scan
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
+            {dataQualityQuery.isLoading ? (
+              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background px-3 py-3 text-[0.86rem] text-muted-foreground dark:bg-[#141d1f]">
+                <Loader2 className="size-4 animate-spin" />
+                Scanning transaction quality...
+              </div>
+            ) : (
+              <>
+                <div className="grid gap-2.5 lg:grid-cols-3">
+                  <div className="rounded-lg border-l-2 border-amber-400 border-r border-y border-border/70 bg-background px-3 py-2.5 dark:border-amber-400/70 dark:bg-[#141d1f]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex size-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
+                          <FolderOpen className="size-4" />
+                        </span>
+                        <div>
+                          <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">Uncategorized</p>
+                          <p className="text-[1.15rem] leading-none font-semibold tracking-tight text-foreground">{qualityUncategorized}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </div>
+                    <p className="mt-1.5 text-[0.78rem] text-muted-foreground">Review and categorize</p>
+                  </div>
+
+                  <div className="rounded-lg border-l-2 border-violet-400 border-r border-y border-border/70 bg-background px-3 py-2.5 dark:border-violet-400/70 dark:bg-[#141d1f]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex size-9 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                          <Copy className="size-4" />
+                        </span>
+                        <div>
+                          <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">Duplicates</p>
+                          <p className="text-[1.15rem] leading-none font-semibold tracking-tight text-foreground">{qualityDuplicates}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </div>
+                    <p className="mt-1.5 text-[0.78rem] text-muted-foreground">Find and merge</p>
+                  </div>
+
+                  <div className="rounded-lg border-l-2 border-emerald-400 border-r border-y border-border/70 bg-background px-3 py-2.5 dark:border-emerald-400/70 dark:bg-[#141d1f]">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                          <Activity className="size-4" />
+                        </span>
+                        <div>
+                          <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">Odd transactions</p>
+                          <p className="text-[1.15rem] leading-none font-semibold tracking-tight text-foreground">{qualityOdd}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="size-4 text-muted-foreground" />
+                    </div>
+                    <p className="mt-1.5 text-[0.78rem] text-muted-foreground">Review unusual activity</p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border/70 bg-white/60 p-2.5 dark:bg-[#141d1f]">
+                  <p className="mb-1.5 text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                    Quick actions
+                  </p>
+                  <div className="grid gap-2 lg:grid-cols-4">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-border/70 bg-background px-2.5 py-2 text-left transition hover:bg-muted/45 disabled:opacity-60 dark:bg-[#111a1c]"
+                      onClick={() => {
+                        const row = (dataQualityQuery.data?.uncategorized ?? []).find((item) => Boolean(item.suggestedCategoryId));
+                        if (!row?.suggestedCategoryId) return;
+                        applyCategoryFix.mutate({ eventId: row.id, categoryId: row.suggestedCategoryId });
+                      }}
+                      disabled={
+                        applyCategoryFix.isPending ||
+                        !(dataQualityQuery.data?.uncategorized ?? []).some((item) => Boolean(item.suggestedCategoryId))
+                      }
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex size-7 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
+                            <Wand2 className="size-3.5" />
+                          </span>
+                          <p className="text-[0.82rem] font-medium text-foreground">One-tap category fixes</p>
+                        </div>
+                        <ChevronRight className="size-3.5 text-muted-foreground" />
+                      </div>
+                      <p className="mt-1 text-[0.74rem] text-muted-foreground">Auto-fix low confidence categories</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border border-border/70 bg-background px-2.5 py-2 text-left transition hover:bg-muted/45 disabled:opacity-60 dark:bg-[#111a1c]"
+                      onClick={() => {
+                        const row = (dataQualityQuery.data?.duplicateCandidates ?? [])[0];
+                        if (!row) return;
+                        removeDuplicateFix.mutate({ eventId: row.removeEventId });
+                      }}
+                      disabled={removeDuplicateFix.isPending || (dataQualityQuery.data?.duplicateCandidates ?? []).length === 0}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex size-7 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
+                            <Copy className="size-3.5" />
+                          </span>
+                          <p className="text-[0.82rem] font-medium text-foreground">Duplicate candidates</p>
+                        </div>
+                        <ChevronRight className="size-3.5 text-muted-foreground" />
+                      </div>
+                      <p className="mt-1 text-[0.74rem] text-muted-foreground">Review possible duplicate transactions</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="rounded-lg border border-border/70 bg-background px-2.5 py-2 text-left transition hover:bg-muted/45 disabled:opacity-60 dark:bg-[#111a1c]"
+                      onClick={() => {
+                        const row = (dataQualityQuery.data?.oddTransactions ?? [])[0];
+                        if (!row) return;
+                        markOddReviewed.mutate({ eventId: row.id });
+                      }}
+                      disabled={markOddReviewed.isPending || (dataQualityQuery.data?.oddTransactions ?? []).length === 0}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex size-7 items-center justify-center rounded-full bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-200">
+                            <Activity className="size-3.5" />
+                          </span>
+                          <p className="text-[0.82rem] font-medium text-foreground">Odd spend review</p>
+                        </div>
+                        <ChevronRight className="size-3.5 text-muted-foreground" />
+                      </div>
+                      <p className="mt-1 text-[0.74rem] text-muted-foreground">Check flagged unusual spending</p>
+                    </button>
+
+                    <div className="rounded-lg border border-border/70 bg-background px-2.5 py-2 dark:bg-[#111a1c]">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex size-7 items-center justify-center rounded-full bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200">
+                            <ShieldCheck className="size-3.5" />
+                          </span>
+                          <p className="text-[0.82rem] font-medium text-foreground">Data health summary</p>
+                        </div>
+                        <ChevronRight className="size-3.5 text-muted-foreground" />
+                      </div>
+                      <p className="mt-1 text-[0.74rem] text-muted-foreground">
+                        Score {qualityScore}/100 · {qualityGrade}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200/65 bg-emerald-50/65 px-3 py-2.5 dark:border-emerald-500/25 dark:bg-emerald-500/10">
+                  <p className="text-[0.78rem] text-emerald-800 dark:text-emerald-200">
+                    {isDataQualityClean
+                      ? "Clean data leads to better forecasts, smarter budgets, and more accurate AI insights."
+                      : `${totalQualityIssues} issue${totalQualityIssues === 1 ? "" : "s"} found. Use quick actions to improve accuracy.`}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 shrink-0 rounded-full px-2.5 text-[0.76rem] text-emerald-700 hover:bg-emerald-100/60 hover:text-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
+                    onClick={() => setIsDataQualityHelpOpen(true)}
+                  >
+                    Learn more
+                    <ChevronRight className="ml-1 size-3.5" />
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader className="gap-4 px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1134,6 +1408,90 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
           <DialogFooter className="border-t border-border/60 px-5 py-4 sm:px-7 sm:py-5">
             <Button type="button" className="rounded-full" onClick={() => setIsHelpOpen(false)}>
+              Got it
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDataQualityHelpOpen} onOpenChange={setIsDataQualityHelpOpen}>
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-[42rem] rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.98))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:rounded-[1.6rem] sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4">
+          <DialogHeader className="border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-7 sm:pb-5 sm:pt-7 sm:pr-16">
+            <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+              Data quality guide
+            </div>
+            <DialogTitle className="pt-2 text-[1.12rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-3 sm:text-[1.55rem]">
+              How data quality checks work
+            </DialogTitle>
+            <DialogDescription className="max-w-2xl text-[0.84rem] leading-6 text-muted-foreground sm:text-[0.93rem] sm:leading-7">
+              Clean transaction records make your forecasts, budgets, and AI coaching more reliable.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 px-5 py-4 sm:space-y-4 sm:px-7 sm:py-6">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[1rem] border border-border/70 bg-white/60 p-3 dark:bg-[#1a2426]">
+                <p className="text-[0.84rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  Uncategorized
+                </p>
+                <p className="mt-1 text-[0.78rem] leading-5.5 text-muted-foreground">
+                  Expense entries without a category. We suggest a category when merchant history is clear.
+                </p>
+              </div>
+              <div className="rounded-[1rem] border border-border/70 bg-white/60 p-3 dark:bg-[#1a2426]">
+                <p className="text-[0.84rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  Duplicates
+                </p>
+                <p className="mt-1 text-[0.78rem] leading-5.5 text-muted-foreground">
+                  Likely duplicate expenses with the same amount, date, and merchant signature.
+                </p>
+              </div>
+              <div className="rounded-[1rem] border border-border/70 bg-white/60 p-3 dark:bg-[#1a2426]">
+                <p className="text-[0.84rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                  Odd transactions
+                </p>
+                <p className="mt-1 text-[0.78rem] leading-5.5 text-muted-foreground">
+                  Outlier expenses that are much higher than typical spend in the same category.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-[1rem] border border-border/70 bg-white/60 p-3.5 dark:bg-[#1a2426]">
+              <p className="text-[0.82rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Quick actions
+              </p>
+              <ul className="mt-2 space-y-2 text-[0.8rem] text-foreground">
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 size-1.5 rounded-full bg-sky-500 dark:bg-sky-300" />
+                  <span>
+                    <span className="font-medium">One-tap category fixes:</span> applies a suggested category to one uncategorized expense.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 size-1.5 rounded-full bg-violet-500 dark:bg-violet-300" />
+                  <span>
+                    <span className="font-medium">Duplicate candidates:</span> removes one likely duplicate event and keeps the original.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-1 size-1.5 rounded-full bg-orange-500 dark:bg-orange-300" />
+                  <span>
+                    <span className="font-medium">Odd spend review:</span> tags an outlier as reviewed without deleting it.
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="rounded-[1rem] border border-emerald-200/70 bg-emerald-50/65 px-3.5 py-3 text-[0.8rem] text-emerald-800 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200">
+              Tip: run this check weekly to keep your AI coaching and cashflow forecasts accurate.
+            </div>
+          </div>
+
+          <DialogFooter className="border-t border-border/70 px-5 py-3 sm:px-7 sm:py-4">
+            <Button type="button" variant="outline" className="rounded-full" onClick={() => dataQualityQuery.refetch()}>
+              Run data scan
+            </Button>
+            <Button type="button" className="rounded-full" onClick={() => setIsDataQualityHelpOpen(false)}>
               Got it
             </Button>
           </DialogFooter>

@@ -2804,3 +2804,70 @@ A Dashboard v3 surface is successful when:
 - the dashboard feels more guided without becoming more crowded
 - the page still feels calm, premium, and lighter than feature workspaces
 - the 3 W structure is obvious in both desktop and mobile
+
+## Current Gaps and Next Updates (April 2026)
+
+This section tracks near-term product gaps that are already identified in active implementation.
+Keep these aligned with actual code behavior and update this list when scope changes.
+
+### Goals (Current State + Planned)
+
+Current state:
+- `Goals` exists in codebase but is intentionally marked `[Soon]` in navigation for staged release.
+- goal records are currently planning-first (`targetAmount`, `currentAmount`, `targetDate`, `status`).
+- linked budget is contextual only; it does not move money.
+
+Still missing:
+- explicit business requirements for funded-goal behavior.
+- confirmed accounting model for goal funding (manual progress vs transaction-linked progress).
+- goal funding history and reconciliation rules.
+
+Planned update path:
+- Phase 0: keep planning-only goals.
+- Phase 1: define requirements (`planning-only` vs `funded`) and acceptance checks.
+- Phase 2: add optional structured funding flow (with confirmation) and auditable updates.
+
+### Trust, Privacy, and Audit (Current State + Planned)
+
+Current state:
+- `allowAiCoaching` is now runtime-enforced for AI surfaces.
+- AI blocked-by-policy requests are audited.
+- settings preference changes are audited with explicit toggle events (`from` -> `to`).
+- audit log filtering exists in Settings UI.
+
+Still missing:
+- richer audit event rendering (metadata inspector/drawer).
+- optional audit filters by date range and actor.
+- retention/export policy explicitly documented in-product.
+
+Planned update path:
+- add compact metadata viewer for each audit row.
+- add optional filter chips with counts and date scoping.
+- add retention note and export behavior copy in Settings.
+
+### Usage Analytics (Current State + Planned)
+
+Current state:
+- `allowUsageAnalytics` preference is persisted.
+- server-side `trackUsageEvent` wrapper exists and respects policy.
+- events are currently local/placeholder (no external telemetry sink yet).
+
+Still missing:
+- production telemetry provider integration.
+- event taxonomy contract and versioning rules.
+- documented redaction policy for analytics payloads.
+
+Planned update path:
+- integrate a provider behind `trackUsageEvent` only.
+- keep provider calls policy-gated (`allowUsageAnalytics`).
+- define a minimal event catalog (`name`, `surface`, safe metadata only).
+
+### Quality and Delivery Rules For These Areas
+
+- Do not ship privacy-facing toggles as UI-only controls.
+- Any new trust/privacy toggle must have:
+  - persisted preference
+  - runtime enforcement
+  - audit event coverage
+- prefer additive, backwards-compatible rollout paths.
+- if requirements are unknown (especially Goals), default to limited mode with explicit `[Soon]` positioning rather than implied behavior.

@@ -5,7 +5,10 @@ import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import {
   AlertTriangle,
   CircleAlert,
+  Download,
   Globe2,
+  History,
+  Upload,
   ShieldCheck,
   SlidersHorizontal,
   Trash2,
@@ -50,8 +53,28 @@ type RouterOutputs = inferRouterOutputs<AppRouter>;
 type RouterInputs = inferRouterInputs<AppRouter>;
 type SettingsItem = RouterOutputs["settings"]["get"];
 type UpdateSettingsInput = RouterInputs["settings"]["update"];
+type AuditFilter = "all" | "settings" | "ai" | "analytics" | "workspace" | "data-quality" | "goals";
 
 const DELETE_CONFIRMATION_PHRASE = "DELETE WORKSPACE DATA";
+const auditFilterOptions: Array<{ label: string; value: AuditFilter }> = [
+  { label: "All", value: "all" },
+  { label: "Settings", value: "settings" },
+  { label: "AI", value: "ai" },
+  { label: "Analytics", value: "analytics" },
+  { label: "Workspace", value: "workspace" },
+  { label: "Data quality", value: "data-quality" },
+  { label: "Goals", value: "goals" },
+];
+
+function getAuditBucket(action: string): AuditFilter {
+  if (action.startsWith("settings.")) return "settings";
+  if (action.startsWith("ai.")) return "ai";
+  if (action.startsWith("analytics.")) return "analytics";
+  if (action.startsWith("goal.")) return "goals";
+  if (action.startsWith("data_quality.")) return "data-quality";
+  if (action.startsWith("workspace.")) return "workspace";
+  return "workspace";
+}
 
 function toDraft(settings: SettingsItem): UpdateSettingsInput {
   return {
@@ -60,6 +83,8 @@ function toDraft(settings: SettingsItem): UpdateSettingsInput {
     weekStartsOn: settings.weekStartsOn as UpdateSettingsInput["weekStartsOn"],
     dateFormat: settings.dateFormat as UpdateSettingsInput["dateFormat"],
     timezone: settings.timezone as UpdateSettingsInput["timezone"],
+    allowAiCoaching: settings.allowAiCoaching,
+    allowUsageAnalytics: settings.allowUsageAnalytics,
   };
 }
 
@@ -67,10 +92,13 @@ export function SettingsWorkspace() {
   const { openControlCenter } = useControlCenter();
   const utils = trpc.useUtils();
   const settingsQuery = trpc.settings.get.useQuery();
+  const exportDataQuery = trpc.settings.exportData.useQuery(undefined, { enabled: false });
+  const auditLogQuery = trpc.settings.auditLog.useQuery({ limit: 12 });
 
   const [draftOverride, setDraftOverride] = useState<UpdateSettingsInput | null>(null);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [clearConfirmation, setClearConfirmation] = useState("");
+  const [auditFilter, setAuditFilter] = useState<AuditFilter>("all");
 
   const baseDraft = settingsQuery.data ? toDraft(settingsQuery.data) : null;
   const draft = draftOverride ?? baseDraft;
@@ -83,15 +111,81 @@ export function SettingsWorkspace() {
       baseDraft.locale !== draft.locale ||
       baseDraft.weekStartsOn !== draft.weekStartsOn ||
       baseDraft.dateFormat !== draft.dateFormat ||
-      baseDraft.timezone !== draft.timezone
+      baseDraft.timezone !== draft.timezone ||
+      baseDraft.allowAiCoaching !== draft.allowAiCoaching ||
+      baseDraft.allowUsageAnalytics !== draft.allowUsageAnalytics
     );
   }, [baseDraft, draft]);
+
+  const handleExportWorkspace = async () => {
+    try {
+      const result = await exportDataQuery.refetch();
+      const payload = result.data;
+      if (!payload) {
+        toast.error("Could not export workspace", {
+          description: "No data was returned for export.",
+        });
+        return;
+      }
+
+      const fileName = `veyra-export-${new Date().toISOString().slice(0, 10)}.json`;
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast.success("Export ready", {
+        description: `Saved ${fileName}`,
+      });
+    } catch (error) {
+      toast.error("Could not export workspace", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    }
+  };
+
+  const handleDownloadImportTemplate = () => {
+    const template = {
+      format: "veyra-workspace-import-v1",
+      notes: "Use this structure when preparing bulk imports for assisted migration.",
+      accounts: [],
+      categories: [],
+      budgets: [],
+      goals: [],
+      transactions: [],
+      bills: [],
+      loans: [],
+    };
+
+    const fileName = "veyra-import-template.json";
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast.success("Import template ready", {
+      description: `Saved ${fileName}`,
+    });
+  };
 
   const updateSettings = trpc.settings.update.useMutation({
     onSuccess: async (result) => {
       utils.settings.get.setData(undefined, result.settings);
       setDraftOverride(null);
-      await utils.settings.get.invalidate();
+      await Promise.all([
+        utils.settings.get.invalidate(),
+        utils.settings.auditLog.invalidate(),
+      ]);
 
       toast.success("Settings saved", {
         description: "Your workspace preferences are now updated.",
@@ -111,8 +205,10 @@ export function SettingsWorkspace() {
         utils.accounts.summary.invalidate(),
         utils.loans.list.invalidate(),
         utils.loans.summary.invalidate(),
+        utils.goals.list.invalidate(),
         utils.transactions.list.invalidate(),
         utils.transactions.summary.invalidate(),
+        utils.dataQuality.transactions.invalidate(),
         utils.budgets.list.invalidate(),
         utils.budgets.summary.invalidate(),
         utils.categories.list.invalidate(),
@@ -122,6 +218,7 @@ export function SettingsWorkspace() {
         utils.ai.transactionsInsight.invalidate(),
         utils.ai.budgetsInsight.invalidate(),
         utils.ai.loansInsight.invalidate(),
+        utils.settings.auditLog.invalidate(),
       ]);
 
       setShowClearDialog(false);
@@ -141,6 +238,11 @@ export function SettingsWorkspace() {
   const normalizedConfirmation = clearConfirmation.trim().toUpperCase();
   const isDeleteEnabled =
     normalizedConfirmation === DELETE_CONFIRMATION_PHRASE && !clearWorkspace.isPending;
+  const filteredAuditEntries = useMemo(() => {
+    const auditEntries = auditLogQuery.data ?? [];
+    if (auditFilter === "all") return auditEntries;
+    return auditEntries.filter((entry) => getAuditBucket(entry.action) === auditFilter);
+  }, [auditLogQuery.data, auditFilter]);
 
   if (settingsQuery.isLoading || !draft) {
     return (
@@ -414,6 +516,82 @@ export function SettingsWorkspace() {
               </div>
             </div>
           </section>
+
+          <section className="space-y-4 border-t border-border/60 pt-6">
+            <div className="space-y-1">
+              <h3 className="flex items-center gap-2 text-[1rem] font-semibold tracking-tight text-foreground">
+                <ShieldCheck className="size-4 text-primary" />
+                Trust and privacy defaults
+              </h3>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Control AI coaching and product analytics usage for this workspace.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-border/70 bg-background px-4 py-3 dark:bg-[#141d1f]">
+                <p className="text-sm font-medium text-foreground">AI coaching access</p>
+                <p className="mt-1 text-[0.82rem] leading-6 text-muted-foreground">
+                  Allows AI-generated insights from your transaction and budget data.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={draft.allowAiCoaching ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() =>
+                      setDraftOverride((current) => ({ ...(current ?? draft), allowAiCoaching: true }))
+                    }
+                  >
+                    Enabled
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!draft.allowAiCoaching ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() =>
+                      setDraftOverride((current) => ({ ...(current ?? draft), allowAiCoaching: false }))
+                    }
+                  >
+                    Disabled
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-background px-4 py-3 dark:bg-[#141d1f]">
+                <p className="text-sm font-medium text-foreground">Usage analytics</p>
+                <p className="mt-1 text-[0.82rem] leading-6 text-muted-foreground">
+                  Shares anonymous feature-usage telemetry to improve product reliability.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={draft.allowUsageAnalytics ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() =>
+                      setDraftOverride((current) => ({ ...(current ?? draft), allowUsageAnalytics: true }))
+                    }
+                  >
+                    Enabled
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!draft.allowUsageAnalytics ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() =>
+                      setDraftOverride((current) => ({ ...(current ?? draft), allowUsageAnalytics: false }))
+                    }
+                  >
+                    Disabled
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
         </CardContent>
       </Card>
 
@@ -425,18 +603,82 @@ export function SettingsWorkspace() {
               Privacy and account controls
             </p>
             <p className="text-sm leading-6 text-amber-900/80 dark:text-amber-200/85">
-              Manage sign-in, sessions, and account-level actions from the profile menu in the header.
+              Manage sign-in, sessions, exports, and change history for a more auditable workspace.
             </p>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="h-11 rounded-full border-amber-300/55 bg-white/70 px-5 text-amber-900 hover:bg-white dark:border-amber-400/25 dark:bg-transparent dark:text-amber-100"
-            onClick={openControlCenter}
-          >
-            Open control center
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-full border-amber-300/55 bg-white/70 px-5 text-amber-900 hover:bg-white dark:border-amber-400/25 dark:bg-transparent dark:text-amber-100"
+              onClick={openControlCenter}
+            >
+              Open control center
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-full border-amber-300/55 bg-white/70 px-5 text-amber-900 hover:bg-white dark:border-amber-400/25 dark:bg-transparent dark:text-amber-100"
+              onClick={handleExportWorkspace}
+              disabled={exportDataQuery.isFetching}
+            >
+              <Download className="size-4" />
+              {exportDataQuery.isFetching ? "Exporting..." : "Export JSON"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 rounded-full border-amber-300/55 bg-white/70 px-5 text-amber-900 hover:bg-white dark:border-amber-400/25 dark:bg-transparent dark:text-amber-100"
+              onClick={handleDownloadImportTemplate}
+            >
+              <Upload className="size-4" />
+              Import template
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-white/75 bg-white/82 dark:border-white/8 dark:bg-[#182123]">
+        <CardHeader className="space-y-2 border-b border-border/60 pb-5">
+          <CardTitle className="flex items-center gap-2 text-[1.15rem] tracking-tight">
+            <History className="size-4 text-primary" />
+            Audit log
+          </CardTitle>
+          <CardDescription>
+            Recent sensitive changes (settings, exports, data-quality actions, and goal edits).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 pt-5">
+          <div className="flex flex-wrap gap-2 pb-1">
+            {auditFilterOptions.map((option) => (
+              <Button
+                key={option.value}
+                type="button"
+                size="sm"
+                variant={auditFilter === option.value ? "default" : "outline"}
+                className="h-8 rounded-full px-3 text-[0.78rem]"
+                onClick={() => setAuditFilter(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+
+          {auditLogQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading audit history...</p>
+          ) : filteredAuditEntries.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No audit events yet.</p>
+          ) : (
+            filteredAuditEntries.map((entry) => (
+              <div key={entry.id} className="rounded-lg border border-border/70 bg-background px-3 py-2 dark:bg-[#141d1f]">
+                <p className="text-[0.84rem] font-medium text-foreground">{entry.summary}</p>
+                <p className="text-[0.75rem] text-muted-foreground">
+                  {entry.action} · {entry.createdAt.toLocaleString()}
+                </p>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
 

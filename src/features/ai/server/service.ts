@@ -11,6 +11,7 @@ import {
   loanPayments,
   loans,
   transactionEvents,
+  userPreferences,
 } from "@/db/schema";
 import { formatCurrencyMiliunits } from "@/lib/currencies";
 import { getQuickCaptureDraftSchema } from "@/features/ai/server/schema";
@@ -51,6 +52,16 @@ function assertUserId(userId: string | null | undefined): string {
     });
   }
   return userId;
+}
+
+export async function isAiCoachingEnabled(ctx: Pick<TRPCContext, "db" | "userId">) {
+  const userId = assertUserId(ctx.userId);
+  const preferences = await ctx.db.query.userPreferences.findFirst({
+    where: eq(userPreferences.clerkUserId, userId),
+    columns: { allowAiCoaching: true },
+  });
+
+  return preferences?.allowAiCoaching ?? true;
 }
 
 function normalizeValue(value: string) {

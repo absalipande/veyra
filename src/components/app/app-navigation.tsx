@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Menu,
   PiggyBank,
+  Target,
   Settings2,
   Tags,
 } from "lucide-react";
@@ -57,6 +58,12 @@ const items = [
     available: true,
   },
   {
+    label: "Goals",
+    href: "/goals",
+    icon: Target,
+    available: false,
+  },
+  {
     label: "Categories",
     href: "/categories",
     icon: Tags,
@@ -98,7 +105,7 @@ function NavigationList({ onNavigate }: NavigationListProps) {
                 <span>{item.label}</span>
               </div>
               <span className="rounded-full border border-border/70 px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]">
-                Soon
+                [Soon]
               </span>
             </div>
           );

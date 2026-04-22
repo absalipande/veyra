@@ -18,6 +18,8 @@ export const userPreferences = pgTable(
       .default("month-day-year")
       .notNull(),
     timezone: text("timezone").default("Asia/Manila").notNull(),
+    allowAiCoaching: boolean("allow_ai_coaching").default(true).notNull(),
+    allowUsageAnalytics: boolean("allow_usage_analytics").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -197,6 +199,55 @@ export const budgets = pgTable(
     clerkUserIdx: index("veyra_budgets_clerk_user_idx").on(table.clerkUserId),
     parentBudgetIdx: index("veyra_budgets_parent_budget_idx").on(table.parentBudgetId),
     periodIdx: index("veyra_budgets_period_idx").on(table.period),
+  })
+);
+
+export const goals = pgTable(
+  "veyra_goals",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    name: text("name").notNull(),
+    targetAmount: integer("target_amount").notNull(),
+    currentAmount: integer("current_amount").default(0).notNull(),
+    currency: text("currency").default("PHP").notNull(),
+    targetDate: timestamp("target_date", { mode: "date" }).notNull(),
+    linkedBudgetId: text("linked_budget_id").references(() => budgets.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    status: text("status", {
+      enum: ["active", "completed", "paused"],
+    })
+      .default("active")
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_goals_clerk_user_idx").on(table.clerkUserId),
+    statusIdx: index("veyra_goals_status_idx").on(table.status),
+    targetDateIdx: index("veyra_goals_target_date_idx").on(table.targetDate),
+    linkedBudgetIdx: index("veyra_goals_linked_budget_idx").on(table.linkedBudgetId),
+  })
+);
+
+export const auditLogs = pgTable(
+  "veyra_audit_logs",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    action: text("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id"),
+    summary: text("summary").notNull(),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_audit_logs_clerk_user_idx").on(table.clerkUserId),
+    actionIdx: index("veyra_audit_logs_action_idx").on(table.action),
+    entityTypeIdx: index("veyra_audit_logs_entity_type_idx").on(table.entityType),
+    createdAtIdx: index("veyra_audit_logs_created_at_idx").on(table.createdAt),
   })
 );
 

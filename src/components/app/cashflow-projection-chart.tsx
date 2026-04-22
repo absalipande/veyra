@@ -226,15 +226,15 @@ export function CashflowProjectionChart({
         <line x1="0" y1={height - 2} x2={VIEWBOX_WIDTH} y2={height - 2} className="stroke-border/45" />
 
         {areaPath ? <path d={areaPath} fill={`url(#${areaGradientId})`} /> : null}
-        <path
-          d={linePath}
-          fill="none"
-          stroke={`url(#${lineGradientId})`}
-          strokeWidth="2.75"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="dark:opacity-85"
-        />
+      <path
+        d={linePath}
+        fill="none"
+        stroke={`url(#${lineGradientId})`}
+        strokeWidth="1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="dark:opacity-85"
+      />
 
         {hoveredPoint ? (
           <line
@@ -248,14 +248,14 @@ export function CashflowProjectionChart({
         ) : null}
 
         {dueMarkers.map((point, index) => (
-          <circle
-            key={`${point.x}-${point.y}-${index}`}
-            cx={point.x}
-            cy={point.y}
-            r={Math.min(4.2, 2.3 + point.dueCount * 0.45)}
-            className="fill-[#e9f6f5] stroke-[#14656b] dark:fill-[#203032] dark:stroke-[#6bd0c2]"
-            strokeWidth="1.35"
-          >
+        <circle
+          key={`${point.x}-${point.y}-${index}`}
+          cx={point.x}
+          cy={point.y}
+          r={Math.min(3.4, 1.9 + point.dueCount * 0.35)}
+          className="fill-[#e9f6f5] stroke-[#14656b] dark:fill-[#203032] dark:stroke-[#6bd0c2]"
+          strokeWidth="1.1"
+        >
             <title>
               {`Due date marker (${point.dueCount} item${point.dueCount === 1 ? "" : "s"}) · ${toDateLabel(point.date)}`}
             </title>
@@ -265,32 +265,32 @@ export function CashflowProjectionChart({
         {lowestIndex >= 0 ? (
           <>
             <circle
-              cx={plotPoints[lowestIndex]!.x}
-              cy={plotPoints[lowestIndex]!.y}
-              r="4.7"
-              className="fill-rose-50/95 stroke-rose-500 dark:fill-rose-500/20 dark:stroke-rose-300"
-              strokeWidth="1.5"
-            >
-              <title>Lowest projected balance point</title>
-            </circle>
-            <circle
-              cx={plotPoints[lowestIndex]!.x}
-              cy={plotPoints[lowestIndex]!.y}
-              r="1.7"
-              className="fill-rose-500 dark:fill-rose-300"
-            />
-          </>
-        ) : null}
-
-        {hoveredPoint ? (
+            cx={plotPoints[lowestIndex]!.x}
+            cy={plotPoints[lowestIndex]!.y}
+            r="4"
+            className="fill-rose-50/95 stroke-rose-500 dark:fill-rose-500/20 dark:stroke-rose-300"
+            strokeWidth="1.25"
+          >
+            <title>Lowest projected balance point</title>
+          </circle>
           <circle
-            cx={hoveredPoint.x}
-            cy={hoveredPoint.y}
-            r="4.8"
-            className="fill-white stroke-[#14656b] dark:fill-[#182123] dark:stroke-[#6bd0c2]"
-            strokeWidth="1.8"
+            cx={plotPoints[lowestIndex]!.x}
+            cy={plotPoints[lowestIndex]!.y}
+            r="1.35"
+            className="fill-rose-500 dark:fill-rose-300"
           />
-        ) : null}
+        </>
+      ) : null}
+
+      {hoveredPoint ? (
+        <circle
+          cx={hoveredPoint.x}
+          cy={hoveredPoint.y}
+          r="3.9"
+          className="fill-white stroke-[#14656b] dark:fill-[#182123] dark:stroke-[#6bd0c2]"
+          strokeWidth="1.35"
+        />
+      ) : null}
       </svg>
 
       {hoveredPoint ? (
