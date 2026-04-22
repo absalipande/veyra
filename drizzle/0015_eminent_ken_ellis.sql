@@ -1,0 +1,3 @@
+ALTER TABLE "veyra_bill_occurrences" ADD COLUMN "transaction_event_id" text;--> statement-breakpoint
+ALTER TABLE "veyra_bill_occurrences" ADD CONSTRAINT "veyra_bill_occurrences_transaction_event_id_veyra_transaction_events_id_fk" FOREIGN KEY ("transaction_event_id") REFERENCES "public"."veyra_transaction_events"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "veyra_bill_occurrences_transaction_event_idx" ON "veyra_bill_occurrences" USING btree ("transaction_event_id");

@@ -16,6 +16,8 @@ type DatePickerFieldProps = {
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  size?: "default" | "compact"
+  displayFormat?: string
 }
 
 function parseDateInputValue(value: string) {
@@ -62,8 +64,14 @@ export function DatePickerField({
   onChange,
   placeholder = "Pick a date",
   className,
+  size = "default",
+  displayFormat = "MM / dd / yyyy",
 }: DatePickerFieldProps) {
   const date = parseDateInputValue(value)
+  const baseClassName =
+    size === "compact"
+      ? "inline-flex h-9 w-full items-center justify-between rounded-[0.75rem] border border-border/80 bg-white px-3 text-left text-[0.88rem] leading-none font-normal text-foreground shadow-none outline-none transition-colors hover:bg-white focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+      : "inline-flex h-10 w-full items-center justify-between rounded-[1rem] border border-border/80 bg-white px-3 text-left text-sm leading-none font-normal text-foreground shadow-none outline-none transition-colors hover:bg-white focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 sm:h-11 sm:px-4 sm:text-[0.98rem]"
 
   return (
     <Popover>
@@ -71,12 +79,12 @@ export function DatePickerField({
         <button
           type="button"
           className={cn(
-            "inline-flex h-10 w-full items-center justify-between rounded-[1rem] border border-border/80 bg-white px-3 text-left text-sm leading-none font-normal text-foreground shadow-none outline-none transition-colors hover:bg-white focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30 sm:h-11 sm:px-4 sm:text-[0.98rem]",
+            baseClassName,
             !date && "text-muted-foreground",
             className
           )}
         >
-          <span className="leading-none">{date ? format(date, "MM / dd / yyyy") : placeholder}</span>
+          <span className="leading-none">{date ? format(date, displayFormat) : placeholder}</span>
           <CalendarIcon className="h-4 w-4 text-muted-foreground" />
         </button>
       </PopoverTrigger>

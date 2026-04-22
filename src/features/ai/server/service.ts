@@ -645,19 +645,255 @@ export type HabitCoachingInsight = {
   };
   keyFindings: string[];
   advice: string[];
+  categoryHighlights: Array<{
+    name: string;
+    amountLabel: string;
+    sharePct: number;
+    note: string;
+  }>;
+  budgetPosture: {
+    trackedBudgets: number;
+    atRiskBudgets: number;
+    onTrackBudgets: number;
+    totalRemainingLabel: string;
+    note: string;
+  };
+  dataWindow: {
+    expensesAnalyzed: number;
+    budgetsAnalyzed: number;
+  };
 };
 
 const HABIT_SURFACE = "habit_coaching";
+const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
+const FALLBACK_OPENAI_MODEL = "gpt-4o-mini";
+
+const habitInsightDraftSchema = z.object({
+  summary: z.string().min(1).max(260),
+  keyFindings: z.array(z.string().min(1)).min(2).max(5),
+  advice: z.array(z.string().min(1)).min(2).max(5),
+  categoryNotes: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(80),
+        note: z.string().min(1).max(180),
+      })
+    )
+    .max(6)
+    .optional(),
+  budgetNote: z.string().min(1).max(180).optional(),
+});
+
+type HabitInsightDraft = z.infer<typeof habitInsightDraftSchema>;
+
+const habitCoachingInsightSchema = z.object({
+  generatedAt: z.string(),
+  periodLabel: z.string(),
+  summary: z.string(),
+  topSpendCategory: z.object({
+    name: z.string(),
+    amountLabel: z.string(),
+    sharePct: z.number(),
+  }),
+  monthOverMonthShift: z.object({
+    category: z.string(),
+    deltaLabel: z.string(),
+    direction: z.enum(["up", "down", "flat"]),
+  }),
+  keyFindings: z.array(z.string()),
+  advice: z.array(z.string()),
+  categoryHighlights: z
+    .array(
+      z.object({
+        name: z.string(),
+        amountLabel: z.string(),
+        sharePct: z.number(),
+        note: z.string(),
+      })
+    )
+    .optional(),
+  budgetPosture: z
+    .object({
+      trackedBudgets: z.number(),
+      atRiskBudgets: z.number(),
+      onTrackBudgets: z.number(),
+      totalRemainingLabel: z.string(),
+      note: z.string(),
+    })
+    .optional(),
+  dataWindow: z
+    .object({
+      expensesAnalyzed: z.number(),
+      budgetsAnalyzed: z.number(),
+    })
+    .optional(),
+});
+
+function normalizeInsightLines(lines: string[], fallback: string[]) {
+  const normalized = lines
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function parseOpenAiChatContent(content: string | null | undefined): HabitInsightDraft | null {
+  if (!content) return null;
+  try {
+    const parsed = JSON.parse(content);
+    const validated = habitInsightDraftSchema.safeParse(parsed);
+    if (!validated.success) return null;
+    return validated.data;
+  } catch {
+    return null;
+  }
+}
+
+function buildDefaultBudgetPosture(
+  budgetSummary: Awaited<ReturnType<typeof getBudgetsSummary>>["summary"]
+) {
+  const atRiskBudgets =
+    budgetSummary.warningBudgets + budgetSummary.dangerBudgets + budgetSummary.exceededBudgets;
+  const onTrackBudgets = budgetSummary.onTrackBudgets;
+
+  return {
+    trackedBudgets: budgetSummary.totalBudgets,
+    atRiskBudgets,
+    onTrackBudgets,
+    totalRemainingLabel: formatCurrencyMiliunits(budgetSummary.totalRemaining, "PHP"),
+    note:
+      budgetSummary.totalBudgets === 0
+        ? "No active budgets yet. Add one to get budget pacing guidance."
+        : atRiskBudgets > 0
+          ? `${atRiskBudgets} budget${atRiskBudgets === 1 ? "" : "s"} need closer pacing this cycle.`
+          : "Budgets are currently pacing within plan.",
+  };
+}
+
+async function generateInsightDraftFromOpenAi(input: {
+  periodLabel: string;
+  currentTotal: number;
+  previousTotal: number;
+  topCategory: string;
+  topSharePct: number;
+  shiftCategory: string;
+  shiftLabel: string;
+  budgetSummary: Awaited<ReturnType<typeof getBudgetsSummary>>["summary"];
+  topCategories: Array<{
+    name: string;
+    currentAmount: number;
+    previousAmount: number;
+    currentSharePct: number;
+  }>;
+  recentExpenses: Array<{
+    date: string;
+    description: string;
+    category: string;
+    amount: number;
+    budgetName: string | null;
+  }>;
+}) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const model = process.env.OPENAI_HABIT_MODEL ?? process.env.OPENAI_MODEL ?? FALLBACK_OPENAI_MODEL;
+
+  const atRiskBudgets =
+    input.budgetSummary.warningBudgets +
+    input.budgetSummary.dangerBudgets +
+    input.budgetSummary.exceededBudgets;
+
+  const payload = {
+    periodLabel: input.periodLabel,
+    totals: {
+      currentMonthExpense: input.currentTotal,
+      previousMonthExpense: input.previousTotal,
+      currency: "PHP",
+    },
+    budgets: {
+      totalBudgets: input.budgetSummary.totalBudgets,
+      onTrackBudgets: input.budgetSummary.onTrackBudgets,
+      atRiskBudgets,
+      totalRemaining: input.budgetSummary.totalRemaining,
+    },
+    topCategory: {
+      name: input.topCategory,
+      sharePct: input.topSharePct,
+    },
+    shift: {
+      category: input.shiftCategory,
+      label: input.shiftLabel,
+    },
+    topCategories: input.topCategories,
+    recentExpenses: input.recentExpenses,
+  };
+
+  const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.3,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are a personal finance coaching assistant. Use only the provided budget and transaction data. " +
+            "Return valid JSON only with keys: summary, keyFindings, advice, categoryNotes, budgetNote. " +
+            "Focus on concrete category concentration risks (e.g., food, clothing) and practical next steps.",
+        },
+        {
+          role: "user",
+          content: JSON.stringify(payload),
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`OpenAI request failed (${response.status})`);
+  }
+
+  const json = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string | null } }>;
+  };
+  return parseOpenAiChatContent(json.choices?.[0]?.message?.content);
+}
 
 function parseHabitInsightPayload(payload: string): HabitCoachingInsight | null {
   try {
-    const parsed = JSON.parse(payload) as HabitCoachingInsight;
-    if (!parsed || typeof parsed !== "object") return null;
-    if (typeof parsed.generatedAt !== "string") return null;
-    if (typeof parsed.periodLabel !== "string") return null;
-    if (typeof parsed.summary !== "string") return null;
-    if (!Array.isArray(parsed.keyFindings) || !Array.isArray(parsed.advice)) return null;
-    return parsed;
+    const parsed = JSON.parse(payload);
+    const validated = habitCoachingInsightSchema.safeParse(parsed);
+    if (!validated.success) return null;
+
+    const value = validated.data;
+    return {
+      generatedAt: value.generatedAt,
+      periodLabel: value.periodLabel,
+      summary: value.summary,
+      topSpendCategory: value.topSpendCategory,
+      monthOverMonthShift: value.monthOverMonthShift,
+      keyFindings: value.keyFindings,
+      advice: value.advice,
+      categoryHighlights: value.categoryHighlights ?? [],
+      budgetPosture:
+        value.budgetPosture ?? {
+          trackedBudgets: 0,
+          atRiskBudgets: 0,
+          onTrackBudgets: 0,
+          totalRemainingLabel: formatCurrencyMiliunits(0, "PHP"),
+          note: "No budget posture available yet.",
+        },
+      dataWindow:
+        value.dataWindow ?? {
+          expensesAnalyzed: 0,
+          budgetsAnalyzed: 0,
+        },
+    };
   } catch {
     return null;
   }
@@ -717,7 +953,7 @@ export async function generateMonthlyHabitCoachingInsight(
   const current = getMonthDateRange(now, 0);
   const previous = getMonthDateRange(now, -1);
 
-  const [events, categoryRows] = await Promise.all([
+  const [events, categoryRows, budgetSummary] = await Promise.all([
     ctx.db.query.transactionEvents.findMany({
       where: and(
         eq(transactionEvents.clerkUserId, userId),
@@ -728,6 +964,8 @@ export async function generateMonthlyHabitCoachingInsight(
       columns: {
         amount: true,
         categoryId: true,
+        budgetId: true,
+        description: true,
         occurredAt: true,
       },
     }),
@@ -735,9 +973,11 @@ export async function generateMonthlyHabitCoachingInsight(
       where: and(eq(categories.clerkUserId, userId), eq(categories.isArchived, false)),
       columns: { id: true, name: true },
     }),
+    getBudgetsSummary(ctx),
   ]);
 
   const categoryById = new Map(categoryRows.map((category) => [category.id, category.name]));
+  const budgetNameById = new Map(budgetSummary.budgets.map((budget) => [budget.id, budget.name]));
   const currentByCategory = new Map<string, number>();
   const previousByCategory = new Map<string, number>();
 
@@ -750,6 +990,7 @@ export async function generateMonthlyHabitCoachingInsight(
 
   const currentTotal = Array.from(currentByCategory.values()).reduce((sum, value) => sum + value, 0);
   const previousTotal = Array.from(previousByCategory.values()).reduce((sum, value) => sum + value, 0);
+  const currentExpenseCount = events.filter((event) => event.occurredAt >= current.start).length;
 
   const [topCategory, topAmount] =
     Array.from(currentByCategory.entries()).sort((a, b) => b[1] - a[1])[0] ?? ["No category yet", 0];
@@ -774,9 +1015,9 @@ export async function generateMonthlyHabitCoachingInsight(
       : `${direction === "up" ? "+" : "-"}${formatCurrencyMiliunits(Math.abs(shiftAmount), "PHP")} vs last month`;
 
   const potentialSavings = topAmount > 0 ? Math.round(topAmount * 0.12) : 0;
-  const keyFindings: string[] = [];
+  const defaultKeyFindings: string[] = [];
   if (topAmount > 0) {
-    keyFindings.push(
+    defaultKeyFindings.push(
       `${topCategory} is your biggest spend this month at ${formatCurrencyMiliunits(
         topAmount,
         "PHP"
@@ -784,9 +1025,9 @@ export async function generateMonthlyHabitCoachingInsight(
     );
   }
   if (direction !== "flat" && shiftCategory !== "No major shift") {
-    keyFindings.push(`${shiftCategory} moved ${shiftLabel}.`);
+    defaultKeyFindings.push(`${shiftCategory} moved ${shiftLabel}.`);
   } else {
-    keyFindings.push("Spending distribution stayed relatively stable month-over-month.");
+    defaultKeyFindings.push("Spending distribution stayed relatively stable month-over-month.");
   }
   if (currentTotal > 0 && previousTotal > 0) {
     const totalDelta = currentTotal - previousTotal;
@@ -794,28 +1035,55 @@ export async function generateMonthlyHabitCoachingInsight(
       Math.abs(totalDelta),
       "PHP"
     )}`;
-    keyFindings.push(`Overall spending change: ${totalDeltaLabel} vs last month.`);
+    defaultKeyFindings.push(`Overall spending change: ${totalDeltaLabel} vs last month.`);
   }
 
-  const advice: string[] = [];
+  const defaultAdvice: string[] = [];
   if (topAmount > 0 && topCategory !== "No category yet") {
-    advice.push(
+    defaultAdvice.push(
       `Set a monthly guardrail for ${topCategory} and review it weekly.`
     );
-    advice.push(
+    defaultAdvice.push(
       `If you cut ${topCategory} by 12%, you can free up about ${formatCurrencyMiliunits(
         potentialSavings,
         "PHP"
       )} this month.`
     );
   } else {
-    advice.push("Record more categorized expenses to unlock stronger coaching insights.");
+    defaultAdvice.push("Record more categorized expenses to unlock stronger coaching insights.");
   }
   if (direction === "up" && shiftCategory !== "No major shift") {
-    advice.push(`Check recent ${shiftCategory} transactions and trim non-essential items first.`);
+    defaultAdvice.push(`Check recent ${shiftCategory} transactions and trim non-essential items first.`);
   }
+  const budgetPosture = buildDefaultBudgetPosture(budgetSummary.summary);
 
-  return {
+  const categoryStats = Array.from(
+    new Set([...currentByCategory.keys(), ...previousByCategory.keys()])
+  )
+    .map((name) => {
+      const currentAmount = currentByCategory.get(name) ?? 0;
+      const previousAmount = previousByCategory.get(name) ?? 0;
+      return {
+        name,
+        currentAmount,
+        previousAmount,
+        currentSharePct: currentTotal > 0 ? Math.round((currentAmount / currentTotal) * 100) : 0,
+      };
+    })
+    .sort((left, right) => right.currentAmount - left.currentAmount);
+
+  const topCategoryStats = categoryStats.filter((entry) => entry.currentAmount > 0).slice(0, 4);
+  const defaultCategoryHighlights = topCategoryStats.slice(0, 3).map((entry) => ({
+    name: entry.name,
+    amountLabel: formatCurrencyMiliunits(entry.currentAmount, "PHP"),
+    sharePct: entry.currentSharePct,
+    note:
+      entry.currentSharePct >= 25
+        ? "Large share of monthly spend. Set a guardrail and check weekly."
+        : "Steady category. Keep this within your planned range.",
+  }));
+
+  const fallbackInsight: HabitCoachingInsight = {
     generatedAt: now.toISOString(),
     periodLabel: "This month vs last month",
     summary:
@@ -832,9 +1100,72 @@ export async function generateMonthlyHabitCoachingInsight(
       deltaLabel: shiftLabel,
       direction,
     },
-    keyFindings,
-    advice,
+    keyFindings: defaultKeyFindings,
+    advice: defaultAdvice,
+    categoryHighlights: defaultCategoryHighlights,
+    budgetPosture,
+    dataWindow: {
+      expensesAnalyzed: currentExpenseCount,
+      budgetsAnalyzed: budgetSummary.summary.totalBudgets,
+    },
   };
+
+  try {
+    const recentExpenses = events
+      .filter((event) => event.occurredAt >= current.start)
+      .sort((left, right) => right.occurredAt.getTime() - left.occurredAt.getTime())
+      .slice(0, 15)
+      .map((event) => ({
+        date: event.occurredAt.toISOString().slice(0, 10),
+        description: event.description,
+        category: (event.categoryId ? categoryById.get(event.categoryId) : null) ?? "Uncategorized",
+        amount: event.amount,
+        budgetName: event.budgetId ? (budgetNameById.get(event.budgetId) ?? null) : null,
+      }));
+
+    const aiDraft = await generateInsightDraftFromOpenAi({
+      periodLabel: fallbackInsight.periodLabel,
+      currentTotal,
+      previousTotal,
+      topCategory,
+      topSharePct,
+      shiftCategory,
+      shiftLabel,
+      budgetSummary: budgetSummary.summary,
+      topCategories: topCategoryStats,
+      recentExpenses,
+    });
+
+    if (!aiDraft) {
+      return fallbackInsight;
+    }
+
+    const categoryNoteByName = new Map(
+      (aiDraft.categoryNotes ?? []).map((entry) => [normalizeValue(entry.name), entry.note.trim()])
+    );
+    const categoryHighlights = (fallbackInsight.categoryHighlights.length
+      ? fallbackInsight.categoryHighlights
+      : defaultCategoryHighlights
+    ).map((entry) => ({
+      ...entry,
+      note: categoryNoteByName.get(normalizeValue(entry.name)) ?? entry.note,
+    }));
+
+    return {
+      ...fallbackInsight,
+      summary: aiDraft.summary.trim(),
+      keyFindings: normalizeInsightLines(aiDraft.keyFindings, fallbackInsight.keyFindings),
+      advice: normalizeInsightLines(aiDraft.advice, fallbackInsight.advice),
+      categoryHighlights,
+      budgetPosture: {
+        ...fallbackInsight.budgetPosture,
+        note: aiDraft.budgetNote?.trim() || fallbackInsight.budgetPosture.note,
+      },
+    };
+  } catch (error) {
+    console.error("[ai.generateMonthlyHabitCoachingInsight] fallback", error);
+    return fallbackInsight;
+  }
 }
 
 export async function getAiBudgetsInsight(ctx: Pick<TRPCContext, "db" | "userId">) {

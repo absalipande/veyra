@@ -336,12 +336,14 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const habitInsightQuery = trpc.ai.latestHabitInsight.useQuery();
   const generateHabitInsight = trpc.ai.generateHabitInsight.useMutation({
     onSuccess: async () => {
+      setInsightErrorMessage(null);
       await utils.ai.latestHabitInsight.invalidate();
       toast.success("Insight generated", {
         description: "Habit coaching was updated from your latest spending history.",
       });
     },
     onError: (error) => {
+      setInsightErrorMessage(error.message);
       toast.error("Could not generate insight", {
         description: error.message,
       });
@@ -362,6 +364,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const [draft, setDraft] = useState<EventDraft>(initialDraft);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
+  const [insightErrorMessage, setInsightErrorMessage] = useState<string | null>(null);
   const deferredSearch = useDeferredValue(search);
   const pageSize = isMobile ? 10 : 20;
   const eventsQuery = trpc.transactions.list.useQuery({
@@ -377,6 +380,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const cooldownRemainingMs = cooldownEndsAtMs ? Math.max(0, cooldownEndsAtMs - cooldownNowMs) : 0;
   const isInsightCooldownActive = cooldownRemainingMs > 0;
   const canGenerateInsight = !isGeneratingInsight && !isInsightCooldownActive;
+
+  const handleGenerateInsight = () => {
+    if (!canGenerateInsight) return;
+    setInsightErrorMessage(null);
+    generateHabitInsight.mutate();
+  };
 
   useEffect(() => {
     if (!isInsightCooldownActive) return;
@@ -754,7 +763,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   AI insight
                 </p>
                 <h3 className="text-[1.02rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                  Transaction intelligence
+                  AI financial advisor
                 </h3>
               </div>
             </div>
@@ -764,16 +773,16 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 variant="outline"
                 size="sm"
                 className="w-fit rounded-full"
-                onClick={() => generateHabitInsight.mutate()}
+                onClick={handleGenerateInsight}
                 disabled={!canGenerateInsight}
               >
                 {isGeneratingInsight ? (
                   <>
                     <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                    Generating insight...
+                    Analyzing...
                   </>
                 ) : (
-                  "Generate insight"
+                  habitInsightQuery.data ? "Refresh analysis" : "Generate insights"
                 )}
               </Button>
               {isInsightCooldownActive ? (
@@ -785,7 +794,22 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               )}
             </div>
 
-            {habitInsightQuery.data ? (
+            {insightErrorMessage ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[0.84rem] text-rose-700 dark:border-rose-500/35 dark:bg-rose-500/10 dark:text-rose-200">
+                {insightErrorMessage}
+              </div>
+            ) : null}
+
+            {habitInsightQuery.isLoading ? (
+              <div className="rounded-xl border border-dashed border-border/80 bg-background px-3.5 py-4 text-center dark:bg-[#141d1f]">
+                <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" />
+                <p className="mt-2 text-[0.84rem] text-muted-foreground">
+                  Loading your latest analysis...
+                </p>
+              </div>
+            ) : null}
+
+            {!habitInsightQuery.isLoading && habitInsightQuery.data ? (
               <div
                 className={`rounded-xl border border-border/70 bg-background px-3.5 py-3 transition dark:bg-[#141d1f] ${
                   isGeneratingInsight ? "relative overflow-hidden" : ""
@@ -801,7 +825,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 ) : null}
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Monthly coaching insight
+                    Analysis
                   </p>
                   <p className="text-[0.72rem] text-muted-foreground">
                     {new Date(habitInsightQuery.data.generatedAt).toLocaleString()}
@@ -849,17 +873,23 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   </div>
                   <div className="rounded-lg border border-[#b9d8bf]/45 bg-[#edf8ee] px-3 py-2 dark:border-[#2f5a35] dark:bg-[#1b2a20]">
                     <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
-                      Recommended next step
+                      Budget posture
                     </p>
                     <p className="mt-1 text-[0.88rem] font-semibold text-[#11424a] dark:text-emerald-100">
-                      {habitInsightQuery.data.advice[0] ?? "No recommendation yet."}
+                      {habitInsightQuery.data.budgetPosture?.atRiskBudgets ?? 0} at risk ·{" "}
+                      {habitInsightQuery.data.budgetPosture?.onTrackBudgets ?? 0} on track
+                    </p>
+                    <p className="text-[0.78rem] text-muted-foreground">
+                      Remaining{" "}
+                      {habitInsightQuery.data.budgetPosture?.totalRemainingLabel ??
+                        formatCurrencyMiliunits(0, "PHP")}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-4 rounded-lg border border-border/70 bg-white/65 px-4 py-3 dark:bg-[#1a2527]/80">
                   <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    What changed
+                    Spending patterns
                   </p>
                   <ul className="mt-3 space-y-2.5 pl-1 text-[0.86rem] text-foreground">
                     {habitInsightQuery.data.keyFindings.map((item: string) => (
@@ -873,7 +903,36 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
 
                 <div className="mt-3 rounded-lg border border-border/70 bg-white/65 px-4 py-3 dark:bg-[#1a2527]/80">
                   <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Suggested actions
+                    Category focus
+                  </p>
+                  <ul className="mt-3 space-y-2.5 pl-1 text-[0.86rem] text-foreground">
+                    {((habitInsightQuery.data.categoryHighlights ?? []).length > 0
+                      ? (habitInsightQuery.data.categoryHighlights ?? [])
+                      : [
+                          {
+                            name: "No category data yet",
+                            amountLabel: "—",
+                            sharePct: 0,
+                            note: "Categorize expenses to unlock category-level coaching.",
+                          },
+                        ]
+                    ).map((item) => (
+                      <li key={item.name} className="flex items-start gap-3 pl-1">
+                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sky-500 dark:bg-sky-300" />
+                        <span className="leading-6">
+                          <span className="font-medium">
+                            {item.name} {item.amountLabel !== "—" ? `(${item.sharePct}% · ${item.amountLabel})` : ""}
+                          </span>{" "}
+                          {item.note}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-3 rounded-lg border border-border/70 bg-white/65 px-4 py-3 dark:bg-[#1a2527]/80">
+                  <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Recommendations
                   </p>
                   <ul className="mt-3 space-y-2.5 pl-1 text-[0.86rem] text-foreground">
                     {habitInsightQuery.data.advice.map((item: string) => (
@@ -883,16 +942,30 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       </li>
                     ))}
                   </ul>
+                  <p className="mt-2 text-[0.76rem] text-muted-foreground">
+                    Based on {habitInsightQuery.data.dataWindow?.expensesAnalyzed ?? 0} expense events across{" "}
+                    {habitInsightQuery.data.dataWindow?.budgetsAnalyzed ?? 0} active budgets.
+                  </p>
                 </div>
               </div>
-            ) : (
+            ) : null}
+
+            {!habitInsightQuery.isLoading && !habitInsightQuery.data ? (
               <div className="rounded-xl border border-dashed border-border/80 bg-background px-3.5 py-3 dark:bg-[#141d1f]">
                 <p className="text-[0.9rem] text-foreground">No generated insight yet.</p>
                 <p className="mt-1 text-[0.82rem] text-muted-foreground">
-                  Generate insight to analyze your monthly spending habits and coaching actions.
+                  Generate insights to analyze monthly spending habits and coaching actions.
                 </p>
+                <Button
+                  type="button"
+                  className="mt-3 h-8 rounded-full px-3 text-[0.78rem]"
+                  onClick={handleGenerateInsight}
+                  disabled={!canGenerateInsight}
+                >
+                  {isGeneratingInsight ? "Analyzing..." : "Generate insights"}
+                </Button>
               </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       </section>

@@ -290,3 +290,72 @@ export const ledgerEntries = pgTable(
     accountIdx: index("veyra_ledger_entries_account_idx").on(table.accountId),
   })
 );
+
+export const billSeries = pgTable(
+  "veyra_bill_series",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    name: text("name").notNull(),
+    amount: integer("amount").notNull(),
+    currency: text("currency").default("PHP").notNull(),
+    cadence: text("cadence", {
+      enum: ["one_time", "weekly", "monthly", "yearly"],
+    })
+      .default("monthly")
+      .notNull(),
+    intervalCount: integer("interval_count").default(1).notNull(),
+    startsAt: timestamp("starts_at", { mode: "date" }).notNull(),
+    nextDueDate: timestamp("next_due_date", { mode: "date" }),
+    endsAfterOccurrences: integer("ends_after_occurrences"),
+    remainingOccurrences: integer("remaining_occurrences"),
+    isActive: boolean("is_active").default(true).notNull(),
+    accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_bill_series_clerk_user_idx").on(table.clerkUserId),
+    nextDueDateIdx: index("veyra_bill_series_next_due_date_idx").on(table.nextDueDate),
+    accountIdx: index("veyra_bill_series_account_idx").on(table.accountId),
+    activeIdx: index("veyra_bill_series_active_idx").on(table.isActive),
+  })
+);
+
+export const billOccurrences = pgTable(
+  "veyra_bill_occurrences",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    billId: text("bill_id")
+      .references(() => billSeries.id, { onDelete: "cascade" })
+      .notNull(),
+    dueDate: timestamp("due_date", { mode: "date" }).notNull(),
+    amount: integer("amount").notNull(),
+    status: text("status", {
+      enum: ["pending", "paid", "skipped"],
+    })
+      .default("pending")
+      .notNull(),
+    paidAt: timestamp("paid_at", { mode: "date" }),
+    transactionEventId: text("transaction_event_id").references(() => transactionEvents.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_bill_occurrences_clerk_user_idx").on(table.clerkUserId),
+    billIdx: index("veyra_bill_occurrences_bill_idx").on(table.billId),
+    dueDateIdx: index("veyra_bill_occurrences_due_date_idx").on(table.dueDate),
+    statusIdx: index("veyra_bill_occurrences_status_idx").on(table.status),
+    transactionEventIdx: index("veyra_bill_occurrences_transaction_event_idx").on(
+      table.transactionEventId
+    ),
+    uniqueBillDueIdx: uniqueIndex("veyra_bill_occurrences_bill_due_uidx").on(
+      table.billId,
+      table.dueDate
+    ),
+  })
+);

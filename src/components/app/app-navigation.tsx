@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   BadgeDollarSign,
+  CalendarClock,
   CreditCard,
   HandCoins,
   LayoutDashboard,
@@ -41,6 +42,12 @@ const items = [
     label: "Budgets",
     href: "/budgets",
     icon: PiggyBank,
+    available: true,
+  },
+  {
+    label: "Bills",
+    href: "/bills",
+    icon: CalendarClock,
     available: true,
   },
   {
