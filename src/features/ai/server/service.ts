@@ -630,6 +630,7 @@ export async function getAiTransactionsInsightCheckpoint(
 }
 
 export type HabitCoachingInsight = {
+  version: number;
   generatedAt: string;
   periodLabel: string;
   summary: string;
@@ -665,6 +666,7 @@ export type HabitCoachingInsight = {
 };
 
 const HABIT_SURFACE = "habit_coaching";
+const HABIT_INSIGHT_VERSION = 2;
 const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 const FALLBACK_OPENAI_MODEL = "gpt-4o-mini";
 
@@ -687,6 +689,7 @@ const habitInsightDraftSchema = z.object({
 type HabitInsightDraft = z.infer<typeof habitInsightDraftSchema>;
 
 const habitCoachingInsightSchema = z.object({
+  version: z.number().optional(),
   generatedAt: z.string(),
   periodLabel: z.string(),
   summary: z.string(),
@@ -826,6 +829,59 @@ function normalizeAdviceLines(lines: string[], fallback: string[]) {
   return normalizeInsightLines(lines, fallback).map((line) => toFriendlyAdviceLine(line));
 }
 
+function isGenericAdviceLine(line: string) {
+  const normalized = normalizeValue(line);
+  return (
+    normalized.includes("guardrail") ||
+    normalized.includes("monthly cap") ||
+    normalized.includes("monthly limit") ||
+    normalized.includes("check weekly") ||
+    normalized.includes("optional spending") ||
+    normalized.includes("non essential")
+  );
+}
+
+function buildCoachingAdvice(input: {
+  draftAdvice: string[];
+  fallbackAdvice: string[];
+  topCategory: string;
+  topAmount: number;
+  topSharePct: number;
+}) {
+  const normalizedDraft = normalizeAdviceLines(input.draftAdvice, input.fallbackAdvice);
+  if (input.topAmount <= 0 || input.topCategory === "No category yet") {
+    return normalizedDraft.slice(0, 3);
+  }
+
+  const baseCategoryActions = getCategoryActionPlan(
+    input.topCategory,
+    input.topAmount,
+    input.topSharePct
+  ).map((line) => toFriendlyAdviceLine(line));
+
+  const hasCategoryNamedAdvice = normalizedDraft.some((line) =>
+    normalizeValue(line).includes(normalizeValue(input.topCategory))
+  );
+  const genericLineCount = normalizedDraft.filter((line) => isGenericAdviceLine(line)).length;
+  const shouldInjectCategoryActions = !hasCategoryNamedAdvice || genericLineCount >= 2;
+
+  if (!shouldInjectCategoryActions) {
+    return normalizedDraft.slice(0, 3);
+  }
+
+  const merged = [...baseCategoryActions, ...normalizedDraft];
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+  for (const line of merged) {
+    const key = normalizeValue(line);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(line);
+  }
+
+  return deduped.slice(0, 3);
+}
+
 function parseOpenAiChatContent(content: string | null | undefined): HabitInsightDraft | null {
   if (!content) return null;
   try {
@@ -963,6 +1019,7 @@ function parseHabitInsightPayload(payload: string): HabitCoachingInsight | null 
 
     const value = validated.data;
     return {
+      version: value.version ?? 1,
       generatedAt: value.generatedAt,
       periodLabel: value.periodLabel,
       summary: value.summary,
@@ -997,7 +1054,10 @@ export async function getStoredHabitInsight(ctx: Pick<TRPCContext, "db" | "userI
     columns: { payload: true },
   });
   if (!row) return null;
-  return parseHabitInsightPayload(row.payload);
+  const parsed = parseHabitInsightPayload(row.payload);
+  if (!parsed) return null;
+  if ((parsed.version ?? 1) < HABIT_INSIGHT_VERSION) return null;
+  return parsed;
 }
 
 export async function saveHabitInsight(
@@ -1272,6 +1332,7 @@ export async function generateMonthlyHabitCoachingInsight(
   });
 
   const fallbackInsight: HabitCoachingInsight = {
+    version: HABIT_INSIGHT_VERSION,
     generatedAt: now.toISOString(),
     periodLabel: hasCurrentMonthCategoryData
       ? "This month vs last month"
@@ -1354,7 +1415,13 @@ export async function generateMonthlyHabitCoachingInsight(
       ...fallbackInsight,
       summary: aiDraft.summary.trim(),
       keyFindings: normalizeInsightLines(aiDraft.keyFindings, fallbackInsight.keyFindings),
-      advice: normalizeAdviceLines(aiDraft.advice, fallbackInsight.advice),
+      advice: buildCoachingAdvice({
+        draftAdvice: aiDraft.advice,
+        fallbackAdvice: fallbackInsight.advice,
+        topCategory: fallbackTopCategoryName,
+        topAmount: fallbackTopAmount,
+        topSharePct: fallbackTopSharePct,
+      }),
       categoryHighlights,
       budgetPosture: {
         ...fallbackInsight.budgetPosture,

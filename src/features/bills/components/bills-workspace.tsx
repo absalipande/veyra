@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { formatCurrencyMiliunits, isSupportedCurrency } from "@/lib/currencies";
+import { CashflowProjectionChart } from "@/components/app/cashflow-projection-chart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -114,25 +115,6 @@ function getInitialDraft(): BillDraft {
     notes: "",
     isActive: true,
   };
-}
-
-function buildProjectionPath(points: Array<{ balance: number }>, width: number, height: number) {
-  if (points.length === 0) return "";
-  if (points.length === 1) return `M0 ${height / 2} L${width} ${height / 2}`;
-
-  const balances = points.map((point) => point.balance);
-  const min = Math.min(...balances);
-  const max = Math.max(...balances);
-  const span = Math.max(max - min, 1);
-
-  return points
-    .map((point, index) => {
-      const x = (index / (points.length - 1)) * width;
-      const normalized = (point.balance - min) / span;
-      const y = height - normalized * height;
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
-    })
-    .join(" ");
 }
 
 const billDialogContentClassName =
@@ -311,10 +293,6 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
       : forecastQuery.data?.riskLevel === "watch"
         ? "Watch"
         : "Safe";
-  const forecastPath = useMemo(
-    () => buildProjectionPath(forecastQuery.data?.dailyProjection ?? [], 320, 64),
-    [forecastQuery.data?.dailyProjection],
-  );
   const forecastTrendDirection =
     forecastQuery.data && forecastQuery.data.projectedEndingBalance >= forecastQuery.data.startingBalance
       ? "up"
@@ -914,21 +892,24 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                         {forecastQuery.data.days} days
                       </span>
                     </div>
-                    <svg
-                      viewBox="0 0 320 64"
-                      role="img"
-                      aria-label="Projected balance trend"
-                      className="h-14 w-full"
-                      preserveAspectRatio="none"
-                    >
-                      <path
-                        d={forecastPath}
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        className="text-[#17393c] dark:text-[#6bd0c2]"
+                    <div className="h-[6.4rem] w-full max-w-[44rem]">
+                      <CashflowProjectionChart
+                        points={forecastQuery.data.dailyProjection}
+                        height={56}
+                        currency={forecastQuery.data.currency}
+                        scaleMode="fill"
                       />
-                    </svg>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.68rem] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="size-2 rounded-full border border-[#14656b] bg-[#e9f6f5] dark:border-[#6bd0c2] dark:bg-[#203032]" />
+                        Due-date outflow marker
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="size-2 rounded-full border border-rose-500 bg-rose-100 dark:border-rose-300 dark:bg-rose-500/20" />
+                        Lowest projected balance
+                      </span>
+                    </div>
                   </div>
                 </div>
 
