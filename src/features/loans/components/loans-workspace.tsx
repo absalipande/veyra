@@ -135,6 +135,8 @@ const initialDraft: LoanDraft = {
 const loanFieldClassName =
   "!h-8 w-full !rounded-[0.75rem] px-2.5 text-[0.74rem] sm:!h-9 sm:!rounded-[0.85rem] sm:px-3 sm:text-[0.84rem]";
 const loanLabelClassName = "text-[0.88rem] font-semibold text-foreground sm:text-[0.82rem]";
+const loanSupportLabelClassName =
+  "text-[0.74rem] font-medium text-muted-foreground sm:text-[0.76rem]";
 
 function toDateInputLocal(value: Date) {
   const year = value.getFullYear();
@@ -471,6 +473,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       await Promise.all([
         utils.loans.list.invalidate(),
         utils.loans.summary.invalidate(),
+        utils.bills.list.invalidate(),
+        utils.bills.summary.invalidate(),
+        utils.bills.get.invalidate(),
+        utils.forecast.summary.invalidate(),
         utils.ai.loansInsight.invalidate(),
         utils.ai.dashboardInsight.invalidate(),
         utils.ai.accountsInsight.invalidate(),
@@ -492,6 +498,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       await Promise.all([
         utils.loans.list.invalidate(),
         utils.loans.summary.invalidate(),
+        utils.bills.list.invalidate(),
+        utils.bills.summary.invalidate(),
+        utils.bills.get.invalidate(),
+        utils.forecast.summary.invalidate(),
         utils.ai.loansInsight.invalidate(),
         utils.ai.dashboardInsight.invalidate(),
         utils.ai.accountsInsight.invalidate(),
@@ -513,6 +523,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       await Promise.all([
         utils.loans.list.invalidate(),
         utils.loans.summary.invalidate(),
+        utils.bills.list.invalidate(),
+        utils.bills.summary.invalidate(),
+        utils.bills.get.invalidate(),
+        utils.forecast.summary.invalidate(),
         utils.ai.loansInsight.invalidate(),
         utils.ai.dashboardInsight.invalidate(),
         utils.ai.accountsInsight.invalidate(),
@@ -533,13 +547,33 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
     },
   });
 
-  const loans = loansQuery.data?.items ?? [];
+  const loans = useMemo(() => loansQuery.data?.items ?? [], [loansQuery.data?.items]);
   const summary = summaryQuery.data;
   const accounts = accountsQuery.data ?? [];
   const liquidAccounts = accounts.filter((account) => account.type === "cash" || account.type === "wallet");
 
   const activeLoans = loans.filter((loan) => loan.status === "active");
   const closedLoans = loans.filter((loan) => loan.status === "closed");
+  const recentLoanPayments = useMemo(
+    () =>
+      loans
+        .flatMap((loan) =>
+          (loan.payments ?? []).map((payment) => ({
+            amount: payment.amount,
+            currency: loan.currency,
+            id: payment.id,
+            loanName: loan.name,
+            note: payment.notes,
+            paidAt: payment.paidAt,
+          })),
+        )
+        .sort(
+          (left, right) =>
+            new Date(right.paidAt).getTime() - new Date(left.paidAt).getTime(),
+        )
+        .slice(0, 6),
+    [loans],
+  );
   const topLenderPosture = useMemo(() => {
     if (activeLoans.length === 0) return null;
     const byLender = new Map<string, number>();
@@ -1311,6 +1345,47 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
         </Card>
       </section>
 
+      <section>
+        <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
+          <CardContent className="space-y-3 px-4 py-4 sm:px-5 sm:py-4.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[1rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                Recent loan payments
+              </p>
+              <p className="text-[0.78rem] text-muted-foreground">
+                Last {recentLoanPayments.length} activity
+              </p>
+            </div>
+            {recentLoanPayments.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border/70 px-3 py-3 text-[0.84rem] text-muted-foreground">
+                No loan payments recorded yet.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {recentLoanPayments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/65 bg-background/80 px-3 py-2.5 dark:bg-[#141d1f]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[0.86rem] font-medium text-foreground">
+                        {payment.loanName}
+                      </p>
+                      <p className="text-[0.75rem] text-muted-foreground">
+                        {formatDate(payment.paidAt)} · {payment.note?.trim() || "Loan payment"}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-[0.88rem] font-semibold text-foreground">
+                      {formatCurrencyMiliunits(payment.amount, payment.currency)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
       <Card className="border-border/70 bg-card/90">
         <CardHeader className="pb-1.5">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1602,10 +1677,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                 </div>
               ) : (
                 <>
-                  <p className="text-[0.72rem] leading-5 text-muted-foreground">
-                    Capture lender reference and contract identity first, then set amounts and repayment terms.
-                  </p>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3">
                     <div className="space-y-1.5">
                       <label className={loanLabelClassName}>Lender name</label>
                       <Input
@@ -1629,7 +1701,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                       />
                     </div>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3">
                     <div className="space-y-1.5">
                       <label className={loanLabelClassName}>Application / Loan ID</label>
                       <Input
@@ -1637,7 +1709,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         onChange={(event) =>
                           setDraft((current) => ({ ...current, applicationId: event.target.value }))
                         }
-                        placeholder="Lender reference"
+                        placeholder="Lender reference (optional)"
                         className={loanFieldClassName}
                       />
                     </div>
@@ -1665,7 +1737,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                       </Select>
                     </div>
                   </div>
-                  <div className="grid gap-3 sm:[grid-template-columns:minmax(0,0.86fr)_minmax(0,1.14fr)]">
+                  <div className="grid gap-3">
                     <div className="space-y-1.5">
                       <label className={loanLabelClassName}>Disbursement date</label>
                       <DatePickerField
@@ -1714,10 +1786,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
               <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Contract amounts
               </p>
-              <p className="text-[0.72rem] leading-5 text-muted-foreground">
-                Track approved principal and deductions so amount received and finance preview stay accurate.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className={loanLabelClassName}>Approved principal</label>
                   <Input
@@ -1743,7 +1812,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                   />
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className={loanLabelClassName}>Interest rate % (optional)</label>
                   <Input
@@ -1920,12 +1989,12 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                   <>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-1.5">
-                        <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
+                        <label className={loanSupportLabelClassName}>
                           Monthly payment
                         </label>
-                      <Input
-                        inputMode="decimal"
-                        value={draft.autoMonthlyPayment}
+                        <Input
+                          inputMode="decimal"
+                          value={draft.autoMonthlyPayment}
                           onChange={(event) =>
                             setDraft((current) => ({ ...current, autoMonthlyPayment: event.target.value }))
                           }
@@ -1934,7 +2003,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
+                        <label className={loanSupportLabelClassName}>
                           Duration (months)
                         </label>
                         <Input
@@ -1952,7 +2021,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
+                        <label className={loanSupportLabelClassName}>
                           First payment due
                         </label>
                         <DatePickerField
@@ -1965,7 +2034,7 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[0.84rem] font-semibold text-foreground/90 sm:text-[0.76rem] sm:font-medium sm:text-muted-foreground">
+                        <label className={loanSupportLabelClassName}>
                           Monthly rate % (optional)
                         </label>
                         <Input
@@ -1984,28 +2053,32 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                         Enter monthly installment, number of installments, and first due date to auto-build repayment plan.
                       </div>
                     ) : (
-                      <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
-                        {autoGeneratedPlan.map((installment, index) => (
-                          <div
-                            key={installment.id}
-                            className="grid items-end gap-2 rounded-xl border border-border/70 bg-background/70 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] sm:p-4"
-                          >
-                            <div className="space-y-1">
-                              <p className="text-[0.74rem] font-medium text-muted-foreground">Due #{index + 1}</p>
-                              <p className="text-sm font-medium text-foreground">{installment.dueDate}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-[0.74rem] font-medium text-muted-foreground">Amount</p>
-                              <p className="text-sm font-medium text-foreground">{installment.amount}</p>
-                            </div>
-                            <div className="space-y-1">
-                              <p className="text-[0.74rem] font-medium text-muted-foreground">Principal / Interest</p>
-                              <p className="text-sm font-medium text-foreground">
-                                {installment.principalAmount} / {installment.interestAmount}
-                              </p>
-                            </div>
+                      <div className="space-y-2 rounded-xl border border-border/70 bg-background/70 p-2">
+                        <div className="flex items-center justify-between px-1 text-[0.72rem] text-muted-foreground">
+                          <span>{autoGeneratedPlan.length} scheduled payments</span>
+                          <span className="font-semibold text-foreground">
+                            {formatCurrencyMiliunits(repaymentPlanTotal, draft.currency)}
+                          </span>
+                        </div>
+                        <div className="overflow-hidden rounded-lg border border-border/70 bg-background">
+                          <div className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/70 px-3 py-2 text-[0.62rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                            <p>#</p>
+                            <p>Due date</p>
+                            <p className="text-right">Amount</p>
                           </div>
-                        ))}
+                          <div className="max-h-64 overflow-y-auto">
+                            {autoGeneratedPlan.map((installment, index) => (
+                              <div
+                                key={installment.id}
+                                className="grid grid-cols-[30px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/50 px-3 py-2.5 text-[0.8rem] last:border-b-0 sm:text-[0.84rem]"
+                              >
+                                <p className="font-semibold tabular-nums text-muted-foreground">{index + 1}</p>
+                                <p className="font-medium text-foreground">{formatDate(installment.dueDate)}</p>
+                                <p className="text-right font-semibold tabular-nums text-foreground">{installment.amount}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </>
@@ -2118,26 +2191,31 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
             ) : null}
 
             {!isCreateMode || loanTypeStepComplete ? (
-            <div className="space-y-2 rounded-xl border border-border/70 bg-background/60 p-3 sm:p-4">
-              <label className={loanLabelClassName}>Preview (read-only)</label>
-              <div className="rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-[0.76rem] leading-5 text-muted-foreground sm:px-3.5 sm:text-[0.8rem]">
+            <div className="space-y-2 rounded-xl border border-border/70 bg-background/60 p-2.5 sm:p-3">
+              <div className="flex items-center justify-between gap-3">
+                <label className={loanLabelClassName}>Preview</label>
+                <span className="rounded-full border border-border/70 bg-background px-2.5 py-0.5 text-[0.64rem] font-medium text-muted-foreground">
+                  Read-only
+                </span>
+              </div>
+              <div className="rounded-lg border border-border/70 bg-background px-3 py-2.5">
                 {isPersonalFlow ? (
-                  <>
-                    <p>
-                      Total payable:{" "}
-                      <span className="font-semibold text-foreground">
+                  <div className="space-y-1.5">
+                    <p className="flex items-center justify-between gap-3 text-[0.84rem]">
+                      <span className="text-muted-foreground">Total payable</span>
+                      <span className="font-semibold tabular-nums text-foreground">
                         {formatCurrencyMiliunits(personalPreviewTotalPayable, draft.currency)}
                       </span>
                     </p>
-                    <p>
-                      Interest & fees:{" "}
-                      <span className="font-semibold text-foreground">
+                    <p className="flex items-center justify-between gap-3 text-[0.84rem]">
+                      <span className="text-muted-foreground">Interest & fees</span>
+                      <span className="font-semibold tabular-nums text-foreground">
                         {formatCurrencyMiliunits(personalPreviewInterestAndFees, draft.currency)}
                       </span>
                     </p>
-                    <p>
-                      Maturity date:{" "}
-                      <span className="font-semibold text-foreground">
+                    <p className="flex items-center justify-between gap-3 text-[0.84rem]">
+                      <span className="text-muted-foreground">Maturity date</span>
+                      <span className="text-right font-semibold text-foreground">
                         {personalPreviewMaturityDate
                           ? formatDate(personalPreviewMaturityDate)
                           : draft.personalScheduleStyle === "flexible"
@@ -2145,34 +2223,34 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                             : "Add due date + duration"}
                       </span>
                     </p>
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <p>
-                      Amount received:{" "}
-                      <span className="font-semibold text-foreground">
+                  <div className="space-y-1.5">
+                    <p className="flex items-center justify-between gap-3 text-[0.84rem]">
+                      <span className="text-muted-foreground">Amount received</span>
+                      <span className="font-semibold tabular-nums text-foreground">
                         {formatCurrencyMiliunits(amountReceivedPreview, draft.currency)}
                       </span>
                     </p>
-                    <p>
-                      Total payable:{" "}
-                      <span className="font-semibold text-foreground">
+                    <p className="flex items-center justify-between gap-3 text-[0.84rem]">
+                      <span className="text-muted-foreground">Total payable</span>
+                      <span className="font-semibold tabular-nums text-foreground">
                         {formatCurrencyMiliunits(totalPayablePreview, draft.currency)}
                       </span>
                     </p>
-                    <p>
-                      Interest & fees:{" "}
-                      <span className="font-semibold text-foreground">
+                    <p className="flex items-center justify-between gap-3 text-[0.84rem]">
+                      <span className="text-muted-foreground">Interest & fees</span>
+                      <span className="font-semibold tabular-nums text-foreground">
                         {formatCurrencyMiliunits(interestAndFeesPreview, draft.currency)}
                       </span>
                     </p>
-                    <p>
-                      Maturity date:{" "}
-                      <span className="font-semibold text-foreground">
+                    <p className="flex items-center justify-between gap-3 text-[0.84rem]">
+                      <span className="text-muted-foreground">Maturity date</span>
+                      <span className="text-right font-semibold text-foreground">
                         {maturityDatePreview ? formatDate(maturityDatePreview) : "Add first due + duration"}
                       </span>
                     </p>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

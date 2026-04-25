@@ -11,7 +11,6 @@ import {
   Landmark,
   Sparkles,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
@@ -22,6 +21,7 @@ import {
 } from "@/features/settings/lib/date-format";
 import { trpc } from "@/trpc/react";
 import { CashflowProjectionChart } from "@/components/app/cashflow-projection-chart";
+import { InstitutionAvatar } from "@/components/app/institution-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -800,25 +800,15 @@ export function DashboardRecentActivity() {
                         key={account.id}
                         className="flex items-center gap-3 px-4 py-3 md:gap-3 md:px-5 md:py-3.5"
                       >
-                        <div
-                          className={`flex size-10 shrink-0 items-center justify-center rounded-full overflow-hidden md:size-10 ${
-                            institution.logoPath
-                              ? "border border-border/70 bg-white/90 p-0 dark:border-white/10 dark:bg-[#141d1f]"
-                              : `text-[0.76rem] font-semibold md:text-[0.75rem] ${institution.tone}`
-                          }`}
-                        >
-                          {institution.logoPath ? (
-                            <Image
-                              src={institution.logoPath}
-                              alt={`${institution.label} logo`}
-                              width={30}
-                              height={30}
-                              className="size-full rounded-full object-cover"
-                            />
-                          ) : (
-                            institution.initials
-                          )}
-                        </div>
+                        <InstitutionAvatar
+                          key={`${institution.label}:${institution.logoPaths.join("|")}`}
+                          display={institution}
+                          sizeClassName="size-10 md:size-10"
+                          containerClassName=""
+                          imageClassName="size-full rounded-full object-cover"
+                          initialsClassName="text-[0.76rem] font-semibold md:text-[0.75rem]"
+                          logoContainerClassName="border border-border/70 bg-white/90 p-0 dark:border-white/10 dark:bg-[#141d1f]"
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
                             {account.name}

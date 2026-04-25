@@ -1,10 +1,18 @@
 export type InstitutionOption = {
   aliases?: string[];
   keywords?: string[];
-  logoDomain?: string;
+  logoDomain?: string | string[];
   id: string;
   initials: string;
   label: string;
+  tone: string;
+};
+
+export type InstitutionDisplay = {
+  initials: string;
+  label: string;
+  logoPath: string | null;
+  logoPaths: string[];
   tone: string;
 };
 
@@ -169,7 +177,7 @@ export const institutionOptions: InstitutionOption[] = [
     initials: "GT",
     tone: "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-100",
     aliases: ["GoTyme Bank"],
-    logoDomain: "gotyme.com.ph",
+    logoDomain: ["gotyme.com.ph", "gotyme.com.hk"],
   },
   {
     id: "seabank",
@@ -565,12 +573,18 @@ function resolveFallbackTone(value: string) {
   return fallbackTonePalette[hashed % fallbackTonePalette.length] ?? fallbackTonePalette[0];
 }
 
-function buildLogoDevUrl(domain?: string | null) {
+function buildLogoDevUrls(domain?: string | string[] | null) {
   const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
 
-  if (!domain || !token) return null;
+  if (!domain || !token) return [];
 
-  return `https://img.logo.dev/${domain}?token=${token}&format=png&size=128`;
+  const domains = (typeof domain === "string" ? [domain] : domain)
+    .map((entry) => entry.trim())
+    .filter((entry, index, collection) => Boolean(entry) && collection.indexOf(entry) === index);
+
+  return domains.map(
+    (entry) => `https://img.logo.dev/${entry}?token=${token}&format=png&size=128`,
+  );
 }
 
 export function findInstitutionOption(value?: string | null) {
@@ -607,14 +621,16 @@ export function findInstitutionOption(value?: string | null) {
   );
 }
 
-export function getInstitutionDisplay(value?: string | null) {
+export function getInstitutionDisplay(value?: string | null): InstitutionDisplay {
   const matched = findInstitutionOption(value);
 
   if (matched) {
+    const logoPaths = buildLogoDevUrls(matched.logoDomain);
     return {
       label: matched.label,
       initials: matched.initials,
-      logoPath: buildLogoDevUrl(matched.logoDomain),
+      logoPath: logoPaths[0] ?? null,
+      logoPaths,
       tone: matched.tone,
     };
   }
@@ -626,6 +642,7 @@ export function getInstitutionDisplay(value?: string | null) {
     label: fallback,
     initials: initials || "VA",
     logoPath: null,
+    logoPaths: [],
     tone: resolveFallbackTone(fallback),
   };
 }

@@ -41,10 +41,6 @@ export async function getOrComputeInsight<T>(input: GetOrComputeInsightInput<T>)
     return existing.value as T;
   }
 
-  if (existing && nowMs - existing.updatedAtMs < input.cooldownMs) {
-    return existing.value as T;
-  }
-
   const computed = await input.compute();
   insightCache.set(key, {
     checkpoint: input.checkpoint,

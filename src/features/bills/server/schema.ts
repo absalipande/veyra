@@ -4,6 +4,7 @@ import { supportedCurrencies } from "@/lib/currencies";
 
 export const billCadences = ["one_time", "weekly", "monthly", "yearly"] as const;
 export const billStatuses = ["pending", "paid", "overdue"] as const;
+export const billObligationTypes = ["general", "loan_repayment"] as const;
 
 export const listBillsSchema = z.object({
   page: z.number().int().min(1).default(1),

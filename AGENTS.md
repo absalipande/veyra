@@ -714,6 +714,147 @@ Loan v2 schedule behavior details:
 - allow fixed regular installments with final-installment reconciliation
 - expose final installment clearly when it deviates from regular monthly payment
 
+### Loans + Bills Correlation Contract (Active)
+
+This section is the active source-of-truth for how `Loans` and `Bills` should work together.
+
+#### Product intent
+
+- `Loans` is the source-of-truth for loan repayment obligations.
+- `Bills` supports two obligation classes:
+  - standalone recurring obligations (`wifi`, `subscriptions`, `utilities`, memberships, one-off invoices)
+  - loan-linked repayment obligations derived from Loans schedules
+- creating institution-style loans (digital bank / traditional bank / lending app) with repayment schedule should auto-create linked Bills reminders.
+
+#### Current implementation findings (as-built)
+
+- Loans currently persists:
+  - loan master (`veyra_loans`)
+  - expected schedule (`veyra_loan_installments`)
+  - actual posted payments (`veyra_loan_payments`)
+- Bills currently persists:
+  - generic bill series (`veyra_bill_series`)
+  - generic bill occurrences (`veyra_bill_occurrences`)
+- Bills currently does not yet have first-class loan link columns (`loanId`, `obligationType`, etc.).
+- Forecast currently can surface both:
+  - `Bill` obligations
+  - `Loan installment` obligations
+  and may double-count the same loan repayment when both exist.
+
+#### Required correlation behavior
+
+1. Loan-first linkage:
+- if a loan has a repayment schedule, create or sync one linked bill series automatically.
+- flexible personal loans without schedule may remain unlinked until schedule is added.
+
+2. Schedule sync:
+- linked bill series must track loan schedule shape:
+  - cadence
+  - interval count
+  - next due date
+  - due amount
+  - remaining payment count (or equivalent occurrence horizon)
+
+3. Lifecycle sync:
+- loan updates (cadence, due, amount shape, close/open) must sync linked bill series.
+- closing a loan should end/deactivate linked repayment bills safely.
+
+4. Two-way payment sync:
+- paying from Loans page must settle linked pending bill occurrence.
+- paying from Bills page for a loan-linked item must route through loan payment posting, not generic bill expense posting.
+
+#### Shared payment UX contract (2-way)
+
+Use one shared `Record loan payment` modal flow for loan-linked obligations.
+
+From Loans:
+- prefill from selected installment:
+  - loan id
+  - installment id (when known)
+  - remaining amount
+  - paid date default today
+  - default liquid source account
+
+From Bills (loan-linked):
+- `Mark paid` should open the same loan payment modal prefilled from bill occurrence:
+  - linked loan id
+  - best-match installment id
+  - due amount
+  - due date / paid date default
+
+Submit path (both surfaces):
+- use one source-of-truth service path:
+  - `recordLoanPayment`
+- after success, write back to bill occurrence:
+  - status `paid`
+  - paidAt
+  - linked payment reference(s)
+  - linked transaction reference when available
+
+#### Dedupe and idempotency rules (required)
+
+- one active linked bill series per loan (no duplicate repayment series).
+- sync operations must be upsert-style (update existing link, do not create duplicate).
+- payment posting must be idempotent across entrypoints:
+  - if paid from Loans first, Bills occurrence auto-settles
+  - if paid from Bills first, do not create duplicate loan payment rows
+- dedupe keys should include user scope + loan scope + installment/occurrence identity where available.
+
+#### Data contract to introduce
+
+Extend bills tables to represent linked loan obligations explicitly:
+
+- `veyra_bill_series`:
+  - `obligationType`:
+    - `general`
+    - `loan_repayment`
+  - `loanId` (nullable FK to `veyra_loans`)
+  - `loanInstallmentId` (nullable FK to `veyra_loan_installments`, optional precision link)
+
+- `veyra_bill_occurrences`:
+  - `loanPaymentId` (nullable FK to `veyra_loan_payments`)
+
+Constraints:
+- if `obligationType=loan_repayment`, `loanId` is required.
+- if `obligationType=general`, loan link columns must be null.
+
+#### Forecast anti-double-count rule
+
+- linked loan repayment obligations must not be double-counted as both:
+  - bill obligation
+  - loan installment obligation
+- forecast should treat linked loan bills and loan installments as one obligation stream.
+
+#### Implementation order
+
+1. Schema and constraints:
+- add loan-link columns + constraints + indexes in Drizzle + SQL migration.
+
+2. Service sync foundation:
+- add loan->bill sync helpers in loans service (create/update/close).
+- enforce one-series-per-loan dedupe.
+
+3. Payment path unification:
+- route loan-linked Bills mark-paid through `recordLoanPayment`.
+- settle/writeback both sides transactionally.
+
+4. UI differentiation:
+- bills row/chips clearly label `Linked loan repayment`.
+- expose navigation/context between linked bill and loan.
+
+5. Forecast dedupe:
+- prevent duplicate obligation lines for same linked loan due.
+
+#### Acceptance checklist (Loans + Bills)
+
+- create scheduled institution loan auto-creates one linked bill series.
+- loan edits sync linked bill cadence/due/amount shape.
+- loan payment from Loans settles linked bill occurrence.
+- mark-paid from Bills (loan-linked) posts loan payment and updates loan schedule state.
+- no duplicate linked bill series after repeated edits or retries.
+- forecast does not show duplicate obligations for same linked loan due.
+- standalone bills (Netflix, Apple Music, wifi, utilities) remain unaffected and independent.
+
 ## Design System Direction
 
 Veyra uses a calm premium visual system.

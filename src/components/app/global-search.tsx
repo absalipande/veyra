@@ -2,7 +2,6 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ArrowUpRight, Landmark, Search, Wallet, X } from "lucide-react";
 
@@ -12,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { getInstitutionDisplay } from "@/features/accounts/lib/institutions";
+import { InstitutionAvatar } from "@/components/app/institution-avatar";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
@@ -299,25 +299,14 @@ export function GlobalSearch() {
                           const institution = getInstitutionDisplay(account.institution || account.name);
 
                           return (
-                            <div
-                              className={`flex size-9 shrink-0 items-center justify-center rounded-full overflow-hidden ${
-                                institution.logoPath
-                                  ? "border border-border/70 bg-white/90 p-0 dark:border-white/10 dark:bg-[#141d1f]"
-                                  : `text-[0.76rem] font-semibold ${institution.tone}`
-                              }`}
-                            >
-                              {institution.logoPath ? (
-                                <Image
-                                  src={institution.logoPath}
-                                  alt={`${institution.label} logo`}
-                                  width={36}
-                                  height={36}
-                                  className="size-full rounded-full object-cover"
-                                />
-                              ) : (
-                                institution.initials
-                              )}
-                            </div>
+                            <InstitutionAvatar
+                              key={`${institution.label}:${institution.logoPaths.join("|")}`}
+                              display={institution}
+                              sizeClassName="size-9"
+                              imageClassName="size-full rounded-full object-cover"
+                              initialsClassName="text-[0.76rem] font-semibold"
+                              logoContainerClassName="border border-border/70 bg-white/90 p-0 dark:border-white/10 dark:bg-[#141d1f]"
+                            />
                           );
                         })()}
                         <div className="min-w-0">

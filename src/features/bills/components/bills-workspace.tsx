@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
@@ -21,6 +22,10 @@ import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { formatCurrencyMiliunits, isSupportedCurrency } from "@/lib/currencies";
 import { CashflowProjectionChart } from "@/components/app/cashflow-projection-chart";
+import {
+  type LoanPaymentPreset,
+  RecordLoanPaymentDialog,
+} from "@/features/loans/components/record-loan-payment-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -154,6 +159,7 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
   const [deleteTarget, setDeleteTarget] = useState<BillItem | null>(null);
   const [draft, setDraft] = useState<BillDraft>(getInitialDraft());
   const [query, setQuery] = useState(initialQuery);
+  const [loanPaymentPreset, setLoanPaymentPreset] = useState<LoanPaymentPreset | null>(null);
   const [status, setStatus] = useState<BillStatusFilter>("all");
   const [page, setPage] = useState(1);
   const deferredQuery = useDeferredValue(query);
@@ -166,6 +172,13 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
     includeInactive: false,
   });
   const summaryQuery = trpc.bills.summary.useQuery();
+  const recentBillsQuery = trpc.bills.list.useQuery({
+    page: 1,
+    pageSize: 80,
+    search: "",
+    status: "all",
+    includeInactive: true,
+  });
   const forecastQuery = trpc.forecast.summary.useQuery({
     days: 30,
   });
@@ -175,6 +188,9 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
       utils.bills.list.invalidate(),
       utils.bills.summary.invalidate(),
       utils.bills.get.invalidate(),
+      utils.loans.list.invalidate(),
+      utils.loans.summary.invalidate(),
+      utils.loans.get.invalidate(),
       utils.transactions.list.invalidate(),
       utils.transactions.summary.invalidate(),
       utils.accounts.list.invalidate(),
@@ -184,6 +200,7 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
       utils.forecast.summary.invalidate(),
       utils.ai.dashboardInsight.invalidate(),
       utils.ai.accountsInsight.invalidate(),
+      utils.ai.loansInsight.invalidate(),
       utils.ai.transactionsInsight.invalidate(),
       utils.ai.budgetsInsight.invalidate(),
     ]);
@@ -268,6 +285,26 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
   });
 
   const bills = listQuery.data?.items ?? [];
+  const recentBillPayments = useMemo(
+    () =>
+      (recentBillsQuery.data?.items ?? [])
+        .filter((bill) => bill.latestPaidOccurrence?.paidAt)
+        .map((bill) => ({
+          amount: bill.latestPaidOccurrence?.amount ?? 0,
+          billId: bill.id,
+          billName: bill.name,
+          currency: bill.currency,
+          isLoanLinked: bill.obligationType === "loan_repayment",
+          paidAt: bill.latestPaidOccurrence?.paidAt ?? null,
+        }))
+        .filter((item) => item.paidAt instanceof Date)
+        .sort(
+          (left, right) =>
+            (right.paidAt?.getTime() ?? 0) - (left.paidAt?.getTime() ?? 0),
+        )
+        .slice(0, 6),
+    [recentBillsQuery.data?.items],
+  );
   const accountMap = useMemo(
     () => new Map((accountsQuery.data ?? []).map((account) => [account.id, account])),
     [accountsQuery.data],
@@ -710,6 +747,20 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
         </DialogContent>
       </Dialog>
 
+      <RecordLoanPaymentDialog
+        key={
+          loanPaymentPreset
+            ? `${loanPaymentPreset.loanId}:${loanPaymentPreset.installmentId ?? "manual"}:${loanPaymentPreset.amountMiliunits ?? "na"}:${String(loanPaymentPreset.paidAt ?? "")}`
+            : "loan-payment-dialog-from-bills"
+        }
+        open={loanPaymentPreset !== null}
+        preset={loanPaymentPreset}
+        title="Record linked loan payment"
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setLoanPaymentPreset(null);
+        }}
+      />
+
       <section>
         <Card className="relative overflow-hidden rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
           <div className="pointer-events-none absolute inset-0 opacity-70">
@@ -954,6 +1005,48 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
       </section>
 
       <section>
+        <Card className="rounded-[1.4rem] border-white/80 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
+          <CardContent className="space-y-3 p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[1rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                Recent bill payments
+              </p>
+              <p className="text-[0.78rem] text-muted-foreground">
+                Last {recentBillPayments.length} activity
+              </p>
+            </div>
+            {recentBillPayments.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border/70 px-3 py-3 text-[0.84rem] text-muted-foreground">
+                No bill payments yet.
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {recentBillPayments.map((payment) => (
+                  <div
+                    key={`${payment.billId}:${payment.paidAt?.toISOString() ?? "unknown"}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/65 bg-background/80 px-3 py-2.5 dark:bg-[#141d1f]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-[0.86rem] font-medium text-foreground">
+                        {payment.billName}
+                      </p>
+                      <p className="text-[0.75rem] text-muted-foreground">
+                        {formatDateLabel(payment.paidAt)} ·{" "}
+                        {payment.isLoanLinked ? "Loan-linked repayment" : "Bill payment"}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-[0.88rem] font-semibold text-foreground">
+                      {formatCurrencyMiliunits(payment.amount, payment.currency)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
         <Card className="border-white/75 bg-white/84 shadow-[0_24px_70px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_80px_-55px_rgba(0,0,0,0.62)]">
           <CardHeader className="gap-4 px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1021,6 +1114,7 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
             ) : (
               bills.map((bill) => {
                 const linkedAccount = bill.accountId ? accountMap.get(bill.accountId) : null;
+                const isLoanLinked = bill.obligationType === "loan_repayment" && Boolean(bill.loanId);
                 const isMarkingPaid = markPaid.isPending && markPaid.variables?.billId === bill.id;
                 const isCompletingBill =
                   completeBill.isPending && completeBill.variables?.id === bill.id;
@@ -1045,6 +1139,11 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                           >
                             {getStatusLabel(bill)}
                           </span>
+                          {bill.obligationType === "loan_repayment" ? (
+                            <span className="inline-flex items-center rounded-full border border-sky-300/60 bg-sky-100/65 px-2 py-0.5 text-[0.69rem] font-medium text-sky-800 dark:border-sky-800/70 dark:bg-sky-950/30 dark:text-sky-300">
+                              Linked loan repayment
+                            </span>
+                          ) : null}
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-[0.79rem] text-muted-foreground">
                           <span className="inline-flex items-center gap-1.5">
@@ -1077,7 +1176,7 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                           variant="outline"
                           size="sm"
                           className="h-8 rounded-full px-3 text-[0.8rem]"
-                          disabled={isCompletingBill || isMarkingPaid}
+                          disabled={isCompletingBill || isMarkingPaid || isLoanLinked}
                           onClick={() => completeBill.mutate({ id: bill.id })}
                         >
                           {isCompletingBill ? (
@@ -1097,7 +1196,22 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                           size="sm"
                           className="h-8 rounded-full px-3 text-[0.8rem]"
                           disabled={isMarkingPaid || isCompletingBill || bill.status === "paid"}
-                          onClick={() =>
+                          onClick={() => {
+                            if (isLoanLinked && bill.loanId) {
+                              setLoanPaymentPreset({
+                                loanId: bill.loanId,
+                                installmentId: bill.loanInstallmentId ?? undefined,
+                                amountMiliunits: bill.nextPendingOccurrence?.amount ?? bill.amount,
+                                paidAt: bill.nextPendingOccurrence?.dueDate ?? bill.nextDueDate ?? new Date(),
+                                notes: `Loan-linked payment from Bills · ${bill.name}`,
+                                sourceAccountId:
+                                  linkedAccount?.type === "cash" || linkedAccount?.type === "wallet"
+                                    ? linkedAccount.id
+                                    : defaultLiquidPaymentAccountId,
+                              });
+                              return;
+                            }
+
                             markPaid.mutate({
                               billId: bill.id,
                               settleOnly: false,
@@ -1105,8 +1219,8 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                                 linkedAccount?.type === "credit"
                                   ? defaultLiquidPaymentAccountId
                                   : undefined,
-                            })
-                          }
+                            });
+                          }}
                         >
                           {isMarkingPaid ? (
                             <>
@@ -1126,7 +1240,7 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                           size="icon-sm"
                           className="h-8 w-8 rounded-full"
                           onClick={() => openEditDialog(bill)}
-                          disabled={isCompletingBill}
+                          disabled={isCompletingBill || isLoanLinked}
                           aria-label={`Edit ${bill.name}`}
                           title={`Edit ${bill.name}`}
                         >
@@ -1138,12 +1252,23 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                           size="icon-sm"
                           className="h-8 w-8 rounded-full text-destructive hover:text-destructive"
                           onClick={() => setDeleteTarget(bill)}
-                          disabled={isCompletingBill}
+                          disabled={isCompletingBill || isLoanLinked}
                           aria-label={`Delete ${bill.name}`}
                           title={`Delete ${bill.name}`}
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
+                        {isLoanLinked ? (
+                          <Button
+                            asChild
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-8 rounded-full px-3 text-[0.8rem]"
+                          >
+                            <Link href={`/loans/${bill.loanId}`}>View loan</Link>
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   </div>

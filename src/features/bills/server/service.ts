@@ -7,6 +7,7 @@ import {
   createTransactionEvent,
   deleteTransactionEvent,
 } from "@/features/transactions/server/service";
+import { recordLoanPayment } from "@/features/loans/server/service";
 import {
   completeBillSchema,
   createBillSchema,
@@ -402,6 +403,9 @@ export async function createBill(
       nextDueDate,
       endsAfterOccurrences: endsAfterOccurrences ?? null,
       remainingOccurrences,
+      obligationType: "general",
+      loanId: null,
+      loanInstallmentId: null,
       isActive,
       accountId: input.accountId ?? null,
       notes: input.notes?.trim() || null,
@@ -418,17 +422,18 @@ export async function createBill(
   }
 
   if (nextDueDate) {
-    await ctx.db.insert(billOccurrences).values({
-      id: crypto.randomUUID(),
-      clerkUserId: userId,
-      billId: id,
-      dueDate: nextDueDate,
-      amount: input.amount,
-      status: "pending",
-      paidAt: null,
-      createdAt: now,
-      updatedAt: now,
-    });
+      await ctx.db.insert(billOccurrences).values({
+        id: crypto.randomUUID(),
+        clerkUserId: userId,
+        billId: id,
+        dueDate: nextDueDate,
+        amount: input.amount,
+        status: "pending",
+        paidAt: null,
+        loanPaymentId: null,
+        createdAt: now,
+        updatedAt: now,
+      });
   }
 
   return getBill(ctx, { id });
@@ -461,6 +466,9 @@ export async function updateBill(
       nextDueDate,
       endsAfterOccurrences: input.endsAfterOccurrences ?? null,
       remainingOccurrences: sanitizedRemaining ?? null,
+      obligationType: existing.obligationType,
+      loanId: existing.loanId,
+      loanInstallmentId: existing.loanInstallmentId,
       isActive: input.isActive && (sanitizedRemaining === undefined || sanitizedRemaining !== 0),
       accountId: input.accountId ?? null,
       notes: input.notes?.trim() || null,
@@ -504,6 +512,7 @@ export async function updateBill(
         amount: input.amount,
         status: "pending",
         paidAt: null,
+        loanPaymentId: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
@@ -550,6 +559,43 @@ export async function markBillPaid(
   }
 
   const paidAt = input.paidAt ?? new Date();
+  if (series.obligationType === "loan_repayment" && series.loanId && !input.settleOnly) {
+    const paymentSourceAccountId = input.paymentAccountId ?? series.accountId ?? undefined;
+    if (!paymentSourceAccountId) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Loan-linked repayments require a liquid payment account.",
+      });
+    }
+
+    const result = await recordLoanPayment(ctx, {
+      loanId: series.loanId,
+      installmentId: series.loanInstallmentId ?? undefined,
+      sourceAccountId: paymentSourceAccountId,
+      amount: occurrence.amount,
+      paidAt,
+      notes: input.notes,
+    });
+
+    await ctx.db
+      .update(billOccurrences)
+      .set({
+        status: "paid",
+        paidAt,
+        loanPaymentId:
+          result.loan.payments.find(
+            (payment) =>
+              payment.paidAt.getTime() === paidAt.getTime() &&
+              payment.amount === occurrence.amount
+          )?.id ?? null,
+        transactionEventId: occurrence.transactionEventId ?? null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(billOccurrences.id, occurrence.id), eq(billOccurrences.clerkUserId, userId)));
+
+    return getBill(ctx, { id: series.id });
+  }
+
   let transactionEventId: string | null = null;
 
   if (!input.settleOnly) {
@@ -570,6 +616,7 @@ export async function markBillPaid(
       .set({
         status: "paid",
         paidAt,
+        loanPaymentId: null,
         transactionEventId,
         updatedAt: new Date(),
       })
@@ -598,6 +645,7 @@ export async function markBillPaid(
           amount: series.amount,
           status: "pending",
           paidAt: null,
+          loanPaymentId: null,
           transactionEventId: null,
           createdAt: new Date(),
           updatedAt: new Date(),

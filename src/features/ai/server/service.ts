@@ -1646,7 +1646,12 @@ export async function getAiAccountsInsightCheckpoint(ctx: Pick<TRPCContext, "db"
   const userId = assertUserId(ctx.userId);
   const [accountRow, txnRow] = await Promise.all([
     ctx.db
-      .select({ value: sql<Date | null>`max(${accounts.updatedAt})` })
+      .select({
+        maxUpdatedAt: sql<Date | null>`max(${accounts.updatedAt})`,
+        accountCount: sql<number>`count(*)`,
+        balanceSum: sql<number>`coalesce(sum(${accounts.balance}), 0)`,
+        creditLimitSum: sql<number>`coalesce(sum(${accounts.creditLimit}), 0)`,
+      })
       .from(accounts)
       .where(eq(accounts.clerkUserId, userId)),
     ctx.db
@@ -1656,7 +1661,10 @@ export async function getAiAccountsInsightCheckpoint(ctx: Pick<TRPCContext, "db"
   ]);
 
   return [
-    `ac:${checkpointValue(accountRow[0]?.value)}`,
+    `ac:${checkpointValue(accountRow[0]?.maxUpdatedAt)}`,
+    `ac_n:${Number(accountRow[0]?.accountCount ?? 0)}`,
+    `ac_b:${Number(accountRow[0]?.balanceSum ?? 0)}`,
+    `ac_l:${Number(accountRow[0]?.creditLimitSum ?? 0)}`,
     `tx:${checkpointValue(txnRow[0]?.value)}`,
   ].join("|");
 }
@@ -1715,17 +1723,40 @@ export async function getAiLoansInsight(ctx: Pick<TRPCContext, "db" | "userId">)
     };
   }
 
-  const activeLoans = loanRows.filter((loan) => loan.status === "active");
-  const totalOutstanding = activeLoans.reduce((sum, loan) => sum + loan.outstandingAmount, 0);
+  const installmentOutstandingByLoanId = new Map<string, number>();
+  const installmentCountByLoanId = new Map<string, number>();
+  for (const installment of installmentRows) {
+    const remaining = Math.max(installment.amount - installment.paidAmount, 0);
+    installmentOutstandingByLoanId.set(
+      installment.loanId,
+      (installmentOutstandingByLoanId.get(installment.loanId) ?? 0) + remaining
+    );
+    installmentCountByLoanId.set(
+      installment.loanId,
+      (installmentCountByLoanId.get(installment.loanId) ?? 0) + 1
+    );
+  }
+
+  const activeLoans = loanRows
+    .filter((loan) => loan.status === "active")
+    .map((loan) => {
+      const hasSchedule = (installmentCountByLoanId.get(loan.id) ?? 0) > 0;
+      const effectiveOutstanding = hasSchedule
+        ? installmentOutstandingByLoanId.get(loan.id) ?? 0
+        : Math.max(loan.outstandingAmount, 0);
+      return { ...loan, effectiveOutstanding };
+    });
+
+  const totalOutstanding = activeLoans.reduce((sum, loan) => sum + loan.effectiveOutstanding, 0);
   const overdueLoans = activeLoans.filter(
-    (loan) => loan.nextDueDate && loan.nextDueDate < now && loan.outstandingAmount > 0
+    (loan) => loan.nextDueDate && loan.nextDueDate < now && loan.effectiveOutstanding > 0
   );
   const dueSoonLoans = activeLoans.filter(
     (loan) =>
       loan.nextDueDate &&
       loan.nextDueDate >= now &&
       loan.nextDueDate <= sevenDaysFromNow &&
-      loan.outstandingAmount > 0
+      loan.effectiveOutstanding > 0
   );
   const monthlyPayments = paymentRows.reduce((sum, payment) => sum + payment.amount, 0);
 
@@ -1733,7 +1764,7 @@ export async function getAiLoansInsight(ctx: Pick<TRPCContext, "db" | "userId">)
   for (const loan of activeLoans) {
     groupedOutstanding.set(
       loan.lenderName,
-      (groupedOutstanding.get(loan.lenderName) ?? 0) + loan.outstandingAmount
+      (groupedOutstanding.get(loan.lenderName) ?? 0) + loan.effectiveOutstanding
     );
   }
 
@@ -1741,7 +1772,10 @@ export async function getAiLoansInsight(ctx: Pick<TRPCContext, "db" | "userId">)
   const topLenderShare =
     topLender && totalOutstanding > 0 ? Math.round((topLender[1] / totalOutstanding) * 100) : 0;
 
-  const pendingInstallments = installmentRows.filter((installment) => installment.status !== "paid");
+  const activeLoanIds = new Set(activeLoans.map((loan) => loan.id));
+  const pendingInstallments = installmentRows.filter(
+    (installment) => activeLoanIds.has(installment.loanId) && installment.status !== "paid"
+  );
   const remainingScheduled = pendingInstallments.reduce(
     (sum, installment) => sum + Math.max(installment.amount - installment.paidAmount, 0),
     0

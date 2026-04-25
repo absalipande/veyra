@@ -15,6 +15,9 @@ type BillSeriesState = {
   nextDueDate: Date | null;
   endsAfterOccurrences: number | null;
   remainingOccurrences: number | null;
+  obligationType: "general" | "loan_repayment";
+  loanId: string | null;
+  loanInstallmentId: string | null;
   isActive: boolean;
   accountId: string | null;
   notes: string | null;
@@ -30,6 +33,7 @@ type BillOccurrenceState = {
   amount: number;
   status: "pending" | "paid" | "overdue";
   paidAt: Date | null;
+  loanPaymentId: string | null;
   transactionEventId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -139,6 +143,9 @@ describe("bills service", () => {
           nextDueDate: firstDue,
           endsAfterOccurrences: 2,
           remainingOccurrences: 2,
+          obligationType: "general",
+          loanId: null,
+          loanInstallmentId: null,
           isActive: true,
           accountId: null,
           notes: null,
@@ -155,6 +162,7 @@ describe("bills service", () => {
           amount: 1_500,
           status: "pending",
           paidAt: null,
+          loanPaymentId: null,
           transactionEventId: null,
           createdAt: new Date("2026-05-01T00:00:00.000Z"),
           updatedAt: new Date("2026-05-01T00:00:00.000Z"),
@@ -199,6 +207,9 @@ describe("bills service", () => {
           nextDueDate: new Date("2026-06-01T00:00:00.000Z"),
           endsAfterOccurrences: null,
           remainingOccurrences: null,
+          obligationType: "general",
+          loanId: null,
+          loanInstallmentId: null,
           isActive: true,
           accountId: null,
           notes: null,
@@ -215,6 +226,7 @@ describe("bills service", () => {
           amount: 500,
           status: "paid",
           paidAt: new Date("2026-05-01T00:00:00.000Z"),
+          loanPaymentId: null,
           transactionEventId: null,
           createdAt: new Date("2026-05-01T00:00:00.000Z"),
           updatedAt: new Date("2026-05-01T00:00:00.000Z"),
@@ -227,6 +239,7 @@ describe("bills service", () => {
           amount: 500,
           status: "pending",
           paidAt: null,
+          loanPaymentId: null,
           transactionEventId: null,
           createdAt: new Date("2026-05-01T00:00:00.000Z"),
           updatedAt: new Date("2026-05-01T00:00:00.000Z"),

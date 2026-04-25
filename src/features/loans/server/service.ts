@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import {
   accounts,
+  billOccurrences,
+  billSeries,
   ledgerEntries,
   loanInstallments,
   loanPayments,
@@ -232,6 +234,253 @@ function getInstallmentRemainingAmount(installment: LoanInstallmentRecord) {
   return Math.max(installment.amount - installment.paidAmount, 0);
 }
 
+function getEffectiveOutstandingAmount(
+  loan: Pick<LoanRecord, "outstandingAmount">,
+  installments: LoanInstallmentRecord[]
+) {
+  if (installments.length === 0) {
+    return Math.max(loan.outstandingAmount, 0);
+  }
+
+  return installments.reduce(
+    (sum, installment) => sum + getInstallmentRemainingAmount(installment),
+    0
+  );
+}
+
+function mapLoanCadenceToBillSchedule(cadence: LoanRecord["cadence"]) {
+  if (cadence === "weekly") return { cadence: "weekly" as const, intervalCount: 1 };
+  if (cadence === "bi-weekly") return { cadence: "weekly" as const, intervalCount: 2 };
+  if (cadence === "monthly") return { cadence: "monthly" as const, intervalCount: 1 };
+  return { cadence: "monthly" as const, intervalCount: 1 };
+}
+
+async function syncLinkedLoanBillSeries(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  loan: LoanRecord,
+  installments: LoanInstallmentRecord[]
+) {
+  const dbAny = ctx.db as unknown as {
+    query?: {
+      billSeries?: { findMany?: (...args: unknown[]) => Promise<Array<typeof billSeries.$inferSelect>> };
+      billOccurrences?: unknown;
+    };
+    update?: unknown;
+    insert?: unknown;
+    delete?: unknown;
+  };
+  if (
+    !dbAny.query?.billSeries?.findMany ||
+    !dbAny.query?.billOccurrences ||
+    typeof dbAny.update !== "function" ||
+    typeof dbAny.insert !== "function" ||
+    typeof dbAny.delete !== "function"
+  ) {
+    return null;
+  }
+
+  const userId = assertUserId(ctx.userId);
+  const sortedInstallments = [...installments].sort(
+    (left, right) => left.sequence - right.sequence || left.dueDate.getTime() - right.dueDate.getTime()
+  );
+  const pendingInstallments = sortedInstallments.filter(
+    (installment) => getInstallmentStatus(installment) !== "paid" && getInstallmentRemainingAmount(installment) > 0
+  );
+  const nextPendingInstallment = pendingInstallments[0] ?? null;
+  const pendingCount = pendingInstallments.length;
+  const shouldBeActive = loan.status === "active" && Boolean(nextPendingInstallment);
+
+  const schedule = mapLoanCadenceToBillSchedule(loan.cadence);
+  const startsAt = sortedInstallments[0]?.dueDate ?? loan.disbursedAt;
+  const nextDueDate = nextPendingInstallment?.dueDate ?? null;
+  const nextAmount = nextPendingInstallment
+    ? getInstallmentRemainingAmount(nextPendingInstallment)
+    : 0;
+
+  const linkedSeriesRows = await ctx.db.query.billSeries.findMany({
+    where: and(
+      eq(billSeries.clerkUserId, userId),
+      eq(billSeries.loanId, loan.id),
+      eq(billSeries.obligationType, "loan_repayment")
+    ),
+    orderBy: [desc(billSeries.updatedAt), desc(billSeries.createdAt)],
+  });
+
+  const primarySeries = linkedSeriesRows[0] ?? null;
+  const duplicateSeries = linkedSeriesRows.slice(1);
+
+  if (duplicateSeries.length > 0) {
+    await Promise.all(
+      duplicateSeries.map((series) =>
+        ctx.db
+          .update(billSeries)
+          .set({
+            isActive: false,
+            nextDueDate: null,
+            remainingOccurrences: 0,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(billSeries.id, series.id), eq(billSeries.clerkUserId, userId)))
+      )
+    );
+  }
+
+  if (!primarySeries && pendingCount === 0) {
+    return null;
+  }
+
+  let targetSeriesId = primarySeries?.id ?? null;
+  if (!primarySeries && pendingCount > 0) {
+    targetSeriesId = crypto.randomUUID();
+    await ctx.db.insert(billSeries).values({
+      id: targetSeriesId,
+      clerkUserId: userId,
+      name: loan.name,
+      amount: nextAmount,
+      currency: loan.currency,
+      cadence: schedule.cadence,
+      intervalCount: schedule.intervalCount,
+      startsAt,
+      nextDueDate,
+      endsAfterOccurrences: sortedInstallments.length > 0 ? sortedInstallments.length : null,
+      remainingOccurrences: pendingCount,
+      obligationType: "loan_repayment",
+      loanId: loan.id,
+      loanInstallmentId: nextPendingInstallment?.id ?? null,
+      isActive: shouldBeActive,
+      accountId: loan.destinationAccountId,
+      notes: loan.notes ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  } else if (primarySeries && targetSeriesId) {
+    await ctx.db
+      .update(billSeries)
+      .set({
+        name: loan.name,
+        amount: nextAmount > 0 ? nextAmount : primarySeries.amount,
+        currency: loan.currency,
+        cadence: schedule.cadence,
+        intervalCount: schedule.intervalCount,
+        startsAt,
+        nextDueDate,
+        endsAfterOccurrences: sortedInstallments.length > 0 ? sortedInstallments.length : null,
+        remainingOccurrences: pendingCount,
+        obligationType: "loan_repayment",
+        loanId: loan.id,
+        loanInstallmentId: nextPendingInstallment?.id ?? null,
+        isActive: shouldBeActive,
+        accountId: loan.destinationAccountId,
+        notes: loan.notes ?? null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(billSeries.id, targetSeriesId), eq(billSeries.clerkUserId, userId)));
+  }
+
+  if (!targetSeriesId) return null;
+
+  await ctx.db
+    .delete(billOccurrences)
+    .where(
+      and(
+        eq(billOccurrences.clerkUserId, userId),
+        eq(billOccurrences.billId, targetSeriesId),
+        eq(billOccurrences.status, "pending")
+      )
+    );
+
+  if (shouldBeActive && nextDueDate && nextAmount > 0) {
+    await ctx.db.insert(billOccurrences).values({
+      id: crypto.randomUUID(),
+      clerkUserId: userId,
+      billId: targetSeriesId,
+      dueDate: nextDueDate,
+      amount: nextAmount,
+      status: "pending",
+      paidAt: null,
+      loanPaymentId: null,
+      transactionEventId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+  }
+
+  return targetSeriesId;
+}
+
+async function settleLinkedBillOccurrenceForLoanPayment(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  input: {
+    loanId: string;
+    installmentDueDate: Date | null;
+    paymentAmount: number;
+    paymentDate: Date;
+    loanPaymentId: string;
+  }
+) {
+  const dbAny = ctx.db as unknown as {
+    query?: {
+      billSeries?: { findFirst?: (...args: unknown[]) => Promise<typeof billSeries.$inferSelect | null> };
+      billOccurrences?: { findFirst?: (...args: unknown[]) => Promise<typeof billOccurrences.$inferSelect | null> };
+    };
+    update?: unknown;
+  };
+  if (
+    !dbAny.query?.billSeries?.findFirst ||
+    !dbAny.query?.billOccurrences?.findFirst ||
+    typeof dbAny.update !== "function"
+  ) {
+    return;
+  }
+
+  const userId = assertUserId(ctx.userId);
+  const series = await ctx.db.query.billSeries.findFirst({
+    where: and(
+      eq(billSeries.clerkUserId, userId),
+      eq(billSeries.loanId, input.loanId),
+      eq(billSeries.obligationType, "loan_repayment")
+    ),
+    orderBy: [desc(billSeries.updatedAt), desc(billSeries.createdAt)],
+  });
+  if (!series) return;
+
+  const byDueDate = input.installmentDueDate
+    ? await ctx.db.query.billOccurrences.findFirst({
+        where: and(
+          eq(billOccurrences.clerkUserId, userId),
+          eq(billOccurrences.billId, series.id),
+          eq(billOccurrences.status, "pending"),
+          eq(billOccurrences.dueDate, input.installmentDueDate)
+        ),
+        orderBy: [asc(billOccurrences.dueDate)],
+      })
+    : null;
+
+  const pending = byDueDate
+    ? byDueDate
+    : await ctx.db.query.billOccurrences.findFirst({
+        where: and(
+          eq(billOccurrences.clerkUserId, userId),
+          eq(billOccurrences.billId, series.id),
+          eq(billOccurrences.status, "pending")
+        ),
+        orderBy: [asc(billOccurrences.dueDate)],
+      });
+
+  if (!pending) return;
+  if (pending.amount !== input.paymentAmount) return;
+
+  await ctx.db
+    .update(billOccurrences)
+    .set({
+      status: "paid",
+      paidAt: input.paymentDate,
+      loanPaymentId: input.loanPaymentId,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(billOccurrences.id, pending.id), eq(billOccurrences.clerkUserId, userId)));
+}
+
 function getInstallmentStatus(installment: LoanInstallmentRecord) {
   if (installment.paidAmount >= installment.amount || installment.status === "paid") {
     return "paid" as const;
@@ -294,7 +543,7 @@ function deriveLoanMetrics(loan: LoanRecord, installments: LoanInstallmentRecord
   const paidInstallmentCount = sortedInstallments.filter(
     (installment) => getInstallmentStatus(installment) === "paid"
   ).length;
-  const derivedOutstandingAmount = loan.outstandingAmount;
+  const derivedOutstandingAmount = getEffectiveOutstandingAmount(loan, sortedInstallments);
 
   const firstPendingInstallment = sortedInstallments.find(
     (installment) => getInstallmentStatus(installment) !== "paid"
@@ -620,7 +869,11 @@ export async function getLoansSummary(ctx: Pick<TRPCContext, "db" | "userId">) {
   const enrichedLoans = enrichLoanRecords(loanRows, installmentsMap, paymentsMap);
   const activeLoans = enrichedLoans.filter((loan) => loan.status === "active");
   const dueSoonLoans = activeLoans.filter(
-    (loan) => loan.nextDueDate && loan.nextDueDate <= dueSoonDate
+    (loan) =>
+      loan.nextDueDate &&
+      loan.nextDueDate >= now &&
+      loan.nextDueDate <= dueSoonDate &&
+      loan.outstandingAmount > 0
   );
   const nextDueLoan =
     activeLoans
@@ -730,6 +983,7 @@ export async function createLoan(
     (normalizedRepaymentPlan.length > 0
       ? initialScheduleState.nextDueDate
       : normalizedRepaymentPlan[0]?.dueDate ?? null);
+  let linkedBillSynced = false;
 
   try {
     await ctx.db.insert(loans).values({
@@ -784,8 +1038,30 @@ export async function createLoan(
         destinationAccount: accountResolution.destinationAccount,
       });
     }
+
+    if (normalizedRepaymentPlan.length > 0) {
+      const createdLoan = await requireLoan(ctx, loanId, "Loan was not found after create.");
+      const createdInstallments = await ctx.db.query.loanInstallments.findMany({
+        where: and(eq(loanInstallments.loanId, loanId), eq(loanInstallments.clerkUserId, userId)),
+        orderBy: [asc(loanInstallments.sequence), asc(loanInstallments.dueDate)],
+      });
+      await syncLinkedLoanBillSeries(ctx, createdLoan, createdInstallments);
+      linkedBillSynced = true;
+    }
   } catch (error) {
     if (loanInserted) {
+      if (linkedBillSynced) {
+        await ctx.db
+          .delete(billSeries)
+          .where(
+            and(
+              eq(billSeries.clerkUserId, userId),
+              eq(billSeries.loanId, loanId),
+              eq(billSeries.obligationType, "loan_repayment")
+            )
+          )
+          .catch(() => undefined);
+      }
       await ctx.db.delete(loans).where(eq(loans.id, loanId)).catch(() => undefined);
     }
 
@@ -899,6 +1175,12 @@ export async function updateLoan(
       }))
     );
   }
+
+  const refreshedInstallments = await ctx.db.query.loanInstallments.findMany({
+    where: and(eq(loanInstallments.loanId, existing.id), eq(loanInstallments.clerkUserId, userId)),
+    orderBy: [asc(loanInstallments.sequence), asc(loanInstallments.dueDate)],
+  });
+  await syncLinkedLoanBillSeries(ctx, updated, refreshedInstallments);
 
   const installmentsMap = await getLoanInstallmentsMap(ctx, [existing.id]);
   const paymentsMap = await getLoanPaymentsMap(ctx, [existing.id]);
@@ -1090,6 +1372,7 @@ export async function recordLoanPayment(
   const mergedNotes = [loan.notes, newNoteLine].filter(Boolean).join("\n");
   const targetInstallmentId = input.installmentId ?? touchedInstallments[0]?.after.id ?? null;
   const paymentRecordId = crypto.randomUUID();
+  const targetInstallment = touchedInstallments[0]?.after ?? null;
 
   let balanceAppliedEntries: BalanceEntry[] = [];
   try {
@@ -1122,6 +1405,14 @@ export async function recordLoanPayment(
       paidAt: paymentDate,
       notes: input.notes || null,
     });
+
+    await settleLinkedBillOccurrenceForLoanPayment(ctx, {
+      loanId: loan.id,
+      installmentDueDate: targetInstallment?.dueDate ?? null,
+      paymentAmount: requestedAmount,
+      paymentDate,
+      loanPaymentId: paymentRecordId,
+    });
   } catch (error) {
     for (const touched of touchedInstallments) {
       await ctx.db
@@ -1151,6 +1442,7 @@ export async function recordLoanPayment(
   const installmentsMap = await getLoanInstallmentsMap(ctx, [loan.id]);
   const paymentsMap = await getLoanPaymentsMap(ctx, [loan.id]);
   const [enrichedLoan] = enrichLoanRecords([updatedLoan], installmentsMap, paymentsMap);
+  await syncLinkedLoanBillSeries(ctx, updatedLoan, installmentsMap.get(loan.id) ?? []);
 
   return {
     loan: enrichedLoan ?? updatedLoan,
@@ -1166,6 +1458,25 @@ export async function deleteLoan(
 ) {
   const existing = await requireLoan(ctx, input.id);
   const userId = assertUserId(ctx.userId);
+
+  await ctx.db
+    .update(billSeries)
+    .set({
+      obligationType: "general",
+      loanId: null,
+      loanInstallmentId: null,
+      isActive: false,
+      nextDueDate: null,
+      remainingOccurrences: 0,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(billSeries.clerkUserId, userId),
+        eq(billSeries.loanId, existing.id),
+        eq(billSeries.obligationType, "loan_repayment")
+      )
+    );
   const linkedLoanAccountIds = new Set<string>();
   if (existing.underlyingLoanAccountId) {
     linkedLoanAccountIds.add(existing.underlyingLoanAccountId);

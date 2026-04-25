@@ -120,6 +120,13 @@
       "when": 1776842680105,
       "tag": "0016_fresh_magneto",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1777137337213,
+      "tag": "0017_magical_maestro",
+      "breakpoints": true
     }
   ]
 }

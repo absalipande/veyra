@@ -1,4 +1,5 @@
-import { boolean, index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, check, index, integer, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const userPreferences = pgTable(
   "veyra_user_preferences",
@@ -360,6 +361,15 @@ export const billSeries = pgTable(
     nextDueDate: timestamp("next_due_date", { mode: "date" }),
     endsAfterOccurrences: integer("ends_after_occurrences"),
     remainingOccurrences: integer("remaining_occurrences"),
+    obligationType: text("obligation_type", {
+      enum: ["general", "loan_repayment"],
+    })
+      .default("general")
+      .notNull(),
+    loanId: text("loan_id").references(() => loans.id, { onDelete: "set null" }),
+    loanInstallmentId: text("loan_installment_id").references(() => loanInstallments.id, {
+      onDelete: "set null",
+    }),
     isActive: boolean("is_active").default(true).notNull(),
     accountId: text("account_id").references(() => accounts.id, { onDelete: "set null" }),
     notes: text("notes"),
@@ -371,6 +381,21 @@ export const billSeries = pgTable(
     nextDueDateIdx: index("veyra_bill_series_next_due_date_idx").on(table.nextDueDate),
     accountIdx: index("veyra_bill_series_account_idx").on(table.accountId),
     activeIdx: index("veyra_bill_series_active_idx").on(table.isActive),
+    obligationTypeIdx: index("veyra_bill_series_obligation_type_idx").on(table.obligationType),
+    loanIdx: index("veyra_bill_series_loan_idx").on(table.loanId),
+    loanInstallmentIdx: index("veyra_bill_series_loan_installment_idx").on(table.loanInstallmentId),
+    uniqueLoanRepaymentIdx: uniqueIndex("veyra_bill_series_loan_repayment_uidx").on(
+      table.clerkUserId,
+      table.loanId
+    ),
+    obligationConsistency: check(
+      "veyra_bill_series_obligation_consistency_check",
+      sql`(
+      (${table.obligationType} = 'loan_repayment' AND ${table.loanId} IS NOT NULL)
+      OR
+      (${table.obligationType} = 'general' AND ${table.loanId} IS NULL AND ${table.loanInstallmentId} IS NULL)
+    )`
+    ),
   })
 );
 
@@ -390,6 +415,9 @@ export const billOccurrences = pgTable(
       .default("pending")
       .notNull(),
     paidAt: timestamp("paid_at", { mode: "date" }),
+    loanPaymentId: text("loan_payment_id").references(() => loanPayments.id, {
+      onDelete: "set null",
+    }),
     transactionEventId: text("transaction_event_id").references(() => transactionEvents.id, {
       onDelete: "set null",
     }),
@@ -401,6 +429,7 @@ export const billOccurrences = pgTable(
     billIdx: index("veyra_bill_occurrences_bill_idx").on(table.billId),
     dueDateIdx: index("veyra_bill_occurrences_due_date_idx").on(table.dueDate),
     statusIdx: index("veyra_bill_occurrences_status_idx").on(table.status),
+    loanPaymentIdx: index("veyra_bill_occurrences_loan_payment_idx").on(table.loanPaymentId),
     transactionEventIdx: index("veyra_bill_occurrences_transaction_event_idx").on(
       table.transactionEventId
     ),

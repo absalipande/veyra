@@ -1,13 +1,11 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   ArrowUpDown,
   CreditCard,
   Globe2,
-  Landmark,
   Pencil,
   Plus,
   Sparkles,
@@ -26,6 +24,7 @@ import {
 } from "@/lib/currencies";
 import { getInstitutionDisplay } from "@/features/accounts/lib/institutions";
 import type { AppRouter } from "@/server/api/root";
+import { InstitutionAvatar } from "@/components/app/institution-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -64,6 +63,11 @@ type CreateState = {
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
 type DeleteTarget = { id: string; name: string } | null;
+type InsightMetric = {
+  label: string;
+  tone: "neutral" | "positive" | "warning";
+  value: string;
+};
 
 function getInitialState(defaultCurrency: CreateState["currency"] = "PHP"): CreateState {
   return {
@@ -340,24 +344,14 @@ function AccountSection({
                     <div className="rounded-[1.1rem] border border-border/70 bg-white/78 px-3.5 py-3 dark:bg-[#182123] md:hidden">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div
-                            className={`flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-white dark:bg-[#162022] ${
-                              institutionDisplay.logoPath ? "p-0" : institutionDisplay.tone
-                            }`}
-                          >
-                            {institutionDisplay.logoPath ? (
-                              <img
-                                src={institutionDisplay.logoPath}
-                                alt={`${institutionDisplay.label} logo`}
-                                className="h-full w-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span className="text-[0.76rem] font-semibold tracking-tight">
-                                {institutionDisplay.initials || "AC"}
-                              </span>
-                            )}
-                          </div>
+                          <InstitutionAvatar
+                            key={`${institutionDisplay.label}:${institutionDisplay.logoPaths.join("|")}`}
+                            display={institutionDisplay}
+                            sizeClassName="size-10"
+                            containerClassName="dark:bg-[#162022]"
+                            imageClassName="h-full w-full object-cover"
+                            initialsClassName="text-[0.76rem] font-semibold tracking-tight"
+                          />
                           <div className="min-w-0">
                             <p className="truncate text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                               {account.name}
@@ -408,24 +402,14 @@ function AccountSection({
                     <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_112px] items-center gap-4 px-6 py-4 md:grid">
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div
-                            className={`flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-white dark:bg-[#162022] ${
-                              institutionDisplay.logoPath ? "p-0" : institutionDisplay.tone
-                            }`}
-                          >
-                            {institutionDisplay.logoPath ? (
-                              <img
-                                src={institutionDisplay.logoPath}
-                                alt={`${institutionDisplay.label} logo`}
-                                className="h-full w-full object-cover"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <span className="text-[0.78rem] font-semibold tracking-tight">
-                                {institutionDisplay.initials || "AC"}
-                              </span>
-                            )}
-                          </div>
+                          <InstitutionAvatar
+                            key={`${institutionDisplay.label}:${institutionDisplay.logoPaths.join("|")}`}
+                            display={institutionDisplay}
+                            sizeClassName="size-11"
+                            containerClassName="dark:bg-[#162022]"
+                            imageClassName="h-full w-full object-cover"
+                            initialsClassName="text-[0.78rem] font-semibold tracking-tight"
+                          />
 
                           <div className="min-w-0">
                             <p className="truncate text-[0.92rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
@@ -503,6 +487,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const summaryQuery = trpc.accounts.summary.useQuery();
   const aiInsightQuery = trpc.ai.accountsInsight.useQuery(undefined, {
     staleTime: 45_000,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
   const settingsQuery = trpc.settings.get.useQuery();
   const [open, setOpen] = useState(false);
@@ -544,10 +530,22 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
 
   const refreshAccounts = async () => {
     await Promise.all([
+      utils.accounts.list.cancel(),
+      utils.accounts.summary.cancel(),
+      utils.loans.list.cancel(),
+      utils.loans.summary.cancel(),
+      utils.ai.accountsInsight.cancel(),
+      utils.ai.dashboardInsight.cancel(),
+    ]);
+
+    await Promise.all([
       utils.accounts.list.invalidate(),
       utils.accounts.summary.invalidate(),
       utils.loans.list.invalidate(),
       utils.loans.summary.invalidate(),
+    ]);
+
+    await Promise.all([
       utils.ai.accountsInsight.invalidate(),
       utils.ai.dashboardInsight.invalidate(),
     ]);
@@ -641,6 +639,54 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     () => accountGroups.liabilities.reduce((sum, account) => sum + account.balance, 0),
     [accountGroups.liabilities],
   );
+  const liveAccountsInsight = useMemo(() => {
+    const creditAccounts = accountGroups.liabilities.filter((account) => account.type === "credit");
+    const loanAccounts = accountGroups.liabilities.filter((account) => account.type === "loan");
+    const totalCreditDebt = creditAccounts.reduce((sum, account) => sum + account.balance, 0);
+    const totalLoanDebt = loanAccounts.reduce((sum, account) => sum + account.balance, 0);
+    const totalLiabilities = totalCreditDebt + totalLoanDebt;
+    const totalCreditLimit = creditAccounts.reduce((sum, account) => sum + account.creditLimit, 0);
+    const utilizationPct =
+      totalCreditLimit > 0 ? Math.round((totalCreditDebt / totalCreditLimit) * 100) : 0;
+    const runwayMetric = aiInsightQuery.data?.metrics.find((metric) => metric.label === "Runway");
+
+    let summary = "Accounts are stable with manageable liquidity and liabilities.";
+    if (utilizationPct >= 70) {
+      summary = `Credit utilization is at ${utilizationPct}%. Focus on paydown to recover margin.`;
+    } else if (totalLiabilities > liquidTotalBalance && totalLiabilities > 0) {
+      summary = "Liabilities are currently higher than liquid balances. Keep debt pacing visible.";
+    }
+
+    const recommendation =
+      utilizationPct >= 70
+        ? "Credit utilization is elevated. Prioritize one extra card payment this cycle."
+        : "Account posture is stable. Keep balancing liquidity and debt paydown.";
+
+    const metrics: InsightMetric[] = [
+      {
+        label: "Liquid balance",
+        value: formatCurrencyMiliunits(liquidTotalBalance, "PHP"),
+        tone: "neutral",
+      },
+      {
+        label: "Liabilities",
+        value: formatCurrencyMiliunits(totalLiabilities, "PHP"),
+        tone: totalLiabilities > liquidTotalBalance ? "warning" : "neutral",
+      },
+      {
+        label: "Credit utilization",
+        value: totalCreditLimit > 0 ? `${utilizationPct}%` : "No credit line",
+        tone: totalCreditLimit > 0 && utilizationPct >= 70 ? "warning" : "positive",
+      },
+      {
+        label: "Runway",
+        value: runwayMetric?.value ?? "Insufficient history",
+        tone: runwayMetric?.tone ?? "neutral",
+      },
+    ];
+
+    return { metrics, recommendation, summary };
+  }, [accountGroups.liabilities, aiInsightQuery.data?.metrics, liquidTotalBalance]);
 
   const visibleLiquidAccounts = useMemo(
     () => sortAccounts(filterAccounts(accountGroups.liquid, liquidFilter), liquidSort),
@@ -905,11 +951,11 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             </div>
 
             <p className="text-[0.86rem] leading-6 text-muted-foreground">
-              {aiInsightQuery.data?.summary ?? "Account pressure signals will appear here."}
+              {liveAccountsInsight.summary}
             </p>
 
             <div className="grid gap-2.5 md:grid-cols-4">
-              {(aiInsightQuery.data?.metrics ?? []).map((metric) => (
+              {liveAccountsInsight.metrics.map((metric) => (
                 <div
                   key={metric.label}
                   className="rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f]"
@@ -935,7 +981,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             <div className="rounded-xl border border-border/70 bg-background px-3.5 py-2.5 dark:bg-[#141d1f]">
               <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">Recommended next step</p>
               <p className="mt-1 text-[0.88rem] text-foreground">
-                {aiInsightQuery.data?.recommendations?.[0] ?? "No recommendation yet."}
+                {liveAccountsInsight.recommendation}
               </p>
             </div>
           </CardContent>

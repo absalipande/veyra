@@ -46,15 +46,15 @@ const items = [
     available: true,
   },
   {
-    label: "Bills",
-    href: "/bills",
-    icon: CalendarClock,
-    available: true,
-  },
-  {
     label: "Loans",
     href: "/loans",
     icon: HandCoins,
+    available: true,
+  },
+  {
+    label: "Bills",
+    href: "/bills",
+    icon: CalendarClock,
     available: true,
   },
   {
@@ -89,8 +89,7 @@ function NavigationList({ onNavigate }: NavigationListProps) {
       {items.map((item) => {
         const Icon = item.icon;
         const isActive =
-          item.available &&
-          (pathname === item.href || pathname.startsWith(`${item.href}/`));
+          item.available && (pathname === item.href || pathname.startsWith(`${item.href}/`));
 
         if (!item.available) {
           return (

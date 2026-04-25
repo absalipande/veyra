@@ -82,7 +82,12 @@ function deriveBillsObligations(
 
   for (const occurrence of occurrences) {
     const series = seriesMap.get(occurrence.billId);
-    if (!series || !series.isActive || series.currency !== currency) {
+    if (
+      !series ||
+      !series.isActive ||
+      series.currency !== currency ||
+      series.obligationType === "loan_repayment"
+    ) {
       continue;
     }
 
