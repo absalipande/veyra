@@ -318,19 +318,23 @@ export function LoanDetailsWorkspace({ loanId }: { loanId: string }) {
           </div>
         ) : (
           <div className="mt-5 overflow-hidden rounded-[1.2rem] border border-border/70 bg-background/80 p-4">
-            <div className="grid grid-cols-2 divide-x divide-border/70 rounded-xl border border-border/60">
-              <div className="p-3">
-                <p className="text-[0.75rem] text-muted-foreground">Remaining payable</p>
-                <p className="mt-1 text-[1.8rem] leading-none font-semibold tracking-tight text-foreground">
+            <div className="grid gap-2">
+              <div className="rounded-xl border border-border/60 p-3">
+                <p className="text-[0.72rem] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                  Remaining payable
+                </p>
+                <p className="mt-1 text-[1.34rem] leading-tight font-semibold tracking-tight text-foreground">
                   {formatCurrencyMiliunits(remainingPayableAmount, loan.currency)}
                 </p>
-                <p className="mt-1 text-[0.86rem] text-muted-foreground">
+                <p className="text-[0.82rem] text-muted-foreground">
                   of {formatCurrencyMiliunits(loan.totalPayable, loan.currency)}
                 </p>
               </div>
-              <div className="p-3">
-                <p className="text-[0.75rem] text-muted-foreground">Progress</p>
-                <div className="mt-2 flex items-center gap-2.5">
+              <div className="rounded-xl border border-border/60 p-3">
+                <p className="text-[0.72rem] font-medium uppercase tracking-[0.1em] text-muted-foreground">
+                  Progress
+                </p>
+                <div className="mt-2 flex items-center gap-3">
                   <ProgressRing progressPercent={progressPercent} />
                   <p className="text-[0.86rem] leading-tight text-muted-foreground">
                     {paidInstallments} of {totalInstallments} payments made

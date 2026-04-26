@@ -27,12 +27,7 @@ import type { AppRouter } from "@/server/api/root";
 import { InstitutionAvatar } from "@/components/app/institution-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -102,7 +97,7 @@ const accountDialogBodyClassName =
 const accountDialogFooterClassName =
   "sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-white px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-6 sm:py-3 dark:bg-[#1a2325]";
 const accountConfirmDialogContentClassName =
-  "max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-x-hidden overflow-y-auto rounded-[1.2rem] border-border/70 bg-background/98 px-0 py-0 ring-0 sm:max-h-[calc(100svh-2rem)] sm:w-auto sm:max-w-[30rem] sm:rounded-[1.35rem]";
+  "max-h-[calc(100dvh-0.75rem)] w-[calc(100vw-0.75rem)] max-w-[30rem] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/98 px-0 py-0 ring-0 sm:max-h-[calc(100svh-2rem)] sm:w-full";
 
 type AccountDialogShellProps = {
   badge: ReactNode;
@@ -274,8 +269,8 @@ function AccountSection({
 }: AccountSectionProps) {
   return (
     <Card className="border-white/75 bg-white/82 shadow-[0_28px_75px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_32px_85px_-55px_rgba(0,0,0,0.62)]">
-          <CardHeader className="gap-2.5 pb-3.5">
-            <div className="space-y-1">
+      <CardHeader className="gap-2.5 pb-3.5">
+        <div className="space-y-1">
           <CardTitle className="text-[1.02rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.08rem]">
             {title}
           </CardTitle>
@@ -979,7 +974,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             </div>
 
             <div className="rounded-xl border border-border/70 bg-background px-3.5 py-2.5 dark:bg-[#141d1f]">
-              <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">Recommended next step</p>
+              <p className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                Recommended next step
+              </p>
               <p className="mt-1 text-[0.88rem] text-foreground">
                 {liveAccountsInsight.recommendation}
               </p>
@@ -991,271 +988,270 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
       <section>
         <Dialog open={open} onOpenChange={resetDialogState}>
           <DialogContent mobileBehavior="adaptive" className={accountDialogContentClassName}>
-                <AccountDialogShell
-                  badge={
-                    <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-white px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
-                      Account setup
+            <AccountDialogShell
+              badge={
+                <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-white px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+                  Account setup
+                </div>
+              }
+              title={editingId ? "Edit account" : "Add account"}
+              description={
+                <p className="hidden max-w-lg text-[0.9rem] leading-6 text-muted-foreground sm:block">
+                  Start with the essentials: account name, type, currency, and opening balance.
+                </p>
+              }
+              body={
+                <div className="space-y-3.5 sm:space-y-4">
+                  <section className="space-y-2.5 border-b border-border/50 pb-3.5">
+                    <div className="space-y-1">
+                      <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
+                        Account basics
+                      </h3>
+                      <p className="text-[0.82rem] leading-5.5 text-muted-foreground">
+                        Name the account, choose its type, and keep the original currency intact.
+                      </p>
                     </div>
-                  }
-                  title={editingId ? "Edit account" : "Add account"}
-                  description={
-                    <p className="hidden max-w-lg text-[0.9rem] leading-6 text-muted-foreground sm:block">
-                      Start with the essentials: account name, type, currency, and opening balance.
-                    </p>
-                  }
-                  body={
-                    <div className="space-y-3.5 sm:space-y-4">
-                      <section className="space-y-2.5 border-b border-border/50 pb-3.5">
-                        <div className="space-y-1">
-                          <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
-                            Account basics
-                          </h3>
-                          <p className="text-[0.82rem] leading-5.5 text-muted-foreground">
-                            Name the account, choose its type, and keep the original currency
-                            intact.
-                          </p>
+
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <label className={accountFieldLabelClassName}>Account name</label>
+                        <Input
+                          value={form.name}
+                          onChange={(event) =>
+                            setForm((current) => ({ ...current, name: event.target.value }))
+                          }
+                          placeholder="e.g. Emergency fund"
+                          className={accountInputClassName}
+                        />
+                      </div>
+
+                      <div className="grid gap-3">
+                        <div className="space-y-2">
+                          <label className={accountFieldLabelClassName}>Account type</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {accountTypeOptions.map((option) => (
+                              <button
+                                key={option.value}
+                                type="button"
+                                onClick={() =>
+                                  setForm((current) => ({ ...current, type: option.value }))
+                                }
+                                className={`h-9.5 rounded-[0.8rem] border px-3 text-[0.86rem] font-medium transition ${
+                                  form.type === option.value
+                                    ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                                    : "border-border/80 bg-background text-foreground hover:bg-muted/70"
+                                }`}
+                              >
+                                {option.label}
+                              </button>
+                            ))}
+                          </div>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-2">
+                          <label className={accountFieldLabelClassName}>Currency</label>
+                          <Select
+                            value={form.currency}
+                            onValueChange={(value) =>
+                              setForm((current) => ({
+                                ...current,
+                                currency: value as CreateState["currency"],
+                              }))
+                            }
+                          >
+                            <SelectTrigger className={accountFieldClassName}>
+                              <SelectValue placeholder="Select currency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {supportedCurrencies.map((currency) => (
+                                <SelectItem key={currency} value={currency}>
+                                  {currency} · {getCurrencyLabel(currency)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {form.type !== "credit" ? (
+                    <section className="space-y-2.5">
+                      <div className="space-y-1">
+                        <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
+                          Balance setup
+                        </h3>
+                        <p className="text-[0.82rem] leading-5.5 text-muted-foreground">
+                          Enter the starting balance for this account.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="space-y-2">
+                          <label className={accountFieldLabelClassName}>
+                            {form.type === "loan" ? "Current loan balance" : "Opening balance"}
+                          </label>
+                          <Input
+                            type="number"
+                            inputMode="decimal"
+                            value={form.balance}
+                            onChange={(event) =>
+                              setForm((current) => ({
+                                ...current,
+                                balance: event.target.value,
+                              }))
+                            }
+                            placeholder="0.00"
+                            className={accountInputClassName}
+                          />
+                        </div>
+
+                        <p className="max-w-[420px] rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
+                          Balances are stored in each account’s native currency. Cross-currency
+                          rollups can be layered on later.
+                        </p>
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {form.type === "credit" ? (
+                    <section className="space-y-2.5">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
+                            Credit details
+                          </h3>
+                          <span className="rounded-full border border-border/70 bg-muted px-2 py-0.5 text-[0.66rem] font-medium text-muted-foreground">
+                            Credit only
+                          </span>
+                        </div>
+                        <p className="text-[0.82rem] leading-5.5 text-muted-foreground">
+                          Enter the limit and the figure you currently know.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2.5 rounded-[0.95rem] border border-border/70 bg-white/60 p-3.5 dark:bg-[#182123]">
+                        <div className="grid gap-3">
                           <div className="space-y-2">
-                            <label className={accountFieldLabelClassName}>Account name</label>
+                            <label className={accountFieldLabelClassName}>Credit limit</label>
                             <Input
-                              value={form.name}
-                              onChange={(event) =>
-                                setForm((current) => ({ ...current, name: event.target.value }))
-                              }
-                              placeholder="e.g. Emergency fund"
+                              type="number"
+                              inputMode="decimal"
+                              value={form.creditLimit}
+                              onChange={(event) => setCreditLimitValue(event.target.value)}
+                              placeholder="0.00"
                               className={accountInputClassName}
                             />
                           </div>
 
-                          <div className="grid gap-3">
-                            <div className="space-y-2">
-                              <label className={accountFieldLabelClassName}>Account type</label>
-                              <div className="grid grid-cols-2 gap-2">
-                                {accountTypeOptions.map((option) => (
-                                  <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() =>
-                                      setForm((current) => ({ ...current, type: option.value }))
-                                    }
-                                    className={`h-9.5 rounded-[0.8rem] border px-3 text-[0.86rem] font-medium transition ${
-                                      form.type === option.value
-                                        ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                                        : "border-border/80 bg-background text-foreground hover:bg-muted/70"
-                                    }`}
-                                  >
-                                    {option.label}
-                                  </button>
-                                ))}
-                              </div>
+                          <div className="space-y-2">
+                            <label className={accountFieldLabelClassName}>Input mode</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {[
+                                { label: "Balance", value: "balance" as const },
+                                { label: "Available", value: "available" as const },
+                              ].map((option) => (
+                                <button
+                                  key={option.value}
+                                  type="button"
+                                  onClick={() =>
+                                    setForm((current) => ({
+                                      ...current,
+                                      creditInputMode: option.value,
+                                    }))
+                                  }
+                                  className={`flex h-9.5 items-center justify-center rounded-[0.8rem] border px-3 text-center text-[0.82rem] font-medium transition ${
+                                    form.creditInputMode === option.value
+                                      ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                                      : "border-border/80 bg-background text-foreground hover:bg-muted/70"
+                                  }`}
+                                >
+                                  {option.label}
+                                </button>
+                              ))}
                             </div>
-
-                            <div className="space-y-2">
-                              <label className={accountFieldLabelClassName}>Currency</label>
-                              <Select
-                                value={form.currency}
-                                onValueChange={(value) =>
-                                  setForm((current) => ({
-                                    ...current,
-                                    currency: value as CreateState["currency"],
-                                  }))
-                                }
-                              >
-                                <SelectTrigger className={accountFieldClassName}>
-                                  <SelectValue placeholder="Select currency" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {supportedCurrencies.map((currency) => (
-                                    <SelectItem key={currency} value={currency}>
-                                      {currency} · {getCurrencyLabel(currency)}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </div>
-                      </section>
-
-                      {form.type !== "credit" ? (
-                        <section className="space-y-2.5">
-                          <div className="space-y-1">
-                            <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
-                              Balance setup
-                            </h3>
-                            <p className="text-[0.82rem] leading-5.5 text-muted-foreground">
-                              Enter the starting balance for this account.
-                            </p>
                           </div>
 
                           <div className="space-y-2">
-                            <div className="space-y-2">
-                              <label className={accountFieldLabelClassName}>
-                                {form.type === "loan" ? "Current loan balance" : "Opening balance"}
-                              </label>
-                              <Input
-                                type="number"
-                                inputMode="decimal"
-                                value={form.balance}
-                                onChange={(event) =>
-                                  setForm((current) => ({
-                                    ...current,
-                                    balance: event.target.value,
-                                  }))
-                                }
-                                placeholder="0.00"
-                                className={accountInputClassName}
-                              />
-                            </div>
-
-                            <p className="max-w-[420px] rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
-                              Balances are stored in each account’s native currency. Cross-currency
-                              rollups can be layered on later.
-                            </p>
-                          </div>
-                        </section>
-                      ) : null}
-
-                      {form.type === "credit" ? (
-                        <section className="space-y-2.5">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-[1rem] font-semibold tracking-tight text-foreground">
-                                Credit details
-                              </h3>
-                              <span className="rounded-full border border-border/70 bg-muted px-2 py-0.5 text-[0.66rem] font-medium text-muted-foreground">
-                                Credit only
-                              </span>
-                            </div>
-                            <p className="text-[0.82rem] leading-5.5 text-muted-foreground">
-                              Enter the limit and the figure you currently know.
-                            </p>
+                            <label className={accountFieldLabelClassName}>
+                              {form.creditInputMode === "available"
+                                ? "Available credit"
+                                : "Current balance"}
+                            </label>
+                            <Input
+                              type="number"
+                              inputMode="decimal"
+                              value={
+                                form.creditInputMode === "available"
+                                  ? form.availableCredit
+                                  : form.balance
+                              }
+                              onChange={(event) =>
+                                form.creditInputMode === "available"
+                                  ? setAvailableCreditValue(event.target.value)
+                                  : setCreditBalanceValue(event.target.value)
+                              }
+                              placeholder="0.00"
+                              className={accountInputClassName}
+                            />
                           </div>
 
-                          <div className="space-y-2.5 rounded-[0.95rem] border border-border/70 bg-white/60 p-3.5 dark:bg-[#182123]">
-                            <div className="grid gap-3">
-                              <div className="space-y-2">
-                                <label className={accountFieldLabelClassName}>Credit limit</label>
-                                <Input
-                                  type="number"
-                                  inputMode="decimal"
-                                  value={form.creditLimit}
-                                  onChange={(event) => setCreditLimitValue(event.target.value)}
-                                  placeholder="0.00"
-                                  className={accountInputClassName}
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <label className={accountFieldLabelClassName}>Input mode</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                  {[
-                                    { label: "Balance", value: "balance" as const },
-                                    { label: "Available", value: "available" as const },
-                                  ].map((option) => (
-                                    <button
-                                      key={option.value}
-                                      type="button"
-                                      onClick={() =>
-                                        setForm((current) => ({
-                                          ...current,
-                                          creditInputMode: option.value,
-                                        }))
-                                      }
-                                      className={`flex h-9.5 items-center justify-center rounded-[0.8rem] border px-3 text-center text-[0.82rem] font-medium transition ${
-                                        form.creditInputMode === option.value
-                                          ? "border-[#17393c] bg-[#17393c] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                                          : "border-border/80 bg-background text-foreground hover:bg-muted/70"
-                                      }`}
-                                    >
-                                      {option.label}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <div className="space-y-2">
-                                <label className={accountFieldLabelClassName}>
-                                  {form.creditInputMode === "available"
-                                    ? "Available credit"
-                                    : "Current balance"}
-                                </label>
-                                <Input
-                                  type="number"
-                                  inputMode="decimal"
-                                  value={
-                                    form.creditInputMode === "available"
-                                      ? form.availableCredit
-                                      : form.balance
-                                  }
-                                  onChange={(event) =>
-                                    form.creditInputMode === "available"
-                                      ? setAvailableCreditValue(event.target.value)
-                                      : setCreditBalanceValue(event.target.value)
-                                  }
-                                  placeholder="0.00"
-                                  className={accountInputClassName}
-                                />
-                              </div>
-
-                              <div className="space-y-2">
-                                <label className={accountFieldLabelClassName}>
-                                  {form.creditInputMode === "available"
-                                    ? "Computed balance"
-                                    : "Computed available"}
-                                </label>
-                                <div className="flex h-10 items-center rounded-[0.8rem] border border-border/80 bg-muted/45 px-3.5 text-[0.88rem] font-medium text-muted-foreground">
-                                  {form.creditInputMode === "available"
-                                    ? formatCurrencyMiliunits(parsedBalance, form.currency)
-                                    : formatCurrencyMiliunits(parsedAvailableCredit, form.currency)}
-                                </div>
-                              </div>
+                          <div className="space-y-2">
+                            <label className={accountFieldLabelClassName}>
+                              {form.creditInputMode === "available"
+                                ? "Computed balance"
+                                : "Computed available"}
+                            </label>
+                            <div className="flex h-10 items-center rounded-[0.8rem] border border-border/80 bg-muted/45 px-3.5 text-[0.88rem] font-medium text-muted-foreground">
+                              {form.creditInputMode === "available"
+                                ? formatCurrencyMiliunits(parsedBalance, form.currency)
+                                : formatCurrencyMiliunits(parsedAvailableCredit, form.currency)}
                             </div>
-
-                            <p className="rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
-                              For credit cards, credit limit stays fixed while current balance
-                              tracks what you owe. If you only know the available credit from your
-                              banking app, Veyra can derive the balance for you.
-                            </p>
                           </div>
-                        </section>
-                      ) : null}
+                        </div>
 
-                      {(createAccount.error || updateAccount.error) && (
-                        <p className="rounded-[0.95rem] border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[0.88rem] text-destructive">
-                          {createAccount.error?.message ?? updateAccount.error?.message}
+                        <p className="rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
+                          For credit cards, credit limit stays fixed while current balance tracks
+                          what you owe. If you only know the available credit from your banking app,
+                          Veyra can derive the balance for you.
                         </p>
-                      )}
-                    </div>
-                  }
-                  footer={
-                    <div className="flex items-center justify-end gap-2.5">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="h-9.5 rounded-full px-4 text-[0.88rem] text-foreground/80 hover:bg-muted"
-                        onClick={() => resetDialogState(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={onSubmit}
-                        disabled={!form.name.trim() || isSubmitting}
-                        className="h-10 w-full rounded-[0.95rem] bg-[#17393c] px-6 text-[0.9rem] font-medium text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:min-w-44 sm:w-auto"
-                      >
-                        {isSubmitting
-                          ? editingId
-                            ? "Saving changes..."
-                            : "Creating account..."
-                          : editingId
-                            ? "Save changes"
-                            : "Create account"}
-                      </Button>
-                    </div>
-                  }
-                />
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {(createAccount.error || updateAccount.error) && (
+                    <p className="rounded-[0.95rem] border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[0.88rem] text-destructive">
+                      {createAccount.error?.message ?? updateAccount.error?.message}
+                    </p>
+                  )}
+                </div>
+              }
+              footer={
+                <div className="flex items-center justify-end gap-2.5">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-9.5 rounded-full px-4 text-[0.88rem] text-foreground/80 hover:bg-muted"
+                    onClick={() => resetDialogState(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={onSubmit}
+                    disabled={!form.name.trim() || isSubmitting}
+                    className="h-10 w-full rounded-[0.95rem] bg-[#17393c] px-6 text-[0.9rem] font-medium text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:min-w-44 sm:w-auto"
+                  >
+                    {isSubmitting
+                      ? editingId
+                        ? "Saving changes..."
+                        : "Creating account..."
+                      : editingId
+                        ? "Save changes"
+                        : "Create account"}
+                  </Button>
+                </div>
+              }
+            />
           </DialogContent>
         </Dialog>
       </section>
@@ -1269,25 +1265,25 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
         }}
       >
         <DialogContent mobileBehavior="modal" className={accountConfirmDialogContentClassName}>
-          <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-3.5 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pb-4 sm:pt-5 sm:pr-16">
-            <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-destructive">
+          <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pt-5 sm:pr-16">
+            <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-destructive">
               Confirm delete
             </div>
-            <DialogTitle className="pt-1.5 text-[1.2rem] tracking-tight text-[#10292B] dark:text-foreground sm:pt-2.5 sm:text-[1.45rem]">
+            <DialogTitle className="pt-2 text-[1.45rem] leading-[1.08] tracking-tight text-[#10292B] dark:text-foreground">
               Remove this account?
             </DialogTitle>
-            <p className="max-w-md text-[0.88rem] leading-6 text-muted-foreground sm:text-[0.92rem] sm:leading-6.5">
+            <p className="max-w-md text-[0.92rem] leading-6.5 text-muted-foreground">
               {deleteTarget
                 ? `Delete "${deleteTarget.name}" from your Veyra workspace? This action cannot be undone.`
                 : "Delete this account from your Veyra workspace? This action cannot be undone."}
             </p>
           </DialogHeader>
 
-          <div className="grid shrink-0 grid-cols-2 gap-2.5 px-5 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-3 sm:flex sm:justify-end sm:px-6 sm:py-4">
+          <div className="grid shrink-0 grid-cols-2 gap-2.5 px-5 pb-[max(0.9rem,env(safe-area-inset-bottom))] pt-3.5 sm:flex sm:justify-end sm:px-6 sm:py-4">
             <Button
               type="button"
               variant="outline"
-              className="h-9.5 w-full rounded-full px-4.5 sm:h-10 sm:w-auto"
+              className="h-10 w-full cursor-pointer rounded-full px-4 text-[0.9rem] sm:w-auto"
               onClick={() => setDeleteTarget(null)}
               disabled={isDeleting}
             >
@@ -1295,7 +1291,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             </Button>
             <Button
               type="button"
-              className="h-9.5 w-full rounded-full bg-destructive px-4.5 text-white hover:bg-destructive/90 sm:h-10 sm:w-auto"
+              className="h-10 w-full cursor-pointer rounded-full bg-destructive px-4 text-[0.9rem] text-white hover:bg-destructive/90 sm:w-auto"
               onClick={onConfirmDelete}
               disabled={isDeleting}
             >
