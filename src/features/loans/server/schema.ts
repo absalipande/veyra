@@ -5,6 +5,13 @@ import { supportedCurrencies } from "@/lib/currencies";
 export const loanKinds = ["institution", "personal"] as const;
 export const loanStatuses = ["active", "closed"] as const;
 export const loanCadences = ["daily", "weekly", "bi-weekly", "monthly"] as const;
+export const loanRepaymentAccountKinds = ["loan_account", "credit_account"] as const;
+export const loanLiabilityTreatments = ["separate_loan", "credit_linked_overlay"] as const;
+export const loanCreditBalanceTreatments = [
+  "already_included",
+  "add_to_credit_balance",
+  "track_separately",
+] as const;
 export const loanInstallmentSchema = z.object({
   dueDate: z.coerce.date(),
   amount: z.number().int().positive(),
@@ -14,7 +21,7 @@ export const loanInstallmentSchema = z.object({
 
 export const listLoansSchema = z.object({
   page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(100).default(20),
+  pageSize: z.number().int().min(1).max(200).default(20),
   search: z.string().trim().max(120).optional().or(z.literal("")).default(""),
   status: z.enum(["all", ...loanStatuses]).default("all"),
 });
@@ -35,6 +42,12 @@ export const createLoanSchema = z
     status: z.enum(loanStatuses).default("active"),
     destinationAccountId: z.string().uuid(),
     underlyingLoanAccountId: z.string().uuid().optional(),
+    repaymentAccountId: z.string().uuid().optional(),
+    repaymentAccountKind: z.enum(loanRepaymentAccountKinds).default("loan_account"),
+    liabilityTreatment: z.enum(loanLiabilityTreatments).default("separate_loan"),
+    creditBalanceTreatment: z.enum(loanCreditBalanceTreatments).optional(),
+    creditLinkedOpeningAmount: z.number().int().nonnegative().optional(),
+    defaultPaymentSourceAccountId: z.string().uuid().optional(),
     cadence: z.enum(loanCadences).optional(),
     nextDueDate: z.coerce.date().optional(),
     notes: z.string().trim().max(500).optional().or(z.literal("")),
@@ -45,7 +58,49 @@ export const createLoanSchema = z
     repaymentPlan: z.array(loanInstallmentSchema).max(120).default([]),
   })
   .superRefine((value, ctx) => {
-    if (!value.underlyingLoanAccountId && !value.autoCreateUnderlyingAccount) {
+    const isCreditLinked = value.repaymentAccountKind === "credit_account";
+
+    if (isCreditLinked && !value.repaymentAccountId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["repaymentAccountId"],
+        message: "Choose the credit account this loan is linked to.",
+      });
+    }
+
+    if (isCreditLinked && value.liabilityTreatment !== "credit_linked_overlay") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["liabilityTreatment"],
+        message: "Credit-linked loans must use credit linked overlay treatment.",
+      });
+    }
+
+    if (isCreditLinked && !value.creditBalanceTreatment) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["creditBalanceTreatment"],
+        message: "Choose how the card balance should be treated at link time.",
+      });
+    }
+
+    if (isCreditLinked && value.createOpeningDisbursement) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["createOpeningDisbursement"],
+        message: "Credit-linked loans store card state directly and cannot create an opening loan disbursement.",
+      });
+    }
+
+    if (!isCreditLinked && value.creditBalanceTreatment) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["creditBalanceTreatment"],
+        message: "Credit balance treatment only applies to credit-linked loans.",
+      });
+    }
+
+    if (!isCreditLinked && !value.underlyingLoanAccountId && !value.autoCreateUnderlyingAccount) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["underlyingLoanAccountId"],
@@ -62,24 +117,66 @@ export const createLoanSchema = z
     }
   });
 
-export const updateLoanSchema = z.object({
-  id: z.string().uuid(),
-  kind: z.enum(loanKinds),
-  name: z.string().trim().min(2).max(120),
-  lenderName: z.string().trim().min(2).max(120),
-  currency: z.enum(supportedCurrencies),
-  principalAmount: z.number().int().positive(),
-  outstandingAmount: z.number().int().nonnegative(),
-  disbursedAt: z.coerce.date(),
-  status: z.enum(loanStatuses),
-  destinationAccountId: z.string().uuid(),
-  underlyingLoanAccountId: z.string().uuid().optional(),
-  cadence: z.enum(loanCadences).optional(),
-  nextDueDate: z.coerce.date().optional(),
-  notes: z.string().trim().max(500).optional().or(z.literal("")),
-  metadata: z.string().trim().max(5000).optional().or(z.literal("")),
-  repaymentPlan: z.array(loanInstallmentSchema).max(120).default([]),
-});
+export const updateLoanSchema = z
+  .object({
+    id: z.string().uuid(),
+    kind: z.enum(loanKinds),
+    name: z.string().trim().min(2).max(120),
+    lenderName: z.string().trim().min(2).max(120),
+    currency: z.enum(supportedCurrencies),
+    principalAmount: z.number().int().positive(),
+    outstandingAmount: z.number().int().nonnegative(),
+    disbursedAt: z.coerce.date(),
+    status: z.enum(loanStatuses),
+    destinationAccountId: z.string().uuid(),
+    underlyingLoanAccountId: z.string().uuid().optional(),
+    repaymentAccountId: z.string().uuid().optional(),
+    repaymentAccountKind: z.enum(loanRepaymentAccountKinds).default("loan_account"),
+    liabilityTreatment: z.enum(loanLiabilityTreatments).default("separate_loan"),
+    creditBalanceTreatment: z.enum(loanCreditBalanceTreatments).optional(),
+    creditLinkedOpeningAmount: z.number().int().nonnegative().optional(),
+    defaultPaymentSourceAccountId: z.string().uuid().optional(),
+    cadence: z.enum(loanCadences).optional(),
+    nextDueDate: z.coerce.date().optional(),
+    notes: z.string().trim().max(500).optional().or(z.literal("")),
+    metadata: z.string().trim().max(5000).optional().or(z.literal("")),
+    repaymentPlan: z.array(loanInstallmentSchema).max(120).default([]),
+  })
+  .superRefine((value, ctx) => {
+    const isCreditLinked = value.repaymentAccountKind === "credit_account";
+
+    if (isCreditLinked && !value.repaymentAccountId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["repaymentAccountId"],
+        message: "Choose the credit account this loan is linked to.",
+      });
+    }
+
+    if (isCreditLinked && value.liabilityTreatment !== "credit_linked_overlay") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["liabilityTreatment"],
+        message: "Credit-linked loans must use credit linked overlay treatment.",
+      });
+    }
+
+    if (isCreditLinked && !value.creditBalanceTreatment) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["creditBalanceTreatment"],
+        message: "Choose how the card balance should be treated at link time.",
+      });
+    }
+
+    if (!isCreditLinked && value.creditBalanceTreatment) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["creditBalanceTreatment"],
+        message: "Credit balance treatment only applies to credit-linked loans.",
+      });
+    }
+  });
 
 export const deleteLoanSchema = z.object({
   id: z.string().uuid(),

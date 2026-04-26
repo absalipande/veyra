@@ -10,6 +10,7 @@ type AccountState = {
   type: "cash" | "wallet" | "credit" | "loan";
   currency: string;
   balance: number;
+  creditLimit?: number;
 };
 
 type LoanState = {
@@ -25,6 +26,17 @@ type LoanState = {
   status: "active" | "closed";
   destinationAccountId: string;
   underlyingLoanAccountId: string | null;
+  repaymentAccountId?: string | null;
+  repaymentAccountKind?: "loan_account" | "credit_account";
+  liabilityTreatment?: "separate_loan" | "credit_linked_overlay";
+  creditBalanceTreatment?: "already_included" | "add_to_credit_balance" | "track_separately" | null;
+  creditLinkedOpeningAmount?: number;
+  creditBalanceAtLink?: number | null;
+  creditLimitAtLink?: number | null;
+  creditAvailableAtLink?: number | null;
+  creditUtilizationAtLink?: number | null;
+  creditOpeningAdjustmentApplied?: boolean;
+  defaultPaymentSourceAccountId?: string | null;
   cadence: "daily" | "weekly" | "bi-weekly" | "monthly" | null;
   nextDueDate: Date | null;
   notes: string | null;
@@ -117,14 +129,20 @@ function createLoansHarness(seed: {
 
         if (table === accounts) {
           const next = pendingBalanceMutations.shift();
-          if (!next) {
+          if (!next && typeof payload.balance !== "number") {
             throw new Error("Missing pending account balance mutation.");
           }
-          const target = state.accounts.find((account) => account.id === next.accountId);
+          const target = next
+            ? state.accounts.find((account) => account.id === next.accountId)
+            : state.accounts.find((account) => account.type === "loan");
           if (!target) {
             throw new Error("Unknown account balance mutation target.");
           }
-          target.balance += next.amountDelta;
+          if (next) {
+            target.balance += next.amountDelta;
+          } else if (typeof payload.balance === "number") {
+            target.balance = payload.balance;
+          }
         }
 
         return {
@@ -265,7 +283,6 @@ describe("loans service", () => {
 
     harness.setBalanceMutations([
       { accountId: sourceAccountId, amountDelta: -2_500 },
-      { accountId: liabilityAccountId, amountDelta: -2_500 },
     ]);
     harness.resetInstallmentCursor();
     vi.spyOn(crypto, "randomUUID").mockReturnValue("7f23823c-0351-4731-a2be-a2d1671c83b0");
@@ -286,8 +303,8 @@ describe("loans service", () => {
     expect(result.unappliedAmount).toBe(0);
 
     expect(harness.state.accounts.find((a) => a.id === sourceAccountId)?.balance).toBe(7_500);
-    expect(harness.state.accounts.find((a) => a.id === liabilityAccountId)?.balance).toBe(3_500);
-    expect(harness.state.loan.outstandingAmount).toBe(500);
+    expect(harness.state.accounts.find((a) => a.id === liabilityAccountId)?.balance).toBe(1_500);
+    expect(harness.state.loan.outstandingAmount).toBe(1_500);
     expect(harness.state.loan.status).toBe("active");
     expect(harness.state.loan.nextDueDate?.toISOString()).toBe("2026-07-10T00:00:00.000Z");
 
@@ -589,5 +606,125 @@ describe("loans service", () => {
     expect(harness.state.payments).toHaveLength(1);
     expect(harness.state.accounts.find((row) => row.id === sourceAccountId)?.balance).toBe(sourceBefore);
     expect(harness.state.accounts.find((row) => row.id === liabilityAccountId)?.balance).toBe(liabilityBefore);
+  });
+
+  it("records credit-linked loan payments as deltas against the linked credit account", async () => {
+    const sourceAccountId = "7d15a7d9-c019-44de-8bb4-3daa5fc0f7ea";
+    const creditAccountId = "f2e3cf9f-3fcb-4877-9eec-7c521ad7ed91";
+    const loanId = "34d51285-5d74-4c54-ac6c-9a22018a7431";
+
+    const harness = createLoansHarness({
+      accounts: [
+        {
+          id: sourceAccountId,
+          clerkUserId: "user_1",
+          name: "BDO Savings",
+          type: "cash",
+          currency: "PHP",
+          balance: 50_000,
+        },
+        {
+          id: creditAccountId,
+          clerkUserId: "user_1",
+          name: "RCBC Gold Mastercard",
+          type: "credit",
+          currency: "PHP",
+          balance: 40_865,
+          creditLimit: 50_000,
+        },
+      ],
+      loan: {
+        id: loanId,
+        clerkUserId: "user_1",
+        kind: "institution",
+        name: "RCBC Cash Loan",
+        lenderName: "RCBC",
+        currency: "PHP",
+        principalAmount: 42_000,
+        outstandingAmount: 52_938,
+        disbursedAt: new Date("2026-04-01T00:00:00.000Z"),
+        status: "active",
+        destinationAccountId: sourceAccountId,
+        underlyingLoanAccountId: null,
+        repaymentAccountId: creditAccountId,
+        repaymentAccountKind: "credit_account",
+        liabilityTreatment: "credit_linked_overlay",
+        creditBalanceTreatment: "already_included",
+        creditLinkedOpeningAmount: 42_000,
+        creditBalanceAtLink: 40_865,
+        creditLimitAtLink: 50_000,
+        creditAvailableAtLink: 9_135,
+        creditUtilizationAtLink: 82,
+        creditOpeningAdjustmentApplied: false,
+        defaultPaymentSourceAccountId: sourceAccountId,
+        cadence: "monthly",
+        nextDueDate: new Date("2026-05-01T00:00:00.000Z"),
+        notes: null,
+        metadata: null,
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+      },
+      installments: [
+        {
+          id: "cd94a6d3-4c9d-4a09-84f9-cab6355de8d0",
+          clerkUserId: "user_1",
+          loanId,
+          sequence: 1,
+          dueDate: new Date("2026-05-01T00:00:00.000Z"),
+          amount: 2_206,
+          principalAmount: 1_700,
+          interestAmount: 506,
+          paidAmount: 0,
+          paidPrincipalAmount: 0,
+          paidInterestAmount: 0,
+          paidAt: null,
+          status: "pending",
+          createdAt: new Date("2026-04-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+        },
+        {
+          id: "399b0a1d-9d52-406c-8e5e-9fa3e24ee2e6",
+          clerkUserId: "user_1",
+          loanId,
+          sequence: 2,
+          dueDate: new Date("2026-06-01T00:00:00.000Z"),
+          amount: 50_732,
+          principalAmount: 40_300,
+          interestAmount: 10_432,
+          paidAmount: 0,
+          paidPrincipalAmount: 0,
+          paidInterestAmount: 0,
+          paidAt: null,
+          status: "pending",
+          createdAt: new Date("2026-04-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+        },
+      ],
+    });
+
+    harness.setBalanceMutations([
+      { accountId: sourceAccountId, amountDelta: -2_206 },
+      { accountId: creditAccountId, amountDelta: -2_206 },
+    ]);
+    harness.resetInstallmentCursor();
+    vi.spyOn(crypto, "randomUUID").mockReturnValue("055a209b-20e0-4da9-a68e-2af7be366cb2");
+
+    const result = await recordLoanPayment(
+      { db: harness.db as never, userId: "user_1" },
+      {
+        loanId,
+        sourceAccountId,
+        amount: 2_206,
+        paidAt: new Date("2026-05-01T00:00:00.000Z"),
+        notes: "First RCBC amortization",
+      },
+    );
+
+    expect(result.appliedAmount).toBe(2_206);
+    expect(harness.state.accounts.find((row) => row.id === sourceAccountId)?.balance).toBe(47_794);
+    expect(harness.state.accounts.find((row) => row.id === creditAccountId)?.balance).toBe(38_659);
+    expect(harness.state.loan.outstandingAmount).toBe(50_732);
+    expect(harness.state.loan.repaymentAccountKind).toBe("credit_account");
+    expect(harness.state.loan.underlyingLoanAccountId).toBeNull();
   });
 });

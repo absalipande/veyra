@@ -178,12 +178,16 @@ export function LoanDetailsWorkspace({ loanId }: { loanId: string }) {
     totalInstallments > 0 ? Math.round((paidInstallments / totalInstallments) * 100) : 0;
   const nextPendingInstallment = timeline.find((entry) => entry.status !== "paid") ?? null;
   const currentDueInstallment = timeline.find((entry) => entry.status === "current") ?? null;
+  const isFlexiblePersonalLoan = loan.kind === "personal" && !hasRepaymentSchedule;
+  const latestPayment = loan.payments?.[0] ?? null;
 
   const loanAmount = loan.principalAmount;
   const remainingPayableAmount =
     timeline.length > 0
       ? timeline.reduce((sum, entry) => sum + Math.max(entry.remainingAmount, 0), 0)
       : Math.max(loan.outstandingAmount, 0);
+  const flexiblePaidBackPercent =
+    loanAmount > 0 ? Math.min(Math.round((paidAmountTotal / loanAmount) * 100), 100) : 0;
   const maturityDate =
     timeline.length > 0 ? timeline[timeline.length - 1]?.dueDate : loan.nextDueDate ?? null;
 
@@ -255,7 +259,39 @@ export function LoanDetailsWorkspace({ loanId }: { loanId: string }) {
           </Button>
         </div>
 
-        {isDesktop ? (
+        {isFlexiblePersonalLoan ? (
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            <div className="rounded-[1.1rem] border border-border/70 bg-background/80 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Remaining balance
+              </p>
+              <p className="mt-2 text-[1.28rem] font-semibold tracking-tight text-foreground">
+                {formatCurrencyMiliunits(remainingPayableAmount, loan.currency)}
+              </p>
+              <p className="mt-1 text-[0.82rem] text-muted-foreground">Flexible repayment</p>
+            </div>
+            <div className="rounded-[1.1rem] border border-border/70 bg-background/80 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Paid back
+              </p>
+              <p className="mt-2 text-[1.28rem] font-semibold tracking-tight text-foreground">
+                {formatCurrencyMiliunits(paidAmountTotal, loan.currency)}
+              </p>
+              <p className="mt-1 text-[0.82rem] text-muted-foreground">Manual payments recorded</p>
+            </div>
+            <div className="rounded-[1.1rem] border border-border/70 bg-background/80 p-4">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                Original amount
+              </p>
+              <p className="mt-2 text-[1.28rem] font-semibold tracking-tight text-foreground">
+                {formatCurrencyMiliunits(loanAmount, loan.currency)}
+              </p>
+              <p className="mt-1 text-[0.82rem] text-muted-foreground">
+                Started {formatDate(loan.disbursedAt)}
+              </p>
+            </div>
+          </div>
+        ) : isDesktop ? (
           <div className="mt-5 overflow-hidden rounded-[1.2rem] border border-border/70 bg-background/80">
             <div className="grid divide-x divide-border/70" style={{ gridTemplateColumns: "repeat(5, minmax(0, 1fr))" }}>
               <div className="p-4">
@@ -376,22 +412,95 @@ export function LoanDetailsWorkspace({ loanId }: { loanId: string }) {
         )}
       </div>
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 320px" : "1fr" }}>
+      <div className="grid items-start gap-4" style={{ gridTemplateColumns: isDesktop ? "minmax(0, 1fr) 320px" : "1fr" }}>
         <Card className="border-border/70 bg-card/90">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-[1.1rem] tracking-tight">Repayment schedule</CardTitle>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 text-[0.86rem] font-medium text-emerald-700 hover:text-emerald-600 dark:text-emerald-300"
-              >
-                <CalendarClock className="size-4" />
-                View full schedule
-              </button>
+              <CardTitle className="text-[1.1rem] tracking-tight">
+                {isFlexiblePersonalLoan ? "Flexible repayment" : "Repayment schedule"}
+              </CardTitle>
+              {!isFlexiblePersonalLoan ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 text-[0.86rem] font-medium text-emerald-700 hover:text-emerald-600 dark:text-emerald-300"
+                >
+                  <CalendarClock className="size-4" />
+                  View full schedule
+                </button>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {!hasRepaymentSchedule ? (
+            {isFlexiblePersonalLoan ? (
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,0.42fr)]">
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                        Pay-as-you-go progress
+                      </p>
+                      <p className="mt-2 text-[1.12rem] font-semibold tracking-tight text-foreground">
+                        {formatCurrencyMiliunits(paidAmountTotal, loan.currency)} paid back
+                      </p>
+                      <p className="mt-1 max-w-xl text-[0.86rem] leading-6 text-muted-foreground">
+                        No fixed schedule is attached, so Veyra tracks this loan by the balance you
+                        still owe and the manual payments you record.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 rounded-xl border border-border/70 bg-card px-3 py-2.5">
+                      <ProgressRing progressPercent={flexiblePaidBackPercent} />
+                      <div>
+                        <p className="text-[0.72rem] text-muted-foreground">Paid back</p>
+                        <p className="text-[0.9rem] font-semibold text-foreground">
+                          {flexiblePaidBackPercent}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                    <div className="rounded-lg border border-border/60 bg-card px-3 py-2.5">
+                      <p className="text-[0.68rem] text-muted-foreground">Remaining</p>
+                      <p className="mt-1 text-[0.95rem] font-semibold text-foreground">
+                        {formatCurrencyMiliunits(remainingPayableAmount, loan.currency)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-card px-3 py-2.5">
+                      <p className="text-[0.68rem] text-muted-foreground">Last payment</p>
+                      <p className="mt-1 text-[0.95rem] font-semibold text-foreground">
+                        {latestPayment ? formatDate(latestPayment.paidAt) : "None yet"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-card px-3 py-2.5">
+                      <p className="text-[0.68rem] text-muted-foreground">Setup</p>
+                      <p className="mt-1 text-[0.95rem] font-semibold text-foreground">
+                        Flexible
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+                  <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Next action
+                  </p>
+                  <p className="mt-2 text-[0.94rem] font-semibold text-foreground">
+                    Record any repayment when money moves.
+                  </p>
+                  <p className="mt-1 text-[0.82rem] leading-5.5 text-muted-foreground">
+                    Veyra will reduce the balance and keep the payment history visible here.
+                  </p>
+                  <Button
+                    type="button"
+                    className="mt-4 h-9 w-full rounded-full bg-[#17393c] text-[0.82rem] text-white hover:bg-[#1d4a4d]"
+                    onClick={() => openPaymentDialog({ notes: "Manual payment entry" })}
+                    disabled={loan.status !== "active"}
+                  >
+                    Record payment
+                  </Button>
+                </div>
+              </div>
+            ) : !hasRepaymentSchedule ? (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed border-border/70 px-3 py-3 text-[0.82rem] text-muted-foreground sm:px-4 sm:text-[0.9rem]">
                 <p>No repayment schedule yet. You can still record payments manually.</p>
                 <Button
@@ -519,6 +628,23 @@ export function LoanDetailsWorkspace({ loanId }: { loanId: string }) {
                   {formatCurrencyMiliunits(loanAmount, loan.currency)}
                 </span>
               </div>
+              {isFlexiblePersonalLoan ? (
+                <>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Current balance</span>
+                    <span className="font-semibold text-foreground">
+                      {formatCurrencyMiliunits(remainingPayableAmount, loan.currency)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Paid back</span>
+                    <span className="font-semibold text-foreground">
+                      {formatCurrencyMiliunits(paidAmountTotal, loan.currency)}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Total payable</span>
                 <span className="font-semibold text-foreground">
@@ -543,6 +669,8 @@ export function LoanDetailsWorkspace({ loanId }: { loanId: string }) {
                 <span className="text-muted-foreground">Maturity date</span>
                 <span className="font-semibold text-foreground">{formatDate(maturityDate)}</span>
               </div>
+                </>
+              )}
               <div className="flex items-center justify-between gap-3">
                 <span className="text-muted-foreground">Loan kind</span>
                 <span className="font-semibold text-foreground">

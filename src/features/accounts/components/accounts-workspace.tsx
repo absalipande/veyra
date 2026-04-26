@@ -4,8 +4,10 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   ArrowUpDown,
+  CalendarClock,
   CreditCard,
   Globe2,
+  HandCoins,
   Pencil,
   Plus,
   Sparkles,
@@ -15,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { DatePickerField } from "@/components/date-picker/date-picker";
 import { trpc } from "@/trpc/react";
 import {
   formatCurrencyMiliunits,
@@ -57,11 +60,30 @@ type CreateState = {
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
+type LoanListItem = RouterOutputs["loans"]["list"]["items"][number];
 type DeleteTarget = { id: string; name: string } | null;
+type CreditBalanceTreatment = "already_included" | "add_to_credit_balance";
 type InsightMetric = {
   label: string;
   tone: "neutral" | "positive" | "warning";
   value: string;
+};
+
+type LinkedLoanDraft = {
+  accountId: string;
+  balanceTreatment: CreditBalanceTreatment;
+  defaultPaymentSourceAccountId: string;
+  destinationAccountId: string;
+  disbursementDate: string;
+  durationMonths: string;
+  eir: string;
+  firstPaymentDue: string;
+  lenderName: string;
+  loanName: string;
+  monthlyPayment: string;
+  notes: string;
+  principalAmount: string;
+  rate: string;
 };
 
 function getInitialState(defaultCurrency: CreateState["currency"] = "PHP"): CreateState {
@@ -98,6 +120,9 @@ const accountDialogFooterClassName =
   "sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-white px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-6 sm:py-3 dark:bg-[#1a2325]";
 const accountConfirmDialogContentClassName =
   "max-h-[calc(100dvh-0.75rem)] w-[calc(100vw-0.75rem)] max-w-[30rem] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/98 px-0 py-0 ring-0 sm:max-h-[calc(100svh-2rem)] sm:w-full";
+
+const linkedLoanDialogContentClassName =
+  "h-[100dvh] overflow-hidden border border-border/70 bg-background/96 px-0 py-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&_[data-slot='dialog-close']]:right-3 [&_[data-slot='dialog-close']]:top-3 sm:[&_[data-slot='dialog-close']]:right-4 sm:[&_[data-slot='dialog-close']]:top-4";
 
 type AccountDialogShellProps = {
   badge: ReactNode;
@@ -145,6 +170,101 @@ const LIABILITY_SORT_STORAGE_KEY = "veyra.accounts.liability-sort";
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function toDateInputLocal(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateInputToUTC(value: string) {
+  const match = value.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function addMonths(input: Date, monthsToAdd: number) {
+  const copy = new Date(input);
+  copy.setUTCMonth(copy.getUTCMonth() + monthsToAdd);
+  return copy;
+}
+
+function parseMoneyToMiliunits(value: string) {
+  const normalized = value.trim().replace(/,/g, "");
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  return Math.round(amount * 1000);
+}
+
+function parseOptionalNumber(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function getInitialLinkedLoanDraft(account: AccountItem, destinationAccountId = ""): LinkedLoanDraft {
+  const today = new Date();
+  const firstDue = addMonths(new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())), 1);
+
+  return {
+    accountId: account.id,
+    balanceTreatment: "already_included",
+    defaultPaymentSourceAccountId: "",
+    destinationAccountId,
+    disbursementDate: toDateInputLocal(today),
+    durationMonths: "",
+    eir: "",
+    firstPaymentDue: toDateInputLocal(firstDue),
+    lenderName: account.institution || account.name,
+    loanName: `${account.institution || account.name} Cash Loan`,
+    monthlyPayment: "",
+    notes: "",
+    principalAmount: "",
+    rate: "",
+  };
+}
+
+function buildMonthlyRepaymentPlan(input: {
+  durationMonths: number;
+  firstPaymentDue: Date;
+  monthlyPayment: number;
+  principalAmount: number;
+  totalPayable: number;
+}) {
+  const regularTotal = input.monthlyPayment * input.durationMonths;
+  const finalAmount = Math.max(
+    input.totalPayable - input.monthlyPayment * Math.max(input.durationMonths - 1, 0),
+    1,
+  );
+  let principalAssigned = 0;
+
+  return Array.from({ length: input.durationMonths }).map((_, index) => {
+    const isLast = index === input.durationMonths - 1;
+    const amount = isLast && Math.abs(regularTotal - input.totalPayable) > 0
+      ? finalAmount
+      : input.monthlyPayment;
+    const principalAmount = isLast
+      ? Math.max(input.principalAmount - principalAssigned, 0)
+      : Math.min(
+          Math.round(input.principalAmount / input.durationMonths),
+          input.principalAmount - principalAssigned,
+        );
+    principalAssigned += principalAmount;
+
+    return {
+      dueDate: addMonths(input.firstPaymentDue, index),
+      amount,
+      principalAmount,
+      interestAmount: Math.max(amount - principalAmount, 0),
+    };
+  });
 }
 
 function getAccountTypeLabel(type: AccountItem["type"]) {
@@ -244,8 +364,9 @@ type AccountSectionProps = {
   emptyBody: string;
   emptyTitle: string;
   filterValue: string;
+  onCreateLinkedLoan?: (account: AccountItem) => void;
   onDelete: (id: string, name: string) => void;
-  onEdit: (account: AccountItem) => void;
+  onEdit: (accountId: string) => void;
   onFilterChange: (value: string) => void;
   onSortChange: (value: AccountSortOption) => void;
   sortValue: AccountSortOption;
@@ -259,6 +380,7 @@ function AccountSection({
   emptyBody,
   emptyTitle,
   filterValue,
+  onCreateLinkedLoan,
   onDelete,
   onEdit,
   onFilterChange,
@@ -322,7 +444,7 @@ function AccountSection({
           </div>
         ) : (
           <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-white dark:bg-[#141d1f]">
-            <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_112px] items-center gap-4 border-b border-border/70 px-6 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
+            <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_152px] items-center gap-4 border-b border-border/70 px-6 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
               <p>Account</p>
               <p className="text-right">Balance</p>
               <p className="text-right">Actions</p>
@@ -355,24 +477,32 @@ function AccountSection({
                               <span className={`font-medium ${getAccountMetaTone(account.type)}`}>
                                 {getAccountTypeLabel(account.type)}
                               </span>
-                              <span className="mx-1.5 text-border">·</span>
-                              <span>{getCurrencyLabel(account.currency)}</span>
                             </p>
                           </div>
                         </div>
                         <div className="flex gap-1.5">
+                          {account.type === "credit" && onCreateLinkedLoan ? (
+                            <Button
+                              variant="outline"
+                              size="icon-sm"
+                              className="h-8 w-8 cursor-pointer rounded-full text-[#006c67]"
+                              onClick={() => onCreateLinkedLoan(account)}
+                            >
+                              <HandCoins className="size-3.5" />
+                            </Button>
+                          ) : null}
                           <Button
                             variant="outline"
                             size="icon-sm"
-                            className="h-8 w-8 rounded-full"
-                            onClick={() => onEdit(account)}
+                            className="h-8 w-8 cursor-pointer rounded-full"
+                            onClick={() => onEdit(account.id)}
                           >
                             <Pencil className="size-3.5" />
                           </Button>
                           <Button
                             variant="outline"
                             size="icon-sm"
-                            className="h-8 w-8 rounded-full text-destructive hover:text-destructive"
+                            className="h-8 w-8 cursor-pointer rounded-full text-destructive hover:text-destructive"
                             onClick={() => onDelete(account.id, account.name)}
                           >
                             <Trash2 className="size-3.5" />
@@ -394,7 +524,7 @@ function AccountSection({
                       </div>
                     </div>
 
-                    <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_112px] items-center gap-4 px-6 py-4 md:grid">
+                    <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_152px] items-center gap-4 px-6 py-4 md:grid">
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-3">
                           <InstitutionAvatar
@@ -414,8 +544,6 @@ function AccountSection({
                               <span className={`font-medium ${getAccountMetaTone(account.type)}`}>
                                 {getAccountTypeLabel(account.type)}
                               </span>
-                              <span className="mx-1.5 text-border">·</span>
-                              <span>{getCurrencyLabel(account.currency)}</span>
                             </p>
                           </div>
                         </div>
@@ -433,13 +561,28 @@ function AccountSection({
                       </div>
 
                       <div className="flex gap-2 justify-end">
+                        {account.type === "credit" && onCreateLinkedLoan ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon-sm"
+                                className="cursor-pointer rounded-full text-[#006c67]"
+                                onClick={() => onCreateLinkedLoan(account)}
+                              >
+                                <HandCoins className="size-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Create linked loan</TooltipContent>
+                          </Tooltip>
+                        ) : null}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               variant="outline"
                               size="icon-sm"
-                              className="rounded-full"
-                              onClick={() => onEdit(account)}
+                              className="cursor-pointer rounded-full"
+                              onClick={() => onEdit(account.id)}
                             >
                               <Pencil className="size-4" />
                             </Button>
@@ -451,7 +594,7 @@ function AccountSection({
                             <Button
                               variant="outline"
                               size="icon-sm"
-                              className="rounded-full text-destructive hover:text-destructive"
+                              className="cursor-pointer rounded-full text-destructive hover:text-destructive"
                               onClick={() => onDelete(account.id, account.name)}
                             >
                               <Trash2 className="size-4" />
@@ -479,6 +622,12 @@ type AccountsWorkspaceProps = {
 export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps) {
   const utils = trpc.useUtils();
   const accountsQuery = trpc.accounts.list.useQuery();
+  const loansForAccountsQuery = trpc.loans.list.useQuery({
+    page: 1,
+    pageSize: 200,
+    search: "",
+    status: "all",
+  });
   const summaryQuery = trpc.accounts.summary.useQuery();
   const aiInsightQuery = trpc.ai.accountsInsight.useQuery(undefined, {
     staleTime: 45_000,
@@ -490,6 +639,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [form, setForm] = useState<CreateState>(getInitialState());
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [linkedLoanDraft, setLinkedLoanDraft] = useState<LinkedLoanDraft | null>(null);
+  const [linkedLoanError, setLinkedLoanError] = useState<string | null>(null);
   const [liquidFilter, setLiquidFilter] = useState(initialQuery);
   const [liabilityFilter, setLiabilityFilter] = useState(initialQuery);
   const [liquidSort, setLiquidSort] = useState<AccountSortOption>("newest");
@@ -598,6 +749,22 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     },
   });
 
+  const createLinkedLoan = trpc.loans.create.useMutation({
+    onSuccess: async () => {
+      await refreshAccounts();
+      setLinkedLoanDraft(null);
+      setLinkedLoanError(null);
+      toast.success("Linked loan created", {
+        description: "The repayment schedule is now connected to the selected credit account.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Could not create linked loan", {
+        description: error.message,
+      });
+    },
+  });
+
   const parsedBalance = useMemo(() => {
     const numeric = Number(form.balance);
     if (Number.isNaN(numeric)) return 0;
@@ -626,17 +793,75 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
       ),
     };
   }, [accountsQuery.data]);
+  const accountById = useMemo(
+    () => new Map((accountsQuery.data ?? []).map((account) => [account.id, account])),
+    [accountsQuery.data],
+  );
+  const loanOutstandingByUnderlyingAccountId = useMemo(() => {
+    const map = new Map<string, number>();
+    const items: LoanListItem[] = loansForAccountsQuery.data?.items ?? [];
+
+    for (const loan of items) {
+      if (!loan.underlyingLoanAccountId) continue;
+      const current = map.get(loan.underlyingLoanAccountId) ?? 0;
+      map.set(loan.underlyingLoanAccountId, current + Math.max(loan.outstandingAmount, 0));
+    }
+
+    return map;
+  }, [loansForAccountsQuery.data?.items]);
+  const liabilityAccountsForDisplay = useMemo(
+    () =>
+      accountGroups.liabilities.map((account) => {
+        if (account.type !== "loan") return account;
+        const linkedOutstanding = loanOutstandingByUnderlyingAccountId.get(account.id);
+        if (linkedOutstanding === undefined) return account;
+
+        return {
+          ...account,
+          balance: linkedOutstanding,
+        };
+      }),
+    [accountGroups.liabilities, loanOutstandingByUnderlyingAccountId],
+  );
   const liquidTotalBalance = useMemo(
     () => accountGroups.liquid.reduce((sum, account) => sum + account.balance, 0),
     [accountGroups.liquid],
   );
   const liabilitiesTotalBalance = useMemo(
-    () => accountGroups.liabilities.reduce((sum, account) => sum + account.balance, 0),
-    [accountGroups.liabilities],
+    () => liabilityAccountsForDisplay.reduce((sum, account) => sum + account.balance, 0),
+    [liabilityAccountsForDisplay],
   );
+  const linkedLoanCreditAccount = useMemo(() => {
+    if (!linkedLoanDraft) return null;
+    const account = accountById.get(linkedLoanDraft.accountId);
+    return account?.type === "credit" ? account : null;
+  }, [accountById, linkedLoanDraft]);
+  const liquidAccounts = accountGroups.liquid;
+  const linkedLoanPrincipal = useMemo(
+    () => parseMoneyToMiliunits(linkedLoanDraft?.principalAmount ?? ""),
+    [linkedLoanDraft?.principalAmount],
+  );
+  const linkedLoanMonthlyPayment = useMemo(
+    () => parseMoneyToMiliunits(linkedLoanDraft?.monthlyPayment ?? ""),
+    [linkedLoanDraft?.monthlyPayment],
+  );
+  const linkedLoanDuration = useMemo(() => {
+    const parsed = Number(linkedLoanDraft?.durationMonths ?? "");
+    return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
+  }, [linkedLoanDraft?.durationMonths]);
+  const linkedLoanTotalPayable = useMemo(() => {
+    if (linkedLoanMonthlyPayment !== null && linkedLoanDuration > 0) {
+      return linkedLoanMonthlyPayment * linkedLoanDuration;
+    }
+    return null;
+  }, [linkedLoanDuration, linkedLoanMonthlyPayment]);
+  const linkedLoanInterestAndFees =
+    linkedLoanPrincipal !== null && linkedLoanTotalPayable !== null
+      ? Math.max(linkedLoanTotalPayable - linkedLoanPrincipal, 0)
+      : null;
   const liveAccountsInsight = useMemo(() => {
-    const creditAccounts = accountGroups.liabilities.filter((account) => account.type === "credit");
-    const loanAccounts = accountGroups.liabilities.filter((account) => account.type === "loan");
+    const creditAccounts = liabilityAccountsForDisplay.filter((account) => account.type === "credit");
+    const loanAccounts = liabilityAccountsForDisplay.filter((account) => account.type === "loan");
     const totalCreditDebt = creditAccounts.reduce((sum, account) => sum + account.balance, 0);
     const totalLoanDebt = loanAccounts.reduce((sum, account) => sum + account.balance, 0);
     const totalLiabilities = totalCreditDebt + totalLoanDebt;
@@ -681,7 +906,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     ];
 
     return { metrics, recommendation, summary };
-  }, [accountGroups.liabilities, aiInsightQuery.data?.metrics, liquidTotalBalance]);
+  }, [aiInsightQuery.data?.metrics, liabilityAccountsForDisplay, liquidTotalBalance]);
 
   const visibleLiquidAccounts = useMemo(
     () => sortAccounts(filterAccounts(accountGroups.liquid, liquidFilter), liquidSort),
@@ -689,8 +914,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   );
 
   const visibleLiabilityAccounts = useMemo(
-    () => sortAccounts(filterAccounts(accountGroups.liabilities, liabilityFilter), liabilitySort),
-    [accountGroups.liabilities, liabilityFilter, liabilitySort],
+    () => sortAccounts(filterAccounts(liabilityAccountsForDisplay, liabilityFilter), liabilitySort),
+    [liabilityAccountsForDisplay, liabilityFilter, liabilitySort],
   );
 
   const getPreferredCurrency = (): CreateState["currency"] => {
@@ -730,6 +955,17 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
       type: account.type,
     });
     setOpen(true);
+  };
+  const startEditById = (accountId: string) => {
+    const account = accountById.get(accountId);
+    if (!account) return;
+    startEdit(account);
+  };
+
+  const startCreateLinkedLoan = (account: AccountItem) => {
+    const firstLiquidAccountId = accountGroups.liquid[0]?.id ?? "";
+    setLinkedLoanDraft(getInitialLinkedLoanDraft(account, firstLiquidAccountId));
+    setLinkedLoanError(null);
   };
 
   const setCreditBalanceValue = (value: string) => {
@@ -831,6 +1067,123 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   const onConfirmDelete = () => {
     if (!deleteTarget) return;
     deleteAccount.mutate({ id: deleteTarget.id });
+  };
+
+  const submitLinkedLoan = () => {
+    if (!linkedLoanDraft || !linkedLoanCreditAccount) return;
+
+    const loanName = linkedLoanDraft.loanName.trim();
+    const lenderName = linkedLoanDraft.lenderName.trim();
+    const principalAmount = parseMoneyToMiliunits(linkedLoanDraft.principalAmount);
+    const monthlyPayment = parseMoneyToMiliunits(linkedLoanDraft.monthlyPayment);
+    const totalPayable =
+      monthlyPayment !== null && linkedLoanDuration > 0
+        ? monthlyPayment * linkedLoanDuration
+        : null;
+    const firstPaymentDue = parseDateInputToUTC(linkedLoanDraft.firstPaymentDue);
+    const disbursementDate = parseDateInputToUTC(linkedLoanDraft.disbursementDate);
+
+    if (loanName.length < 2) {
+      setLinkedLoanError("Enter a loan name with at least 2 characters.");
+      return;
+    }
+
+    if (lenderName.length < 2) {
+      setLinkedLoanError("Enter a lender name with at least 2 characters.");
+      return;
+    }
+
+    if (principalAmount === null || principalAmount <= 0) {
+      setLinkedLoanError("Enter a valid cash loan amount.");
+      return;
+    }
+
+    if (!Number.isFinite(linkedLoanDuration) || linkedLoanDuration <= 0) {
+      setLinkedLoanError("Enter a valid loan term.");
+      return;
+    }
+
+    if (monthlyPayment === null || monthlyPayment <= 0) {
+      setLinkedLoanError("Enter a valid monthly amortization.");
+      return;
+    }
+
+    if (totalPayable === null || totalPayable < principalAmount) {
+      setLinkedLoanError("Total payable should be at least the cash loan amount.");
+      return;
+    }
+
+    if (!firstPaymentDue) {
+      setLinkedLoanError("Choose the first payment due date.");
+      return;
+    }
+
+    if (!disbursementDate) {
+      setLinkedLoanError("Choose the disbursement date.");
+      return;
+    }
+
+    if (!linkedLoanDraft.destinationAccountId) {
+      setLinkedLoanError("Choose the account where the cash was received.");
+      return;
+    }
+
+    if (
+      linkedLoanDraft.balanceTreatment === "add_to_credit_balance" &&
+      linkedLoanCreditAccount.balance + principalAmount > linkedLoanCreditAccount.creditLimit
+    ) {
+      setLinkedLoanError("Adding this loan would push the card above its credit limit.");
+      return;
+    }
+
+    const repaymentPlan = buildMonthlyRepaymentPlan({
+      durationMonths: linkedLoanDuration,
+      firstPaymentDue,
+      monthlyPayment,
+      principalAmount,
+      totalPayable,
+    });
+    const nextDueDate = repaymentPlan[0]?.dueDate;
+    const metadataValue = JSON.stringify({
+      setupPath: "credit_linked_loan",
+      repaymentAccountName: linkedLoanCreditAccount.name,
+      rate: parseOptionalNumber(linkedLoanDraft.rate),
+      eir: parseOptionalNumber(linkedLoanDraft.eir),
+      lenderTotalPayable: totalPayable,
+      monthlyAmortization: monthlyPayment,
+      durationMonths: linkedLoanDuration,
+    });
+
+    createLinkedLoan.mutate({
+      kind: "institution",
+      name: loanName,
+      lenderName,
+      currency: linkedLoanCreditAccount.currency as CreateState["currency"],
+      principalAmount,
+      outstandingAmount: totalPayable,
+      disbursedAt: disbursementDate,
+      status: "active",
+      destinationAccountId: linkedLoanDraft.destinationAccountId,
+      underlyingLoanAccountId: undefined,
+      repaymentAccountId: linkedLoanCreditAccount.id,
+      repaymentAccountKind: "credit_account",
+      liabilityTreatment: "credit_linked_overlay",
+      creditBalanceTreatment: linkedLoanDraft.balanceTreatment,
+      creditLinkedOpeningAmount: principalAmount,
+      defaultPaymentSourceAccountId: linkedLoanDraft.defaultPaymentSourceAccountId || undefined,
+      cadence: "monthly",
+      nextDueDate,
+      notes: linkedLoanDraft.notes.trim() || undefined,
+      metadata: metadataValue,
+      repaymentPlan: repaymentPlan.map((installment) => ({
+        dueDate: installment.dueDate,
+        amount: installment.amount,
+        principalAmount: installment.principalAmount,
+        interestAmount: installment.interestAmount,
+      })),
+      autoCreateUnderlyingAccount: false,
+      createOpeningDisbursement: false,
+    });
   };
 
   return (
@@ -1301,6 +1654,470 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={linkedLoanDraft !== null}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && !createLinkedLoan.isPending) {
+            setLinkedLoanDraft(null);
+            setLinkedLoanError(null);
+          }
+        }}
+      >
+        <DialogContent mobileBehavior="adaptive" className={linkedLoanDialogContentClassName}>
+          <DialogHeader className={accountDialogHeaderClassName + " relative"}>
+            <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-white px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.2em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
+              Credit linked loan
+            </div>
+            <DialogTitle className="pt-0.5 text-[1.1rem] tracking-tight sm:pt-1 sm:text-[1.48rem]">
+              Create linked loan
+            </DialogTitle>
+            <p className="hidden max-w-xl text-[0.9rem] leading-6 text-muted-foreground sm:block">
+              Connect a card-based cash loan to its credit account without counting the same debt twice.
+            </p>
+          </DialogHeader>
+
+          <div className={accountDialogBodyClassName}>
+            {linkedLoanDraft && linkedLoanCreditAccount ? (
+              <div className="space-y-3.5 sm:space-y-4">
+                <section className="rounded-[1rem] border border-border/70 bg-white/70 p-3 dark:bg-[#162022] sm:p-3.5">
+                  <div className="flex items-start gap-3">
+                    <InstitutionAvatar
+                      display={getInstitutionDisplay(
+                        linkedLoanCreditAccount.institution || linkedLoanCreditAccount.name,
+                      )}
+                      sizeClassName="size-11"
+                      containerClassName="dark:bg-[#182123]"
+                      imageClassName="h-full w-full object-cover"
+                      initialsClassName="text-[0.78rem] font-semibold tracking-tight"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[0.95rem] font-semibold tracking-tight text-foreground">
+                        {linkedLoanCreditAccount.name}
+                      </p>
+                      <p className="mt-0.5 text-[0.76rem] text-muted-foreground">
+                        Current card snapshot
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {[
+                      {
+                        label: "Balance",
+                        value: formatCurrencyMiliunits(
+                          linkedLoanCreditAccount.balance,
+                          linkedLoanCreditAccount.currency,
+                        ),
+                      },
+                      {
+                        label: "Limit",
+                        value: formatCurrencyMiliunits(
+                          linkedLoanCreditAccount.creditLimit,
+                          linkedLoanCreditAccount.currency,
+                        ),
+                      },
+                      {
+                        label: "Available",
+                        value: formatCurrencyMiliunits(
+                          Math.max(
+                            linkedLoanCreditAccount.creditLimit - linkedLoanCreditAccount.balance,
+                            0,
+                          ),
+                          linkedLoanCreditAccount.currency,
+                        ),
+                      },
+                      {
+                        label: "Utilization",
+                        value:
+                          linkedLoanCreditAccount.creditLimit > 0
+                            ? `${Math.round(
+                                (linkedLoanCreditAccount.balance /
+                                  linkedLoanCreditAccount.creditLimit) *
+                                  100,
+                              )}%`
+                            : "No limit",
+                      },
+                    ].map((metric) => (
+                      <div
+                        key={metric.label}
+                        className="min-w-0 rounded-[0.8rem] border border-border/70 bg-background/80 px-2.5 py-2 dark:bg-[#182123]"
+                      >
+                        <p className="truncate text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+                          {metric.label}
+                        </p>
+                        <p className="mt-1 truncate text-[0.78rem] font-semibold tracking-tight text-foreground sm:text-[0.82rem]">
+                          {metric.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-2.5 rounded-[1rem] border border-border/70 bg-white/70 p-3 dark:bg-[#182123] sm:p-3.5">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="size-4 text-[#006c67]" />
+                    <h3 className="text-[0.95rem] font-semibold tracking-tight">
+                      Card balance treatment
+                    </h3>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      {
+                        label: "Already included",
+                        value: "already_included" as const,
+                        text: "Store the loan schedule without changing card balance.",
+                      },
+                      {
+                        label: "Add to card balance",
+                        value: "add_to_credit_balance" as const,
+                        text: "Increase this card balance once, capped by credit limit.",
+                      },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, balanceTreatment: option.value } : current,
+                          )
+                        }
+                        className={`rounded-[0.9rem] border px-3.5 py-3 text-left transition ${
+                          linkedLoanDraft.balanceTreatment === option.value
+                            ? "border-[#006c67] bg-emerald-50 text-[#10292B] dark:bg-emerald-500/10 dark:text-foreground"
+                            : "border-border/70 bg-background text-foreground hover:bg-muted/60"
+                        }`}
+                      >
+                        <p className="text-[0.86rem] font-semibold">{option.label}</p>
+                        <p className="mt-1 text-[0.76rem] leading-5 text-muted-foreground">
+                          {option.text}
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-3 rounded-[1rem] border border-border/70 bg-white/70 p-3 dark:bg-[#182123] sm:p-3.5">
+                  <div className="flex items-center gap-2">
+                    <CalendarClock className="size-4 text-[#006c67]" />
+                    <h3 className="text-[0.95rem] font-semibold tracking-tight">Contract terms</h3>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Loan name</label>
+                      <Input
+                        value={linkedLoanDraft.loanName}
+                        onChange={(event) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, loanName: event.target.value } : current,
+                          )
+                        }
+                        className={accountInputClassName}
+                        placeholder="Cash loan"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Lender</label>
+                      <Input
+                        value={linkedLoanDraft.lenderName}
+                        onChange={(event) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, lenderName: event.target.value } : current,
+                          )
+                        }
+                        className={accountInputClassName}
+                        placeholder="Lender name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Cash loan amount</label>
+                      <Input
+                        inputMode="decimal"
+                        value={linkedLoanDraft.principalAmount}
+                        onChange={(event) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, principalAmount: event.target.value } : current,
+                          )
+                        }
+                        className={accountInputClassName}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Term months</label>
+                      <Input
+                        inputMode="numeric"
+                        value={linkedLoanDraft.durationMonths}
+                        onChange={(event) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, durationMonths: event.target.value } : current,
+                          )
+                        }
+                        className={accountInputClassName}
+                        placeholder="e.g. 24"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Monthly amortization</label>
+                      <Input
+                        inputMode="decimal"
+                        value={linkedLoanDraft.monthlyPayment}
+                        onChange={(event) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, monthlyPayment: event.target.value } : current,
+                          )
+                        }
+                        className={accountInputClassName}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Total gross amount</label>
+                      <div className="flex h-10 items-center rounded-[0.8rem] border border-border/80 bg-muted/45 px-3.5 text-[0.88rem] font-medium text-muted-foreground md:h-9.5 md:px-3 md:text-[0.8rem]">
+                        {linkedLoanTotalPayable !== null
+                          ? formatCurrencyMiliunits(
+                              linkedLoanTotalPayable,
+                              linkedLoanCreditAccount.currency,
+                            )
+                          : "Monthly payment x term"}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Disbursement date</label>
+                      <DatePickerField
+                        value={linkedLoanDraft.disbursementDate}
+                        onChange={(value) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, disbursementDate: value } : current,
+                          )
+                        }
+                        size="compact"
+                        className="h-10 rounded-[0.8rem] md:h-9.5"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>First payment due</label>
+                      <DatePickerField
+                        value={linkedLoanDraft.firstPaymentDue}
+                        onChange={(value) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, firstPaymentDue: value } : current,
+                          )
+                        }
+                        size="compact"
+                        className="h-10 rounded-[0.8rem] md:h-9.5"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Monthly rate % (optional)</label>
+                      <Input
+                        inputMode="decimal"
+                        value={linkedLoanDraft.rate}
+                        onChange={(event) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, rate: event.target.value } : current,
+                          )
+                        }
+                        className={accountInputClassName}
+                        placeholder="Optional"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Effective interest rate</label>
+                      <Input
+                        inputMode="decimal"
+                        value={linkedLoanDraft.eir}
+                        onChange={(event) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, eir: event.target.value } : current,
+                          )
+                        }
+                        className={accountInputClassName}
+                        placeholder="Optional"
+                      />
+                    </div>
+                  </div>
+                  <p className="rounded-[0.9rem] border border-dashed border-border/70 bg-background/70 px-3 py-2 text-[0.74rem] leading-5 text-muted-foreground">
+                    Rate is the lender’s stated monthly rate. Effective interest rate is the fuller cost
+                    measure that includes timing and charges when the lender provides it.
+                  </p>
+                </section>
+
+                <section className="space-y-3 rounded-[1rem] border border-border/70 bg-white/70 p-3 dark:bg-[#182123] sm:p-3.5">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="size-4 text-[#006c67]" />
+                    <h3 className="text-[0.95rem] font-semibold tracking-tight">Payment setup</h3>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Cash received in</label>
+                      <Select
+                        value={linkedLoanDraft.destinationAccountId}
+                        onValueChange={(value) =>
+                          setLinkedLoanDraft((current) =>
+                            current ? { ...current, destinationAccountId: value } : current,
+                          )
+                        }
+                      >
+                        <SelectTrigger className={accountFieldClassName}>
+                          <SelectValue placeholder="Choose bank or wallet" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {liquidAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className={accountFieldLabelClassName}>Default payment source</label>
+                      <Select
+                        value={linkedLoanDraft.defaultPaymentSourceAccountId || "none"}
+                        onValueChange={(value) =>
+                          setLinkedLoanDraft((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  defaultPaymentSourceAccountId: value === "none" ? "" : value,
+                                }
+                              : current,
+                          )
+                        }
+                      >
+                        <SelectTrigger className={accountFieldClassName}>
+                          <SelectValue placeholder="Optional" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No default</SelectItem>
+                          {liquidAccounts.map((account) => (
+                            <SelectItem key={account.id} value={account.id}>
+                              {account.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className={accountFieldLabelClassName}>Notes</label>
+                    <Input
+                      value={linkedLoanDraft.notes}
+                      onChange={(event) =>
+                        setLinkedLoanDraft((current) =>
+                          current ? { ...current, notes: event.target.value } : current,
+                        )
+                      }
+                      className={accountInputClassName}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </section>
+
+                <section className="rounded-[1rem] border border-border/70 bg-white/70 p-3 dark:bg-[#162022] sm:p-3.5">
+                  <div className="flex items-center justify-between gap-3">
+                    <h3 className="text-[0.95rem] font-semibold tracking-tight">Preview</h3>
+                    <span className="rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.72rem] text-muted-foreground dark:bg-[#182123]">
+                      Read-only
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {[
+                      {
+                        label: "Principal",
+                        value:
+                          linkedLoanPrincipal !== null
+                            ? formatCurrencyMiliunits(
+                                linkedLoanPrincipal,
+                                linkedLoanCreditAccount.currency,
+                              )
+                            : "—",
+                      },
+                      {
+                        label: "Payable",
+                        value:
+                          linkedLoanTotalPayable !== null
+                            ? formatCurrencyMiliunits(
+                                linkedLoanTotalPayable,
+                                linkedLoanCreditAccount.currency,
+                              )
+                            : "—",
+                      },
+                      {
+                        label: "Interest/fees",
+                        value:
+                          linkedLoanInterestAndFees !== null
+                            ? formatCurrencyMiliunits(
+                                linkedLoanInterestAndFees,
+                                linkedLoanCreditAccount.currency,
+                              )
+                            : "—",
+                      },
+                      {
+                        label: "Card change",
+                        value:
+                          linkedLoanDraft.balanceTreatment === "already_included"
+                            ? "No change"
+                            : linkedLoanPrincipal !== null
+                              ? `+${formatCurrencyMiliunits(
+                                  linkedLoanPrincipal,
+                                  linkedLoanCreditAccount.currency,
+                                )}`
+                              : "—",
+                      },
+                    ].map((metric) => (
+                      <div
+                        key={metric.label}
+                        className="min-w-0 rounded-[0.8rem] border border-border/70 bg-background/80 px-3 py-2.5 dark:bg-[#182123]"
+                      >
+                        <p className="truncate text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                          {metric.label}
+                        </p>
+                        <p className="mt-1 text-[0.82rem] font-semibold leading-5 tracking-tight text-foreground">
+                          {metric.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+
+                {(linkedLoanError || createLinkedLoan.error) && (
+                  <p className="rounded-[0.95rem] border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[0.88rem] text-destructive">
+                    {linkedLoanError ?? createLinkedLoan.error?.message}
+                  </p>
+                )}
+              </div>
+            ) : null}
+          </div>
+
+          <div className={accountDialogFooterClassName}>
+            <div className="flex items-center justify-end gap-2.5">
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9.5 rounded-full px-4 text-[0.88rem] text-foreground/80 hover:bg-muted"
+                onClick={() => {
+                  setLinkedLoanDraft(null);
+                  setLinkedLoanError(null);
+                }}
+                disabled={createLinkedLoan.isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="h-10 w-full rounded-[0.95rem] bg-[#17393c] px-6 text-[0.9rem] font-medium text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:min-w-44 sm:w-auto"
+                onClick={submitLinkedLoan}
+                disabled={createLinkedLoan.isPending}
+              >
+                {createLinkedLoan.isPending ? "Creating loan..." : "Create linked loan"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {accountsQuery.isLoading ? (
         <section className="grid gap-6 xl:grid-cols-2">
           {Array.from({ length: 2 }).map((_, index) => (
@@ -1321,7 +2138,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             sortValue={liquidSort}
             onSortChange={setLiquidSort}
             accounts={visibleLiquidAccounts}
-            onEdit={startEdit}
+            onEdit={startEditById}
             onDelete={onDelete}
             emptyTitle="No liquid accounts yet"
             emptyBody="Add a bank or wallet account to start building your day-to-day balance view."
@@ -1336,7 +2153,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             sortValue={liabilitySort}
             onSortChange={setLiabilitySort}
             accounts={visibleLiabilityAccounts}
-            onEdit={startEdit}
+            onCreateLinkedLoan={startCreateLinkedLoan}
+            onEdit={startEditById}
             onDelete={onDelete}
             emptyTitle="No liabilities yet"
             emptyBody="Credit cards and loan accounts will appear here once you add them to the workspace."

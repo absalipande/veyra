@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import type { inferRouterOutputs } from "@trpc/server";
 import {
   AlertTriangle,
   ArrowDownRight,
@@ -24,8 +25,11 @@ import { CashflowProjectionChart } from "@/components/app/cashflow-projection-ch
 import { InstitutionAvatar } from "@/components/app/institution-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { AppRouter } from "@/server/api/root";
 
 type MoneyPosture = "stable" | "watch" | "lean";
+type RouterOutputs = inferRouterOutputs<AppRouter>;
+type LoanListItem = RouterOutputs["loans"]["list"]["items"][number];
 
 type CurrencyTotals = {
   currency: string;
@@ -168,6 +172,12 @@ function getForecastRiskMeta(risk: "safe" | "watch" | "shortfall") {
 
 export function DashboardRecentActivity() {
   const accountsQuery = trpc.accounts.list.useQuery();
+  const loansForDashboardQuery = trpc.loans.list.useQuery({
+    page: 1,
+    pageSize: 200,
+    search: "",
+    status: "all",
+  });
   const transactionsQuery = trpc.transactions.list.useQuery({
     page: 1,
     pageSize: 30,
@@ -189,6 +199,32 @@ export function DashboardRecentActivity() {
   );
 
   const accounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
+  const loanOutstandingByUnderlyingAccountId = useMemo(() => {
+    const map = new Map<string, number>();
+    const items: LoanListItem[] = loansForDashboardQuery.data?.items ?? [];
+
+    for (const loan of items) {
+      if (!loan.underlyingLoanAccountId) continue;
+      const current = map.get(loan.underlyingLoanAccountId) ?? 0;
+      map.set(loan.underlyingLoanAccountId, current + Math.max(loan.outstandingAmount, 0));
+    }
+
+    return map;
+  }, [loansForDashboardQuery.data?.items]);
+  const accountsForDisplay = useMemo(
+    () =>
+      accounts.map((account) => {
+        if (account.type !== "loan") return account;
+        const linkedOutstanding = loanOutstandingByUnderlyingAccountId.get(account.id);
+        if (linkedOutstanding === undefined) return account;
+
+        return {
+          ...account,
+          balance: linkedOutstanding,
+        };
+      }),
+    [accounts, loanOutstandingByUnderlyingAccountId],
+  );
   const transactions = useMemo(
     () => transactionsQuery.data?.items ?? [],
     [transactionsQuery.data?.items],
@@ -196,17 +232,17 @@ export function DashboardRecentActivity() {
   const budgetsSummary = budgetsSummaryQuery.data;
 
   const liquidAccounts = useMemo(
-    () => accounts.filter((account) => account.type === "cash" || account.type === "wallet"),
-    [accounts],
+    () => accountsForDisplay.filter((account) => account.type === "cash" || account.type === "wallet"),
+    [accountsForDisplay],
   );
 
   const liabilityAccounts = useMemo(
-    () => accounts.filter((account) => account.type === "credit" || account.type === "loan"),
-    [accounts],
+    () => accountsForDisplay.filter((account) => account.type === "credit" || account.type === "loan"),
+    [accountsForDisplay],
   );
 
   const importantAccounts = useMemo(() => {
-    const top = [...accounts]
+    const top = [...accountsForDisplay]
       .sort((left, right) => Math.abs(right.balance) - Math.abs(left.balance))
       .slice(0, 4);
 
@@ -279,7 +315,7 @@ export function DashboardRecentActivity() {
         typeTone,
       };
     });
-  }, [accounts, liquidAccounts, liabilityAccounts]);
+  }, [accountsForDisplay, liquidAccounts, liabilityAccounts]);
 
   const latestEvent = transactions[0] ?? null;
 

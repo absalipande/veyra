@@ -735,11 +735,15 @@ This section is the active source-of-truth for how `Loans` and `Bills` should wo
 - Bills currently persists:
   - generic bill series (`veyra_bill_series`)
   - generic bill occurrences (`veyra_bill_occurrences`)
-- Bills currently does not yet have first-class loan link columns (`loanId`, `obligationType`, etc.).
+- Bills now has first-class loan link fields:
+  - `billSeries.obligationType`
+  - `billSeries.loanId`
+  - `billSeries.loanInstallmentId`
+  - `billOccurrences.loanPaymentId`
 - Forecast currently can surface both:
   - `Bill` obligations
   - `Loan installment` obligations
-  and may double-count the same loan repayment when both exist.
+  but linked loan repayment bills should be excluded from forecast bill obligations so the same loan repayment is not double-counted.
 
 #### Required correlation behavior
 
@@ -854,6 +858,297 @@ Constraints:
 - no duplicate linked bill series after repeated edits or retries.
 - forecast does not show duplicate obligations for same linked loan due.
 - standalone bills (Netflix, Apple Music, wifi, utilities) remain unaffected and independent.
+
+### Credit-Linked Loans Contract (Active)
+
+This section is the working source-of-truth for connecting credit accounts, loans, and bills.
+
+Current implementation status (April 27, 2026):
+- Phase 1 schema foundation is implemented with migration `drizzle/0018_mute_blackheart.sql`.
+- Local configured database has been brought into sync with this migration, and the Drizzle migration ledger is clean for `0017` and `0018`.
+- Credit-linked loans now store a creation-time credit snapshot:
+  - `creditBalanceAtLink`
+  - `creditLimitAtLink`
+  - `creditAvailableAtLink`
+  - `creditUtilizationAtLink`
+- Credit limits remain absolute user-managed account fields; loan linking must never mutate `creditLimit`.
+- The loan service validates credit-linked creation and blocks one-time opening balance adjustments that would push the card above its limit.
+- `recordLoanPayment` supports credit-linked repayment accounts by applying payment deltas to the linked credit account instead of overwriting the card balance.
+- Accounts now has a first UI entrypoint:
+  - credit rows expose `Create linked loan`
+  - the guided modal shows a 2x2 credit snapshot
+  - total gross amount is computed from monthly amortization and term
+  - date fields use the shared Veyra calendar picker
+  - lender rate and EIR are captured as optional metadata only
+- Remaining UI work:
+  - polish loan details presentation for credit-linked loans
+  - add deeper Accounts/Dashboard linked-loan context
+  - add non-tracked cash deposit handling after the loan destination account contract is relaxed
+
+#### Product intent
+
+- Some real-world loans are issued through a credit card or credit facility.
+- Veyra should model these as loans with repayment schedules, while preserving the linked credit account as the repayment destination.
+- The user should not have to understand accounting internals or choose between "credit card" and "loan" when the product is both.
+
+Example target case:
+- Credit account: `RCBC Gold Mastercard`
+- Credit limit: `₱50,000`
+- Current credit balance: `₱40,865.68`
+- Available credit: `₱9,134.32`
+- Cash loan amount: `₱42,000`
+- Term: `24 months`
+- Monthly amortization: `₱2,206.26`
+- Total gross/payable amount: `₱52,938.74`
+- Rate: `1%`
+- EIR: `1.7980`
+
+#### Core concept
+
+A credit-linked loan is:
+- a loan contract and repayment schedule
+- linked to a credit account for repayment
+- optionally linked to a liquid receiving account for the cash disbursement
+- not always a separate liability account
+
+Veyra must be explicit about whether the lender has already included the loan in the credit account balance.
+
+#### Required user questions
+
+Entry point:
+- user clicks `Create linked loan` from a credit account row, or selects a credit account inside the linked-loan flow.
+- if launched from a credit account, preselect that account.
+
+Step 1: credit account context:
+- show the selected credit account
+- show current balance
+- show available credit
+- show credit limit
+- show utilization percentage
+- show existing linked credit-loan count when available
+
+Step 2: balance treatment:
+- ask: `Is this loan already included in your credit card balance?`
+- supported answers:
+  - `Yes, already included`
+  - `No, add it to this card balance`
+  - `Not sure`
+
+Behavior:
+- `Yes, already included`:
+  - create the loan schedule
+  - do not increase credit account balance again
+  - present the loan as a credit-linked overlay
+- `No, add it to this card balance`:
+  - create the loan schedule
+  - increase the linked credit account balance by the chosen opening amount
+  - persist a clear metadata/audit note explaining the balance adjustment
+- `Not sure`:
+  - recommend `already included` when the current credit balance already appears to reflect the loan
+  - still require the user to choose before creating
+
+Step 3: loan contract fields:
+- `loanName` (required)
+- `lenderName` (prefill from credit account institution when possible)
+- `cashLoanAmount` / approved principal (required)
+- `termMonths` (required)
+- `monthlyAmortization` / regular installment amount (required)
+- `totalGrossAmount` / contract total payable (required, allow lender override)
+- `firstPaymentDue` (required)
+- `disbursementDate` (required)
+- `rate` (optional)
+- `eir` (optional)
+- `applicationId` / lender reference (optional)
+- `notes` (optional)
+
+Computed values:
+- computed total payable: `monthlyAmortization * termMonths`
+- current UI treats total gross amount as read-only `monthlyAmortization * termMonths`
+- lender total payable override is deferred until there is a stronger exception flow
+- interest and fees: `computed total payable - cashLoanAmount`
+- maturity date: `firstPaymentDue + (termMonths - 1 months)`
+- final installment reconciliation when lender total does not exactly equal monthly amount times term
+
+Step 4: cash received handling:
+- ask: `Where did the cash go?`
+- supported answers:
+  - `Deposited to one of my accounts`
+  - `Not tracking the cash deposit`
+  - `Already included in an existing balance`
+
+Behavior:
+- `Deposited to one of my accounts`:
+  - require bank/wallet destination account
+  - optionally create an opening cash inflow/balance movement
+- `Not tracking the cash deposit`:
+  - create loan schedule only
+  - do not modify liquid balances
+- `Already included in an existing balance`:
+  - create loan schedule only
+  - store metadata that no cash movement was posted because the receiving balance already includes it
+
+Step 5: payment setup:
+- repayment account is the selected credit account
+- default payment source is optional and must be liquid (`Bank` or `Wallet`)
+- create bill reminders should default to enabled for scheduled credit-linked loans
+
+Confirmation must state exactly what Veyra will do:
+- create the linked loan record
+- create the installment schedule
+- create linked bill reminders
+- whether the credit account balance will be changed
+- whether liquid cash will be posted
+- how future payments will flow
+
+#### Data model direction
+
+Add explicit credit-linked loan fields rather than overloading old loan account behavior.
+
+Preferred loan fields:
+- `repaymentAccountId`
+- `repaymentAccountKind`
+  - `loan_account`
+  - `credit_account`
+- `liabilityTreatment`
+  - `separate_loan`
+  - `credit_linked_overlay`
+- `creditBalanceTreatment`
+  - `already_included`
+  - `add_to_credit_balance`
+  - `track_separately`
+- `creditLinkedOpeningAmount`
+- `defaultPaymentSourceAccountId` (optional)
+
+For credit-linked loans:
+- `repaymentAccountKind = credit_account`
+- `repaymentAccountId` points to a `Credit` account
+- `underlyingLoanAccountId` should generally be null unless the user explicitly chooses separate tracking
+- `liabilityTreatment = credit_linked_overlay` should prevent liability double-counting
+
+Metadata should retain lender-specific values that do not need first-class columns yet:
+- nominal rate
+- EIR
+- lender total gross amount
+- application/reference ID
+- original lender screenshot/source note when user-provided later
+
+#### Data integrity rules
+
+1. No double-counting:
+- if `creditBalanceTreatment = already_included`, do not add the loan payable to account liabilities separately.
+- account and dashboard liability totals should include the credit account balance and should not add the credit-linked overlay again.
+- forecast may include dated loan installment obligations, but balance posture must not double-count them as separate debt.
+
+2. Balance adjustment rules:
+- if `creditBalanceTreatment = add_to_credit_balance`, update the linked credit account balance exactly once at creation.
+- repeated edits must not reapply the opening balance adjustment.
+- store enough metadata to know whether the opening credit adjustment has already been posted.
+
+3. Payment rules:
+- credit-linked loan payments must use a liquid source account only:
+  - `Bank`
+  - `Wallet`
+- payment destination is the linked credit account.
+- payment submission must:
+  - create a loan payment record
+  - update installment paid amounts/status
+  - reduce the liquid source account balance
+  - reduce the linked credit account balance
+  - settle the linked bill occurrence when applicable
+- this should route through one source-of-truth service path, not separate Bills/Loans implementations.
+
+4. Bills rules:
+- scheduled credit-linked loans should create loan-linked bill reminders.
+- Bills `Mark paid` for credit-linked loan bills should open/use the loan payment flow, not generic bill expense posting.
+- generic bill edit/delete controls should remain hidden for loan-linked bills.
+
+5. Deletion and edit protection:
+- deleting a credit account with active linked loans should be blocked or require unlink/migration.
+- editing a credit account balance should not mutate linked loan schedules.
+- editing the linked loan schedule should not silently reapply credit balance opening adjustments.
+
+6. Forecast rules:
+- forecast should show upcoming credit-linked loan installments as obligations.
+- forecast must not double-count those installments as both loan obligations and linked bill obligations.
+- later credit-card statement due modeling must not double-count loan installments already represented as credit-linked loan obligations.
+
+#### Phased implementation plan
+
+Phase 0: Documentation and acceptance framing:
+- keep this AGENTS.md section current as the contract evolves.
+- define acceptance examples using RCBC Gold Mastercard + RCBC Cash Loan.
+
+Phase 1: Schema foundation:
+- implemented:
+  - repayment account and credit-link fields in loans schema
+  - Drizzle SQL migration and matching `drizzle/meta` snapshot updates
+  - old loans remain readable through defaults
+- remaining:
+  - add deeper schema validation tests:
+  - credit-linked loans require a credit repayment account
+  - liquid default payment source only when provided
+  - no underlying loan account required for `credit_linked_overlay`
+
+Phase 2: Service creation path:
+- implemented:
+  - loan create service accepts credit-linked loans
+  - `already_included` creates the schedule without credit balance mutation
+  - `add_to_credit_balance` applies one opening adjustment and respects the absolute credit limit
+  - scheduled linked loans sync linked Bills reminders through the shared loan schedule path
+- remaining:
+  - expand focused service tests for every balance-treatment mode
+  - decide whether `track_separately` should create/retain a separate liability account
+
+Phase 3: Payment path:
+- implemented:
+  - `recordLoanPayment` supports `repaymentAccountKind = credit_account`
+  - payment flow debits liquid source and reduces linked credit account owed balance by delta
+  - loan installments, payment history, and linked bill settlement remain on the same service path
+- remaining:
+  - add idempotency tests across Loans and Bills entrypoints
+
+Phase 4: Accounts and Dashboard presentation:
+- implemented:
+  - `Create linked loan` action for credit accounts
+  - Accounts and Dashboard liability totals use the credit account balance as the liability source for credit-linked overlays
+- remaining:
+  - show linked credit-loan context directly on account rows/details
+  - add guardrails when editing/deleting credit accounts that have linked loans
+
+Phase 5: Linked loan UI:
+- implemented:
+  - Veyra-themed linked loan flow launched from the credit account row
+  - first screen shows an intelligent credit account summary:
+  - current balance
+  - available credit
+  - credit limit
+  - utilization
+  - balance treatment options
+  - contract fields, cash received handling, payment setup, and confirmation preview
+- remaining:
+  - add the `Not sure` balance-treatment helper state
+  - add non-tracked cash deposit handling after the loan destination account contract is relaxed
+
+Phase 6: Bills and Forecast polish:
+- verify Bills linked rows route to the shared loan payment modal.
+- hide generic bill edit/delete for loan-linked rows.
+- ensure forecast obligation lines distinguish credit-linked loan payments clearly.
+- keep standalone bills unaffected.
+
+#### Acceptance checklist (Credit-Linked Loans)
+
+- user can launch `Create linked loan` from a credit account row.
+- selected credit account summary displays accurate limit, balance, available credit, and utilization.
+- user must choose credit balance treatment before create.
+- `already included` creates schedule without changing credit balance.
+- `add to credit balance` applies opening credit balance adjustment once only.
+- scheduled linked loan creates one linked bill series.
+- paying from Loans reduces source liquid account and linked credit account balance.
+- paying from Bills routes through loan payment flow and settles the bill occurrence.
+- Accounts and Dashboard do not double-count credit-linked loan liabilities.
+- Forecast shows upcoming installment obligations without duplicate linked bill obligations.
+- deleting/editing linked credit accounts is guarded.
+- standalone credit cards, standalone loans, and standalone bills continue to work unchanged.
 
 ## Design System Direction
 

@@ -231,7 +231,7 @@ export const institutionOptions: InstitutionOption[] = [
     initials: "UN",
     tone: "bg-stone-100 text-stone-800 dark:bg-stone-500/20 dark:text-stone-100",
     aliases: ["UNO"],
-    logoDomain: "unodigitalbank.com",
+    logoDomain: "uno.bank",
   },
   {
     id: "wise",

@@ -1234,30 +1234,34 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                             </>
                           )}
                         </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          className="h-8 w-8 rounded-full"
-                          onClick={() => openEditDialog(bill)}
-                          disabled={isCompletingBill || isLoanLinked}
-                          aria-label={`Edit ${bill.name}`}
-                          title={`Edit ${bill.name}`}
-                        >
-                          <Pencil className="size-3.5" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon-sm"
-                          className="h-8 w-8 rounded-full text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(bill)}
-                          disabled={isCompletingBill || isLoanLinked}
-                          aria-label={`Delete ${bill.name}`}
-                          title={`Delete ${bill.name}`}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
+                        {!isLoanLinked ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              className="h-8 w-8 rounded-full"
+                              onClick={() => openEditDialog(bill)}
+                              disabled={isCompletingBill}
+                              aria-label={`Edit ${bill.name}`}
+                              title={`Edit ${bill.name}`}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              className="h-8 w-8 rounded-full text-destructive hover:text-destructive"
+                              onClick={() => setDeleteTarget(bill)}
+                              disabled={isCompletingBill}
+                              aria-label={`Delete ${bill.name}`}
+                              title={`Delete ${bill.name}`}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </>
+                        ) : null}
                         {isLoanLinked ? (
                           <Button
                             asChild

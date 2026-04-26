@@ -41,6 +41,19 @@ type LoanRecord = typeof loans.$inferSelect;
 type LoanInstallmentRecord = typeof loanInstallments.$inferSelect;
 type LoanPaymentRecord = typeof loanPayments.$inferSelect;
 
+type CreditLinkResolution = {
+  repaymentAccount: AccountRecord | null;
+  defaultPaymentSourceAccount: AccountRecord | null;
+  snapshot: {
+    balance: number | null;
+    limit: number | null;
+    available: number | null;
+    utilization: number | null;
+  };
+  openingAmount: number;
+  shouldApplyOpeningAdjustment: boolean;
+};
+
 function assertUserId(userId: string | null | undefined): string {
   if (!userId) {
     throw new TRPCError({
@@ -114,6 +127,20 @@ function assertSameCurrency(accountsToCompare: AccountRecord[], message: string)
       message,
     });
   }
+}
+
+function getCreditAccountSnapshot(account: AccountRecord) {
+  const balance = Math.max(account.balance, 0);
+  const limit = Math.max(account.creditLimit, 0);
+  const available = Math.max(limit - balance, 0);
+  const utilization = limit > 0 ? Math.round((balance / limit) * 100) : 0;
+
+  return {
+    balance,
+    limit,
+    available,
+    utilization,
+  };
 }
 
 async function applyBalanceEntries(
@@ -520,7 +547,7 @@ function deriveInitialInstallmentPaymentState(
     };
   });
 
-  const normalizedOutstanding = outstandingAmount;
+  const normalizedOutstanding = plan.length > 0 ? totalPayable : outstandingAmount;
   const firstPending = installmentRows[0] ?? null;
 
   return {
@@ -687,6 +714,99 @@ async function resolveLoanAccounts(
   return {
     destinationAccount,
     underlyingLoanAccount,
+  };
+}
+
+async function resolveCreditLink(
+  ctx: Pick<TRPCContext, "db" | "userId">,
+  input: Pick<
+    CreateLoanInput | UpdateLoanInput,
+    | "currency"
+    | "principalAmount"
+    | "repaymentAccountKind"
+    | "repaymentAccountId"
+    | "creditBalanceTreatment"
+    | "creditLinkedOpeningAmount"
+    | "defaultPaymentSourceAccountId"
+  >
+): Promise<CreditLinkResolution> {
+  const isCreditLinked = input.repaymentAccountKind === "credit_account";
+  const openingAmount = input.creditLinkedOpeningAmount ?? input.principalAmount;
+
+  if (!isCreditLinked) {
+    return {
+      repaymentAccount: null,
+      defaultPaymentSourceAccount: null,
+      snapshot: {
+        balance: null,
+        limit: null,
+        available: null,
+        utilization: null,
+      },
+      openingAmount: 0,
+      shouldApplyOpeningAdjustment: false,
+    };
+  }
+
+  if (!input.repaymentAccountId) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Choose the credit account this loan is linked to.",
+    });
+  }
+
+  if (!input.creditBalanceTreatment) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Choose how the card balance should be treated at link time.",
+    });
+  }
+
+  const repaymentAccount = await requireUserAccount(
+    ctx,
+    input.repaymentAccountId,
+    "Linked credit account"
+  );
+  assertAccountType(repaymentAccount, ["credit"], "Linked credit account");
+
+  if (repaymentAccount.currency !== input.currency) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Loan currency must match the linked credit account currency.",
+    });
+  }
+
+  let defaultPaymentSourceAccount: AccountRecord | null = null;
+  if (input.defaultPaymentSourceAccountId) {
+    defaultPaymentSourceAccount = await requireUserAccount(
+      ctx,
+      input.defaultPaymentSourceAccountId,
+      "Default payment source account"
+    );
+    assertAccountType(defaultPaymentSourceAccount, ["cash", "wallet"], "Default payment source account");
+    assertSameCurrency(
+      [repaymentAccount, defaultPaymentSourceAccount],
+      "Linked credit account and default payment source must use matching currencies."
+    );
+  }
+
+  const snapshot = getCreditAccountSnapshot(repaymentAccount);
+  const shouldApplyOpeningAdjustment = input.creditBalanceTreatment === "add_to_credit_balance";
+
+  if (shouldApplyOpeningAdjustment && snapshot.balance + openingAmount > snapshot.limit) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message:
+        "This linked loan would push the card above its credit limit. Update the loan amount or card balance first; the credit limit is only changed manually.",
+    });
+  }
+
+  return {
+    repaymentAccount,
+    defaultPaymentSourceAccount,
+    snapshot,
+    openingAmount,
+    shouldApplyOpeningAdjustment,
   };
 }
 
@@ -909,16 +1029,18 @@ export async function createLoan(
 ) {
   const userId = assertUserId(ctx.userId);
   assertLoanState(input);
+  const isCreditLinked = input.repaymentAccountKind === "credit_account";
 
   let accountResolution = await resolveLoanAccounts(ctx, {
     currency: input.currency,
     destinationAccountId: input.destinationAccountId,
     underlyingLoanAccountId: input.underlyingLoanAccountId,
   });
+  const creditLink = await resolveCreditLink(ctx, input);
 
   let createdUnderlyingLoanAccountId: string | null = null;
 
-  if (!accountResolution.underlyingLoanAccount && input.autoCreateUnderlyingAccount) {
+  if (!isCreditLinked && !accountResolution.underlyingLoanAccount && input.autoCreateUnderlyingAccount) {
     const createdAccountId = crypto.randomUUID();
 
     const [createdAccount] = await ctx.db
@@ -950,14 +1072,17 @@ export async function createLoan(
     };
   }
 
-  if (!accountResolution.underlyingLoanAccount) {
+  if (!isCreditLinked && !accountResolution.underlyingLoanAccount) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "A loan account is required to create a loan record.",
     });
   }
 
-  if (accountResolution.underlyingLoanAccount.id === accountResolution.destinationAccount.id) {
+  if (
+    accountResolution.underlyingLoanAccount &&
+    accountResolution.underlyingLoanAccount.id === accountResolution.destinationAccount.id
+  ) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "Loan account and destination account must be different.",
@@ -984,8 +1109,55 @@ export async function createLoan(
       ? initialScheduleState.nextDueDate
       : normalizedRepaymentPlan[0]?.dueDate ?? null);
   let linkedBillSynced = false;
+  let creditOpeningAdjustmentApplied = false;
 
   try {
+    if (
+      accountResolution.underlyingLoanAccount &&
+      !input.createOpeningDisbursement &&
+      accountResolution.underlyingLoanAccount.balance !== startingOutstanding
+    ) {
+      await ctx.db
+        .update(accounts)
+        .set({
+          balance: startingOutstanding,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(accounts.id, accountResolution.underlyingLoanAccount.id),
+            eq(accounts.clerkUserId, userId)
+          )
+        );
+    }
+
+    if (creditLink.shouldApplyOpeningAdjustment && creditLink.repaymentAccount) {
+      await ctx.db
+        .update(accounts)
+        .set({
+          balance: sql`${accounts.balance} + ${creditLink.openingAmount}`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(accounts.id, creditLink.repaymentAccount.id),
+            eq(accounts.clerkUserId, userId),
+            sql`${accounts.balance} + ${creditLink.openingAmount} <= ${accounts.creditLimit}`
+          )
+        )
+        .returning({ id: accounts.id })
+        .then(([updatedAccount]) => {
+          if (!updatedAccount) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "This linked loan would push the card above its credit limit. The card balance was not changed.",
+            });
+          }
+        });
+      creditOpeningAdjustmentApplied = true;
+    }
+
     await ctx.db.insert(loans).values({
       id: loanId,
       clerkUserId: userId,
@@ -998,7 +1170,18 @@ export async function createLoan(
       disbursedAt: input.disbursedAt,
       status: startingStatus,
       destinationAccountId: accountResolution.destinationAccount.id,
-      underlyingLoanAccountId: accountResolution.underlyingLoanAccount.id,
+      underlyingLoanAccountId: accountResolution.underlyingLoanAccount?.id ?? null,
+      repaymentAccountId: creditLink.repaymentAccount?.id ?? null,
+      repaymentAccountKind: input.repaymentAccountKind,
+      liabilityTreatment: input.liabilityTreatment,
+      creditBalanceTreatment: input.creditBalanceTreatment ?? null,
+      creditLinkedOpeningAmount: creditLink.openingAmount,
+      creditBalanceAtLink: creditLink.snapshot.balance,
+      creditLimitAtLink: creditLink.snapshot.limit,
+      creditAvailableAtLink: creditLink.snapshot.available,
+      creditUtilizationAtLink: creditLink.snapshot.utilization,
+      creditOpeningAdjustmentApplied,
+      defaultPaymentSourceAccountId: creditLink.defaultPaymentSourceAccount?.id ?? null,
       cadence: input.cadence ?? null,
       nextDueDate: startingNextDueDate,
       notes: input.notes || null,
@@ -1028,6 +1211,12 @@ export async function createLoan(
 
     if (input.createOpeningDisbursement) {
       const openingAmount = input.openingDisbursementAmount ?? input.principalAmount;
+      if (!accountResolution.underlyingLoanAccount) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Opening disbursement requires an underlying loan account.",
+        });
+      }
       openingEventId = await recordLoanDisbursementEvent(ctx, {
         userId,
         loanName: input.name,
@@ -1049,6 +1238,17 @@ export async function createLoan(
       linkedBillSynced = true;
     }
   } catch (error) {
+    if (creditOpeningAdjustmentApplied && creditLink.repaymentAccount) {
+      await ctx.db
+        .update(accounts)
+        .set({
+          balance: sql`${accounts.balance} - ${creditLink.openingAmount}`,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(accounts.id, creditLink.repaymentAccount.id), eq(accounts.clerkUserId, userId)))
+        .catch(() => undefined);
+    }
+
     if (loanInserted) {
       if (linkedBillSynced) {
         await ctx.db
@@ -1069,6 +1269,10 @@ export async function createLoan(
       await ctx.db.delete(accounts).where(eq(accounts.id, createdUnderlyingLoanAccountId)).catch(() => undefined);
     }
 
+    if (error instanceof TRPCError) {
+      throw error;
+    }
+
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",
       message: "Failed to create loan.",
@@ -1078,7 +1282,7 @@ export async function createLoan(
 
   return {
     loanId,
-    underlyingLoanAccountId: accountResolution.underlyingLoanAccount.id,
+    underlyingLoanAccountId: accountResolution.underlyingLoanAccount?.id ?? null,
     openingDisbursementEventId: openingEventId,
   };
 }
@@ -1090,12 +1294,21 @@ export async function updateLoan(
   const userId = assertUserId(ctx.userId);
   const existing = await requireLoan(ctx, input.id);
   assertLoanState(input);
+  const isCreditLinked = input.repaymentAccountKind === "credit_account";
+
+  if (input.repaymentAccountKind !== existing.repaymentAccountKind) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Loan repayment account kind is fixed after creation to preserve the original link snapshot.",
+    });
+  }
 
   const accountResolution = await resolveLoanAccounts(ctx, {
     currency: input.currency,
     destinationAccountId: input.destinationAccountId,
     underlyingLoanAccountId: input.underlyingLoanAccountId,
   });
+  const creditLink = await resolveCreditLink(ctx, input);
 
   if (
     accountResolution.underlyingLoanAccount &&
@@ -1137,6 +1350,21 @@ export async function updateLoan(
       status: normalizedStatus,
       destinationAccountId: input.destinationAccountId,
       underlyingLoanAccountId: input.underlyingLoanAccountId ?? null,
+      repaymentAccountId: isCreditLinked ? creditLink.repaymentAccount?.id ?? null : null,
+      repaymentAccountKind: input.repaymentAccountKind,
+      liabilityTreatment: input.liabilityTreatment,
+      creditBalanceTreatment: isCreditLinked ? input.creditBalanceTreatment ?? null : null,
+      creditLinkedOpeningAmount: isCreditLinked
+        ? existing.creditLinkedOpeningAmount
+        : 0,
+      creditBalanceAtLink: isCreditLinked ? existing.creditBalanceAtLink : null,
+      creditLimitAtLink: isCreditLinked ? existing.creditLimitAtLink : null,
+      creditAvailableAtLink: isCreditLinked ? existing.creditAvailableAtLink : null,
+      creditUtilizationAtLink: isCreditLinked ? existing.creditUtilizationAtLink : null,
+      creditOpeningAdjustmentApplied: isCreditLinked
+        ? existing.creditOpeningAdjustmentApplied
+        : false,
+      defaultPaymentSourceAccountId: creditLink.defaultPaymentSourceAccount?.id ?? null,
       cadence: input.cadence ?? null,
       nextDueDate: normalizedNextDueDate,
       notes: input.notes || null,
@@ -1152,6 +1380,22 @@ export async function updateLoan(
       message: "Failed to update loan.",
     });
   }
+
+  if (updated.underlyingLoanAccountId) {
+    await ctx.db
+      .update(accounts)
+      .set({
+        balance: normalizedOutstanding,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(accounts.id, updated.underlyingLoanAccountId),
+          eq(accounts.clerkUserId, userId)
+        )
+      );
+  }
+
   await ctx.db
     .delete(loanInstallments)
     .where(and(eq(loanInstallments.loanId, existing.id), eq(loanInstallments.clerkUserId, userId)));
@@ -1198,32 +1442,43 @@ export async function recordLoanPayment(
   const userId = assertUserId(ctx.userId);
   const loan = await requireLoan(ctx, input.loanId, "Loan not found.");
 
-  if (loan.status === "closed" || loan.outstandingAmount <= 0) {
+  if (loan.status === "closed") {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "This loan is already closed.",
     });
   }
 
-  if (!loan.underlyingLoanAccountId) {
+  const isCreditLinked = loan.repaymentAccountKind === "credit_account";
+  const repaymentAccountId = isCreditLinked ? loan.repaymentAccountId : loan.underlyingLoanAccountId;
+
+  if (!repaymentAccountId) {
     throw new TRPCError({
       code: "BAD_REQUEST",
-      message: "Loan has no underlying account configured.",
+      message: isCreditLinked
+        ? "Loan has no linked credit account configured."
+        : "Loan has no underlying account configured.",
     });
   }
 
   const sourceAccount = await requireUserAccount(ctx, input.sourceAccountId, "Payment account");
-  const liabilityAccount = await requireUserAccount(
+  const repaymentAccount = await requireUserAccount(
     ctx,
-    loan.underlyingLoanAccountId,
-    "Underlying loan account"
+    repaymentAccountId,
+    isCreditLinked ? "Linked credit account" : "Underlying loan account"
   );
 
   assertAccountType(sourceAccount, ["cash", "wallet"], "Payment account");
-  assertAccountType(liabilityAccount, ["loan"], "Underlying loan account");
+  assertAccountType(
+    repaymentAccount,
+    isCreditLinked ? ["credit"] : ["loan"],
+    isCreditLinked ? "Linked credit account" : "Underlying loan account"
+  );
   assertSameCurrency(
-    [sourceAccount, liabilityAccount],
-    "Payment account and loan account must use matching currencies."
+    [sourceAccount, repaymentAccount],
+    isCreditLinked
+      ? "Payment account and linked credit account must use matching currencies."
+      : "Payment account and loan account must use matching currencies."
   );
 
   const installments = await ctx.db.query.loanInstallments.findMany({
@@ -1266,7 +1521,14 @@ export async function recordLoanPayment(
     };
   }
 
-  const outstandingBefore = Math.max(loan.outstandingAmount, 0);
+  const outstandingBefore = getEffectiveOutstandingAmount(loan, installments);
+  if (outstandingBefore <= 0) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "This loan is already closed.",
+    });
+  }
+
   const effectivePaymentAmount = Math.min(input.amount, outstandingBefore);
   const paymentDate = input.paidAt;
   const requestedAmount = effectivePaymentAmount;
@@ -1375,11 +1637,44 @@ export async function recordLoanPayment(
   const targetInstallment = touchedInstallments[0]?.after ?? null;
 
   let balanceAppliedEntries: BalanceEntry[] = [];
+  const repaymentBalanceBefore = repaymentAccount.balance;
   try {
     balanceAppliedEntries = await applyBalanceEntries(ctx, userId, [
       { accountId: sourceAccount.id, amountDelta: -requestedAmount },
-      { accountId: liabilityAccount.id, amountDelta: -requestedAmount },
     ]);
+
+    const [updatedRepaymentAccount] = isCreditLinked
+      ? await ctx.db
+          .update(accounts)
+          .set({
+            balance: sql`${accounts.balance} - ${requestedAmount}`,
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(accounts.id, repaymentAccount.id),
+              eq(accounts.clerkUserId, userId),
+              sql`${accounts.balance} - ${requestedAmount} >= 0`
+            )
+          )
+          .returning({ id: accounts.id })
+      : await ctx.db
+          .update(accounts)
+          .set({
+            balance: outstandingAfter,
+            updatedAt: new Date(),
+          })
+          .where(and(eq(accounts.id, repaymentAccount.id), eq(accounts.clerkUserId, userId)))
+          .returning({ id: accounts.id });
+
+    if (!updatedRepaymentAccount) {
+      throw new TRPCError({
+        code: isCreditLinked ? "BAD_REQUEST" : "INTERNAL_SERVER_ERROR",
+        message: isCreditLinked
+          ? "This payment would make the linked credit account balance negative. The card balance was not changed."
+          : "Failed to update loan account balance.",
+      });
+    }
 
     await ctx.db
       .update(loans)
@@ -1430,6 +1725,17 @@ export async function recordLoanPayment(
     }
     if (balanceAppliedEntries.length > 0) {
       await rollbackBalanceEntries(ctx, userId, balanceAppliedEntries).catch(() => undefined);
+    }
+    await ctx.db
+      .update(accounts)
+      .set({
+        balance: repaymentBalanceBefore,
+        updatedAt: new Date(),
+      })
+        .where(and(eq(accounts.id, repaymentAccount.id), eq(accounts.clerkUserId, userId)))
+      .catch(() => undefined);
+    if (error instanceof TRPCError) {
+      throw error;
     }
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",

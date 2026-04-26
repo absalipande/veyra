@@ -98,6 +98,34 @@ export const loans = pgTable(
     underlyingLoanAccountId: text("underlying_loan_account_id").references(() => accounts.id, {
       onDelete: "set null",
     }),
+    repaymentAccountId: text("repayment_account_id").references(() => accounts.id, {
+      onDelete: "set null",
+    }),
+    repaymentAccountKind: text("repayment_account_kind", {
+      enum: ["loan_account", "credit_account"],
+    })
+      .default("loan_account")
+      .notNull(),
+    liabilityTreatment: text("liability_treatment", {
+      enum: ["separate_loan", "credit_linked_overlay"],
+    })
+      .default("separate_loan")
+      .notNull(),
+    creditBalanceTreatment: text("credit_balance_treatment", {
+      enum: ["already_included", "add_to_credit_balance", "track_separately"],
+    }),
+    creditLinkedOpeningAmount: integer("credit_linked_opening_amount").default(0).notNull(),
+    creditBalanceAtLink: integer("credit_balance_at_link"),
+    creditLimitAtLink: integer("credit_limit_at_link"),
+    creditAvailableAtLink: integer("credit_available_at_link"),
+    creditUtilizationAtLink: integer("credit_utilization_at_link"),
+    creditOpeningAdjustmentApplied: boolean("credit_opening_adjustment_applied")
+      .default(false)
+      .notNull(),
+    defaultPaymentSourceAccountId: text("default_payment_source_account_id").references(
+      () => accounts.id,
+      { onDelete: "set null" }
+    ),
     cadence: text("cadence", {
       enum: ["daily", "weekly", "bi-weekly", "monthly"],
     }),
@@ -112,7 +140,30 @@ export const loans = pgTable(
     statusIdx: index("veyra_loans_status_idx").on(table.status),
     destinationAccountIdx: index("veyra_loans_destination_account_idx").on(table.destinationAccountId),
     underlyingAccountIdx: index("veyra_loans_underlying_account_idx").on(table.underlyingLoanAccountId),
+    repaymentAccountIdx: index("veyra_loans_repayment_account_idx").on(table.repaymentAccountId),
+    repaymentAccountKindIdx: index("veyra_loans_repayment_account_kind_idx").on(table.repaymentAccountKind),
+    defaultPaymentSourceAccountIdx: index("veyra_loans_default_payment_source_account_idx").on(
+      table.defaultPaymentSourceAccountId
+    ),
     dueDateIdx: index("veyra_loans_next_due_date_idx").on(table.nextDueDate),
+    creditLinkConsistencyCheck: check(
+      "veyra_loans_credit_link_consistency_check",
+      sql`(
+        (${table.repaymentAccountKind} = 'credit_account'
+          AND ${table.repaymentAccountId} IS NOT NULL
+          AND ${table.liabilityTreatment} = 'credit_linked_overlay'
+          AND ${table.creditBalanceTreatment} IS NOT NULL
+          AND ${table.creditBalanceAtLink} IS NOT NULL
+          AND ${table.creditLimitAtLink} IS NOT NULL
+          AND ${table.creditAvailableAtLink} IS NOT NULL
+          AND ${table.creditUtilizationAtLink} IS NOT NULL)
+        OR
+        (${table.repaymentAccountKind} = 'loan_account'
+          AND ${table.liabilityTreatment} = 'separate_loan'
+          AND ${table.creditBalanceTreatment} IS NULL
+          AND ${table.creditOpeningAdjustmentApplied} = false)
+      )`
+    ),
   })
 );
 
