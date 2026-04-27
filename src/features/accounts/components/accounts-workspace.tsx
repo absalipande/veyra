@@ -8,6 +8,7 @@ import {
   CreditCard,
   Globe2,
   HandCoins,
+  MoreHorizontal,
   Pencil,
   Plus,
   Sparkles,
@@ -25,12 +26,22 @@ import {
   isSupportedCurrency,
   supportedCurrencies,
 } from "@/lib/currencies";
+import {
+  formatDateWithPreferences,
+  resolveDatePreferences,
+} from "@/features/settings/lib/date-format";
 import { getInstitutionDisplay } from "@/features/accounts/lib/institutions";
 import type { AppRouter } from "@/server/api/root";
 import { InstitutionAvatar } from "@/components/app/institution-avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -39,7 +50,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const accountTypeOptions = [
   { label: "Bank", value: "cash" },
@@ -119,7 +129,7 @@ const accountDialogBodyClassName =
 const accountDialogFooterClassName =
   "sticky bottom-0 z-10 shrink-0 border-t border-border/70 bg-white px-4 pb-[max(0.8rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-6 sm:py-3 dark:bg-[#1a2325]";
 const accountConfirmDialogContentClassName =
-  "max-h-[calc(100dvh-0.75rem)] w-[calc(100vw-0.75rem)] max-w-[30rem] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-border/70 bg-background/98 px-0 py-0 ring-0 sm:max-h-[calc(100svh-2rem)] sm:w-full";
+  "max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[24rem] overflow-x-hidden overflow-y-auto rounded-[1.15rem] border-border/70 bg-background/98 px-0 py-0 ring-0 sm:max-h-[calc(100svh-2rem)] sm:w-full sm:max-w-[30rem] sm:rounded-[1.35rem]";
 
 const linkedLoanDialogContentClassName =
   "h-[100dvh] overflow-hidden border border-border/70 bg-background/96 px-0 py-0 shadow-[0_40px_90px_-50px_rgba(15,23,42,0.5)] backdrop-blur dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&_[data-slot='dialog-close']]:right-3 [&_[data-slot='dialog-close']]:top-3 sm:[&_[data-slot='dialog-close']]:right-4 sm:[&_[data-slot='dialog-close']]:top-4";
@@ -307,18 +317,18 @@ function formatAccountBalanceDetail(account: AccountItem) {
   return null;
 }
 
-function getAccountMetaTone(type: AccountItem["type"]) {
+function getAccountTypeBadgeClassName(type: AccountItem["type"]) {
   switch (type) {
     case "cash":
-      return "text-emerald-700";
+      return "border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300";
     case "wallet":
-      return "text-teal-700";
+      return "border-teal-200/80 bg-teal-50 text-teal-700 dark:border-teal-500/20 dark:bg-teal-500/10 dark:text-teal-300";
     case "credit":
-      return "text-amber-700";
+      return "border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300";
     case "loan":
-      return "text-rose-700";
+      return "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300";
     default:
-      return "text-foreground";
+      return "border-border/70 bg-muted/40 text-foreground";
   }
 }
 
@@ -373,6 +383,61 @@ type AccountSectionProps = {
   totalBalanceLabel: string;
   title: string;
 };
+
+type AccountActionsMenuProps = {
+  account: AccountItem;
+  onCreateLinkedLoan?: (account: AccountItem) => void;
+  onDelete: (id: string, name: string) => void;
+  onEdit: (accountId: string) => void;
+};
+
+function AccountActionsMenu({
+  account,
+  onCreateLinkedLoan,
+  onDelete,
+  onEdit,
+}: AccountActionsMenuProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          className="h-8 w-8 cursor-pointer rounded-full"
+          aria-label={`Open actions for ${account.name}`}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        {account.type === "credit" && onCreateLinkedLoan ? (
+          <DropdownMenuItem
+            className="gap-2 px-2 py-1.5 text-[0.82rem]"
+            onSelect={() => onCreateLinkedLoan(account)}
+          >
+            <HandCoins className="size-4 text-[#006c67]" />
+            Create linked loan
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[0.82rem]"
+          onSelect={() => onEdit(account.id)}
+        >
+          <Pencil className="size-4" />
+          Edit account
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          className="gap-2 px-2 py-1.5 text-[0.82rem]"
+          onSelect={() => onDelete(account.id, account.name)}
+        >
+          <Trash2 className="size-4" />
+          Delete account
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 function AccountSection({
   accounts,
@@ -444,7 +509,7 @@ function AccountSection({
           </div>
         ) : (
           <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-white dark:bg-[#141d1f]">
-            <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_152px] items-center gap-4 border-b border-border/70 px-6 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
+            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(10.5rem,12rem)_3rem] items-center gap-3 border-b border-border/70 px-4 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
               <p>Account</p>
               <p className="text-right">Balance</p>
               <p className="text-right">Actions</p>
@@ -473,41 +538,19 @@ function AccountSection({
                             <p className="truncate text-[0.9rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                               {account.name}
                             </p>
-                            <p className="mt-1 text-[0.76rem] text-muted-foreground">
-                              <span className={`font-medium ${getAccountMetaTone(account.type)}`}>
-                                {getAccountTypeLabel(account.type)}
-                              </span>
-                            </p>
+                            <span
+                              className={`mt-1 inline-flex h-5 items-center rounded-full border px-2 text-[0.66rem] font-semibold leading-none ${getAccountTypeBadgeClassName(account.type)}`}
+                            >
+                              {getAccountTypeLabel(account.type)}
+                            </span>
                           </div>
                         </div>
-                        <div className="flex gap-1.5">
-                          {account.type === "credit" && onCreateLinkedLoan ? (
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              className="h-8 w-8 cursor-pointer rounded-full text-[#006c67]"
-                              onClick={() => onCreateLinkedLoan(account)}
-                            >
-                              <HandCoins className="size-3.5" />
-                            </Button>
-                          ) : null}
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            className="h-8 w-8 cursor-pointer rounded-full"
-                            onClick={() => onEdit(account.id)}
-                          >
-                            <Pencil className="size-3.5" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            className="h-8 w-8 cursor-pointer rounded-full text-destructive hover:text-destructive"
-                            onClick={() => onDelete(account.id, account.name)}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
+                        <AccountActionsMenu
+                          account={account}
+                          onCreateLinkedLoan={onCreateLinkedLoan}
+                          onDelete={onDelete}
+                          onEdit={onEdit}
+                        />
                       </div>
                       <div className="mt-3 rounded-[0.9rem] border border-border/70 bg-background/75 px-3 py-2">
                         <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
@@ -524,7 +567,7 @@ function AccountSection({
                       </div>
                     </div>
 
-                    <div className="hidden grid-cols-[minmax(0,1.65fr)_220px_152px] items-center gap-4 px-6 py-4 md:grid">
+                    <div className="hidden grid-cols-[minmax(0,1fr)_minmax(10.5rem,12rem)_3rem] items-center gap-3 px-4 py-4 md:grid">
                       <div className="min-w-0">
                         <div className="flex min-w-0 items-center gap-3">
                           <InstitutionAvatar
@@ -536,15 +579,15 @@ function AccountSection({
                             initialsClassName="text-[0.78rem] font-semibold tracking-tight"
                           />
 
-                          <div className="min-w-0">
-                            <p className="truncate text-[0.92rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
+                          <div className="min-w-0 flex-1">
+                            <p className="max-w-[22rem] text-[0.92rem] font-semibold leading-snug tracking-tight text-[#10292B] dark:text-foreground">
                               {account.name}
                             </p>
-                            <p className="mt-1 text-[0.78rem] text-muted-foreground">
-                              <span className={`font-medium ${getAccountMetaTone(account.type)}`}>
-                                {getAccountTypeLabel(account.type)}
-                              </span>
-                            </p>
+                            <span
+                              className={`mt-1.5 inline-flex h-5 w-fit items-center rounded-full border px-2 text-[0.66rem] font-semibold leading-none ${getAccountTypeBadgeClassName(account.type)}`}
+                            >
+                              {getAccountTypeLabel(account.type)}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -554,54 +597,19 @@ function AccountSection({
                           {formatCurrencyMiliunits(account.balance, account.currency)}
                         </p>
                         {formatAccountBalanceDetail(account) ? (
-                          <p className="mt-1 ml-auto max-w-[220px] text-[0.68rem] leading-5 text-muted-foreground">
+                          <p className="mt-1 ml-auto whitespace-nowrap text-[0.64rem] leading-5 text-muted-foreground">
                             {formatAccountBalanceDetail(account)}
                           </p>
                         ) : null}
                       </div>
 
-                      <div className="flex gap-2 justify-end">
-                        {account.type === "credit" && onCreateLinkedLoan ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon-sm"
-                                className="cursor-pointer rounded-full text-[#006c67]"
-                                onClick={() => onCreateLinkedLoan(account)}
-                              >
-                                <HandCoins className="size-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Create linked loan</TooltipContent>
-                          </Tooltip>
-                        ) : null}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              className="cursor-pointer rounded-full"
-                              onClick={() => onEdit(account.id)}
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edit account</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              className="cursor-pointer rounded-full text-destructive hover:text-destructive"
-                              onClick={() => onDelete(account.id, account.name)}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Delete account</TooltipContent>
-                        </Tooltip>
+                      <div className="flex justify-end">
+                        <AccountActionsMenu
+                          account={account}
+                          onCreateLinkedLoan={onCreateLinkedLoan}
+                          onDelete={onDelete}
+                          onEdit={onEdit}
+                        />
                       </div>
                     </div>
                   </div>
@@ -635,6 +643,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     refetchOnReconnect: true,
   });
   const settingsQuery = trpc.settings.get.useQuery();
+  const datePreferences = resolveDatePreferences(settingsQuery.data);
   const [open, setOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
   const [form, setForm] = useState<CreateState>(getInitialState());
@@ -1198,17 +1207,8 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
             <div className="flex items-start justify-between gap-4">
               <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
-                Account posture
+                Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="hidden h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white sm:inline-flex md:h-8 md:px-3.5 md:text-[0.79rem]"
-                onClick={startCreate}
-              >
-                Add account
-              </Button>
             </div>
 
             <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
@@ -1286,14 +1286,14 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                 </div>
                 <div>
                   <p className="text-[0.68rem] uppercase tracking-[0.11em] text-muted-foreground">
-                    AI insight
+                    Veyra insight
                   </p>
                   <h3 className="text-[0.95rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                    {aiInsightQuery.data?.headline ?? "AI accounts watchdog"}
+                    {aiInsightQuery.data?.headline ?? "Veyra accounts watchdog"}
                   </h3>
                 </div>
               </div>
-              <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-[0.72rem] text-muted-foreground">
+              <span className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-background px-2 py-1 text-[0.64rem] leading-none text-muted-foreground sm:px-2.5 sm:text-[0.72rem]">
                 {aiInsightQuery.data?.confidence ?? "Initial estimate"}
               </span>
             </div>
@@ -1618,25 +1618,25 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
         }}
       >
         <DialogContent mobileBehavior="modal" className={accountConfirmDialogContentClassName}>
-          <DialogHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pt-5 sm:pr-16">
-            <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-destructive">
+          <DialogHeader className="shrink-0 border-b border-border/70 px-4 pb-3.5 pt-[max(0.9rem,env(safe-area-inset-top))] pr-13 sm:px-6 sm:pb-4 sm:pt-5 sm:pr-16">
+            <div className="inline-flex w-fit rounded-full border border-destructive/15 bg-destructive/5 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-destructive sm:px-3 sm:text-[0.68rem] sm:tracking-[0.18em]">
               Confirm delete
             </div>
-            <DialogTitle className="pt-2 text-[1.45rem] leading-[1.08] tracking-tight text-[#10292B] dark:text-foreground">
+            <DialogTitle className="pt-1.5 text-[1.24rem] leading-[1.1] tracking-tight text-[#10292B] dark:text-foreground sm:pt-2 sm:text-[1.45rem]">
               Remove this account?
             </DialogTitle>
-            <p className="max-w-md text-[0.92rem] leading-6.5 text-muted-foreground">
+            <p className="max-w-md text-[0.84rem] leading-6 text-muted-foreground sm:text-[0.92rem] sm:leading-6.5">
               {deleteTarget
                 ? `Delete "${deleteTarget.name}" from your Veyra workspace? This action cannot be undone.`
                 : "Delete this account from your Veyra workspace? This action cannot be undone."}
             </p>
           </DialogHeader>
 
-          <div className="grid shrink-0 grid-cols-2 gap-2.5 px-5 pb-[max(0.9rem,env(safe-area-inset-bottom))] pt-3.5 sm:flex sm:justify-end sm:px-6 sm:py-4">
+          <div className="grid shrink-0 grid-cols-2 gap-2 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 sm:flex sm:justify-end sm:gap-2.5 sm:px-6 sm:py-4">
             <Button
               type="button"
               variant="outline"
-              className="h-10 w-full cursor-pointer rounded-full px-4 text-[0.9rem] sm:w-auto"
+              className="h-9 w-full cursor-pointer rounded-full px-3 text-[0.82rem] sm:h-10 sm:w-auto sm:px-4 sm:text-[0.9rem]"
               onClick={() => setDeleteTarget(null)}
               disabled={isDeleting}
             >
@@ -1644,7 +1644,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             </Button>
             <Button
               type="button"
-              className="h-10 w-full cursor-pointer rounded-full bg-destructive px-4 text-[0.9rem] text-white hover:bg-destructive/90 sm:w-auto"
+              className="h-9 w-full cursor-pointer rounded-full bg-destructive px-3 text-[0.82rem] text-white hover:bg-destructive/90 sm:h-10 sm:w-auto sm:px-4 sm:text-[0.9rem]"
               onClick={onConfirmDelete}
               disabled={isDeleting}
             >

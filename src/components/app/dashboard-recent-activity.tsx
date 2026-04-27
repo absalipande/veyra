@@ -651,7 +651,7 @@ export function DashboardRecentActivity() {
               </h3>
               <span className="inline-flex h-6 items-center gap-1.5 whitespace-nowrap rounded-full border border-violet-200/90 bg-violet-50/85 px-2.5 text-[0.64rem] font-semibold uppercase tracking-[0.09em] leading-none text-violet-700 dark:border-violet-500/25 dark:bg-violet-500/12 dark:text-violet-200">
                 <Sparkles className="size-3" />
-                AI insight
+                Veyra insight
               </span>
             </div>
             <div className="hidden text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground md:block">
@@ -731,12 +731,12 @@ export function DashboardRecentActivity() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-[0.9rem] border border-border/70 bg-white/70 px-3 py-2.5 dark:bg-[#111a1c]">
+              <div className="flex flex-col items-start gap-3 rounded-[0.9rem] border border-border/70 bg-white/70 px-3 py-3 dark:bg-[#111a1c] sm:flex-row sm:items-center sm:justify-between sm:py-2.5">
                 <div>
                   <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">
                     Recommended next step
                   </p>
-                  <p className="mt-0.5 text-[0.86rem] font-medium text-foreground">
+                  <p className="mt-0.5 hidden text-[0.86rem] font-medium text-foreground sm:block">
                     {watchNextInsight.nextActionLabel}
                   </p>
                 </div>
@@ -744,7 +744,7 @@ export function DashboardRecentActivity() {
                   asChild
                   variant="outline"
                   size="sm"
-                  className="h-8 rounded-full bg-[#17393c] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white"
+                  className="h-9 w-full justify-center rounded-full bg-[#17393c] px-3 text-[0.8rem] font-medium text-white shadow-none hover:bg-[#1d4a4d] hover:text-white dark:bg-[#20474a] dark:text-white dark:hover:bg-[#28595c] dark:hover:text-white sm:h-8 sm:w-auto sm:text-[0.76rem]"
                 >
                   <Link href={watchNextInsight.nextActionHref}>{watchNextInsight.nextActionLabel}</Link>
                 </Button>
@@ -809,7 +809,7 @@ export function DashboardRecentActivity() {
         <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)] md:order-3">
           <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
             <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
-              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
+              <h3 className="text-[1.02rem] font-semibold leading-snug tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
                 Accounts shaping your position
               </h3>
               <Button
@@ -839,20 +839,20 @@ export function DashboardRecentActivity() {
                         <InstitutionAvatar
                           key={`${institution.label}:${institution.logoPaths.join("|")}`}
                           display={institution}
-                          sizeClassName="size-10 md:size-10"
+                          sizeClassName="size-9 md:size-10"
                           containerClassName=""
                           imageClassName="size-full rounded-full object-cover"
                           initialsClassName="text-[0.76rem] font-semibold md:text-[0.75rem]"
                           logoContainerClassName="border border-border/70 bg-white/90 p-0 dark:border-white/10 dark:bg-[#141d1f]"
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
+                          <p className="truncate text-[0.82rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.88rem]">
                             {account.name}
                           </p>
-                          <div className="mt-1 flex items-center gap-2 text-[0.77rem] leading-none md:text-[0.82rem]">
+                          <div className="mt-1 flex items-center gap-1.5 text-[0.62rem] leading-none md:text-[0.68rem]">
                             {account.note !== "Active" ? (
                               <span
-                                className={`inline-flex rounded-full px-2 py-1 font-medium ${account.noteBadgeClass}`}
+                                className={`inline-flex rounded-full px-1.5 py-0.5 font-medium md:px-1.5 md:py-0.5 ${account.noteBadgeClass}`}
                               >
                                 {account.note}
                               </span>
@@ -861,13 +861,13 @@ export function DashboardRecentActivity() {
                           </div>
                         </div>
                         <div className="shrink-0 text-right">
-                          <p className="text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.94rem]">
+                          <p className="text-[0.82rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.86rem]">
                             {formatCurrencyMiliunits(account.balance, account.currency)}
                           </p>
                           <div
-                            className={`mt-1 flex items-center justify-end gap-1.5 text-[0.74rem] ${account.amountMetaTone} md:text-[0.76rem]`}
+                            className={`mt-1 flex items-center justify-end gap-1 text-[0.6rem] ${account.amountMetaTone} md:gap-1.5 md:text-[0.66rem]`}
                           >
-                            <span className={`size-1.5 rounded-full ${account.amountMetaDot}`} />
+                            <span className={`size-1 rounded-full md:size-1.5 ${account.amountMetaDot}`} />
                             <span>{account.amountMeta}</span>
                           </div>
                         </div>
@@ -1015,7 +1015,7 @@ export function DashboardRecentActivity() {
       <Card className="rounded-[1.5rem] border-white/80 bg-white/84 shadow-[0_26px_80px_-60px_rgba(10,31,34,0.35)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_28px_90px_-60px_rgba(0,0,0,0.6)] md:order-4">
           <CardContent className="p-4 sm:p-5 md:p-6 lg:p-7">
             <div className="mb-4 flex items-center justify-between gap-3 md:mb-5">
-              <h3 className="text-[1.14rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
+              <h3 className="text-[1.02rem] font-semibold leading-snug tracking-tight text-[#10292B] dark:text-foreground md:text-[1.16rem] lg:text-[1.22rem]">
                 Recent changes affecting your balance
               </h3>
               <Button
@@ -1048,32 +1048,32 @@ export function DashboardRecentActivity() {
                         className="flex items-center gap-3 px-4 py-3 md:gap-3 md:px-5 md:py-3.5"
                       >
                         <div
-                          className={`flex size-10 shrink-0 items-center justify-center rounded-full ${iconTone} md:size-10`}
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-full ${iconTone} md:size-10`}
                         >
                           {event.type === "transfer" ? (
-                            <ArrowRightLeft className="size-4" />
+                            <ArrowRightLeft className="size-3.5 md:size-4" />
                           ) : amountPositive ? (
-                            <ArrowUpRight className="size-4" />
+                            <ArrowUpRight className="size-3.5 md:size-4" />
                           ) : (
-                            <ArrowDownRight className="size-4" />
+                            <ArrowDownRight className="size-3.5 md:size-4" />
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[0.98rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.96rem]">
+                          <p className="truncate text-[0.82rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.88rem]">
                             {event.description}
                           </p>
-                          <p className="mt-0.5 text-[0.78rem] text-muted-foreground md:text-[0.78rem]">
+                          <p className="mt-0.5 text-[0.64rem] text-muted-foreground md:text-[0.7rem]">
                             {getMovementTypeLabel(event.type)}
                           </p>
                         </div>
                         <div className="shrink-0 text-right">
                           <p
-                            className={`text-[0.98rem] font-semibold tracking-tight ${amountPositive ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"} md:text-[0.96rem]`}
+                            className={`text-[0.82rem] font-semibold tracking-tight ${amountPositive ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"} md:text-[0.88rem]`}
                           >
                             {amountPositive ? "+" : "-"}
                             {formatCurrencyMiliunits(Math.abs(signedAmount), event.currency)}
                           </p>
-                          <p className="mt-0.5 text-[0.78rem] text-muted-foreground md:text-[0.78rem]">
+                          <p className="mt-0.5 text-[0.64rem] text-muted-foreground md:text-[0.7rem]">
                             {formatDateWithPreferences(event.occurredAt, datePreferences, "date")}
                           </p>
                         </div>

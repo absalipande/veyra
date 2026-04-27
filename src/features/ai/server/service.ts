@@ -307,7 +307,7 @@ export async function getAiDashboardInsight(ctx: Pick<TRPCContext, "db" | "userI
 
   if (totalBudgets === 0) {
     return {
-      statement: "AI insights are ready. Add your first budget to unlock cycle guidance.",
+      statement: "Veyra insights are ready. Add your first budget to unlock cycle guidance.",
       projectedImpact: "No budget projection yet",
       confidence: "Initial estimate",
       window: "Next 7 days",
@@ -1603,7 +1603,7 @@ export async function getAiAccountsInsight(ctx: Pick<TRPCContext, "db" | "userId
   }
 
   return {
-    headline: "AI accounts watchdog",
+    headline: "Veyra accounts watchdog",
     summary,
     confidence: accountRows.length >= 3 ? "Medium confidence" : "Initial estimate",
     recommendations,
@@ -1710,7 +1710,7 @@ export async function getAiLoansInsight(ctx: Pick<TRPCContext, "db" | "userId">)
 
   if (loanRows.length === 0) {
     return {
-      headline: "AI loan coach",
+      headline: "Veyra loan coach",
       summary: "No loans tracked yet. Add a loan to start repayment guidance.",
       confidence: "Initial estimate",
       recommendations: ["Add your first loan with a repayment plan to unlock due-date coaching."],
@@ -1811,7 +1811,7 @@ export async function getAiLoansInsight(ctx: Pick<TRPCContext, "db" | "userId">)
   }
 
   return {
-    headline: "AI loan coach",
+    headline: "Veyra loan coach",
     summary,
     confidence: activeLoans.length >= 2 ? "Medium confidence" : "Initial estimate",
     recommendations,

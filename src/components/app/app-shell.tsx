@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { UserButton } from "@clerk/nextjs";
 import { SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 import { VeyraWordmark } from "@/components/brand/veyra-wordmark";
 import { DesktopAppNavigation, MobileAppNavigation } from "@/components/app/app-navigation";
@@ -18,16 +21,27 @@ type AppShellProps = {
 
 function AppShellLayout({ children }: AppShellProps) {
   const { openControlCenter } = useControlCenter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,rgba(248,246,239,0.96),rgba(243,247,244,0.94))] dark:bg-[linear-gradient(180deg,rgba(16,23,24,0.98),rgba(18,30,31,0.97))]">
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px] px-0 xl:px-3">
         <aside className="sticky top-0 hidden h-screen w-[292px] shrink-0 self-start rounded-[2rem] border-r border-border/70 bg-white/72 px-5 py-6 backdrop-blur dark:bg-[#101718]/90 xl:my-3 xl:flex xl:flex-col xl:border xl:border-white/60 dark:xl:border-white/6">
           <div className="rounded-[1.85rem] border border-white/80 bg-white/78 p-4.5 shadow-[0_20px_60px_-45px_rgba(10,31,34,0.42)] dark:border-white/7 dark:bg-[#151d1f] dark:shadow-[0_20px_60px_-45px_rgba(0,0,0,0.58)]">
-            <VeyraWordmark
-              iconSrc="/auth/veyra-v-icon.svg"
-              textClassName="text-2xl font-semibold tracking-tight text-[#10292B] dark:text-[#e7f2f1]"
-            />
+            <Link
+              href="/dashboard"
+              className="block rounded-[1rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8db8b3]/35"
+              aria-label="Go to dashboard"
+            >
+              <VeyraWordmark
+                iconSrc="/auth/veyra-v-icon.svg"
+                textClassName="text-2xl font-semibold tracking-tight text-[#10292B] dark:text-[#e7f2f1]"
+              />
+            </Link>
             <p className="mt-3 text-[0.92rem] leading-6 text-muted-foreground">
               A calmer workspace for accounts, budgets, and day-to-day money decisions.
             </p>
@@ -49,11 +63,17 @@ function AppShellLayout({ children }: AppShellProps) {
                 </div>
 
                 <div className="xl:hidden">
-                  <VeyraWordmark
-                    iconSrc="/auth/veyra-v-icon.svg"
-                    iconClassName="size-7"
-                    textClassName="text-[1.65rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
-                  />
+                  <Link
+                    href="/dashboard"
+                    className="block rounded-[0.8rem] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8db8b3]/35"
+                    aria-label="Go to dashboard"
+                  >
+                    <VeyraWordmark
+                      iconSrc="/auth/veyra-v-icon.svg"
+                      iconClassName="size-7"
+                      textClassName="text-[1.65rem] font-semibold tracking-tight text-[#10292B] dark:text-white"
+                    />
+                  </Link>
                 </div>
               </div>
 

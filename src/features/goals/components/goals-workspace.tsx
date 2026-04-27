@@ -8,6 +8,10 @@ import { toast } from "sonner";
 import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { formatCurrencyMiliunits } from "@/lib/currencies";
+import {
+  formatDateWithPreferences,
+  resolveDatePreferences,
+} from "@/features/settings/lib/date-format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerField } from "@/components/date-picker/date-picker";
@@ -130,6 +134,8 @@ export function GoalsWorkspace() {
   const utils = trpc.useUtils();
   const goalsQuery = trpc.goals.list.useQuery();
   const accountsQuery = trpc.accounts.list.useQuery();
+  const settingsQuery = trpc.settings.get.useQuery();
+  const datePreferences = resolveDatePreferences(settingsQuery.data);
   const [isOpen, setIsOpen] = useState(false);
   const [editingGoalId, setEditingGoalId] = useState<string | null>(null);
   const [draft, setDraft] = useState<GoalDraft>(getInitialDraft());
@@ -295,17 +301,8 @@ export function GoalsWorkspace() {
           <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
             <div className="flex items-start justify-between gap-4">
               <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
-                Goal planning
+                Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="hidden h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white sm:inline-flex md:h-8 md:px-3.5 md:text-[0.79rem]"
-                onClick={openCreate}
-              >
-                Add goal
-              </Button>
             </div>
 
             <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">

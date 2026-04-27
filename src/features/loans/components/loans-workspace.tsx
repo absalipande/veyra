@@ -4,10 +4,12 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
+  ArrowUpRight,
   CalendarClock,
   Check,
   HandCoins,
   Landmark,
+  MoreHorizontal,
   Pencil,
   Search,
   Sparkles,
@@ -36,10 +38,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   formatCurrencyMiliunits,
   isSupportedCurrency,
   supportedCurrencies,
 } from "@/lib/currencies";
+import {
+  formatDateWithPreferences,
+  resolveDatePreferences,
+} from "@/features/settings/lib/date-format";
 import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 
@@ -467,6 +479,8 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
     staleTime: 60_000,
   });
   const accountsQuery = trpc.accounts.list.useQuery();
+  const settingsQuery = trpc.settings.get.useQuery();
+  const datePreferences = resolveDatePreferences(settingsQuery.data);
 
   const createLoan = trpc.loans.create.useMutation({
     onSuccess: async () => {
@@ -1110,17 +1124,8 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
           <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
             <div className="flex items-start justify-between gap-4">
               <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
-                Loan posture
+                Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="hidden h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white sm:inline-flex md:h-8 md:px-3.5 md:text-[0.79rem]"
-                onClick={openCreateDialog}
-              >
-                Add loan
-              </Button>
             </div>
 
             <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
@@ -1292,10 +1297,10 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
                 </div>
                 <div>
                   <p className="text-[0.68rem] uppercase tracking-[0.11em] text-muted-foreground">
-                    AI insight
+                    Veyra insight
                   </p>
                   <h3 className="text-[0.92rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                    {aiInsightQuery.data?.headline ?? "AI loan coach"}
+                    {aiInsightQuery.data?.headline ?? "Veyra loan coach"}
                   </h3>
                 </div>
               </div>
@@ -1387,27 +1392,25 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
       </section>
 
       <Card className="border-border/70 bg-card/90">
-        <CardHeader className="pb-1.5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        <CardHeader className="space-y-3 pb-1.5">
+          <div className="flex items-center justify-between gap-3">
             <CardTitle className="text-[1.2rem] tracking-tight sm:text-[1.3rem]">Loan Records</CardTitle>
-            <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:flex-row sm:items-center sm:justify-end sm:gap-2">
-              <Button
-                type="button"
-                onClick={openCreateDialog}
-                className="order-1 h-8 w-auto self-start rounded-full bg-[#17393c] px-3.5 text-[0.88rem] text-white hover:bg-[#1d4a4d] sm:order-2 sm:h-[2.15rem] sm:px-4 sm:text-[0.9rem]"
-              >
-                Add loan
-              </Button>
-              <div className="relative order-2 w-full sm:order-1 sm:w-80">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search by loan name or lender"
-                  className="h-8 pl-9 text-[0.9rem] sm:h-[2.15rem] sm:text-[0.92rem]"
-                />
-              </div>
-            </div>
+            <Button
+              type="button"
+              onClick={openCreateDialog}
+              className="h-8 shrink-0 rounded-full bg-[#17393c] px-3.5 text-[0.88rem] text-white hover:bg-[#1d4a4d] sm:h-[2.15rem] sm:px-4 sm:text-[0.9rem]"
+            >
+              Add loan
+            </Button>
+          </div>
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by loan name or lender"
+              className="h-8 pl-9 text-[0.9rem] sm:h-[2.15rem] sm:text-[0.92rem]"
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -2367,10 +2370,26 @@ function LoanRow({
   onDelete: (target: DeleteTarget) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-background/80 p-4 sm:p-5">
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto] md:items-center">
+    <div className="relative rounded-2xl border border-border/70 bg-background/80 p-4 pr-14 sm:p-5 sm:pr-14">
+      <div className="absolute right-4 top-4 sm:right-5 sm:top-5">
+        <LoanActionsMenu loan={loan} onDelete={onDelete} onEdit={onEdit} />
+      </div>
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] md:items-center">
         <div className="min-w-0">
-          <p className="truncate text-[1.08rem] font-semibold tracking-tight text-foreground">{loan.name}</p>
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <p className="min-w-0 max-w-full truncate text-[1.08rem] font-semibold tracking-tight text-foreground">
+              {loan.name}
+            </p>
+            <span
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] ${
+                loan.status === "active"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  : "border-border bg-muted text-muted-foreground"
+              }`}
+            >
+              {loan.status}
+            </span>
+          </div>
           <p className="mt-1 truncate text-[0.82rem] text-muted-foreground">
             {loan.kind === "institution" ? "Institution" : "Personal"} · {loan.lenderName}
           </p>
@@ -2388,44 +2407,56 @@ function LoanRow({
             <p className="text-[0.86rem] font-medium text-foreground/90">{formatDate(loan.nextDueDate)}</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 md:justify-end">
-          <Button asChild type="button" variant="outline" className="h-8 rounded-full px-3 text-xs">
-            <Link href={`/loans/${loan.id}`}>View details</Link>
-          </Button>
-          <span
-            className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.15em] ${
-              loan.status === "active"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300"
-                : "border-border bg-muted text-muted-foreground"
-            }`}
-          >
-            {loan.status}
-          </span>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="rounded-full"
-            onClick={() => onEdit(loan)}
-          >
-            <Pencil className="size-4" />
-            <span className="sr-only">Edit loan</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="rounded-full text-destructive hover:text-destructive"
-            onClick={() => onDelete({ id: loan.id, name: loan.name })}
-          >
-            <Trash2 className="size-4" />
-            <span className="sr-only">Delete loan</span>
-          </Button>
-        </div>
       </div>
     </div>
+  );
+}
+
+function LoanActionsMenu({
+  loan,
+  onEdit,
+  onDelete,
+}: {
+  loan: LoanItem;
+  onEdit: (loan: LoanItem) => void;
+  onDelete: (target: DeleteTarget) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          className="h-8 w-8 rounded-full"
+          aria-label={`Open actions for ${loan.name}`}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem asChild className="gap-2 px-2 py-1.5 text-[0.82rem]">
+          <Link href={`/loans/${loan.id}`}>
+            <ArrowUpRight className="size-4" />
+            View details
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[0.82rem]"
+          onSelect={() => onEdit(loan)}
+        >
+          <Pencil className="size-4" />
+          Edit loan
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          className="gap-2 px-2 py-1.5 text-[0.82rem]"
+          onSelect={() => onDelete({ id: loan.id, name: loan.name })}
+        >
+          <Trash2 className="size-4" />
+          Delete loan
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

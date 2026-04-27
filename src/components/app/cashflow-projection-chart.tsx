@@ -69,41 +69,58 @@ function toPlotPoints(points: CashflowProjectionPoint[], height: number): PlotPo
   });
 }
 
-function buildSteppedPath(points: PlotPoint[]) {
+function buildSpikePath(points: PlotPoint[], height: number) {
   if (points.length === 0) return "";
   if (points.length === 1) {
     const point = points[0];
     return point ? `M${point.x.toFixed(2)} ${point.y.toFixed(2)}` : "";
   }
 
-  const cornerRadius = 6;
-  let path = `M${points[0]!.x.toFixed(2)} ${points[0]!.y.toFixed(2)}`;
+  const baseline = Math.max(12, height * 0.72);
+  const spikeWidth = 8;
+  let path = `M${points[0]!.x.toFixed(2)} ${baseline.toFixed(2)}`;
+
   for (let i = 1; i < points.length; i += 1) {
-    const prev = points[i - 1]!;
-    const next = points[i]!;
-    const dx = next.x - prev.x;
-    const dy = next.y - prev.y;
+    const point = points[i]!;
+    const previous = points[i - 1]!;
+    const hasOutflow = point.dueCount > 0 || point.outflow > 0 || point.balance < previous.balance;
 
-    if (dy === 0 || dx === 0) {
-      path += ` H${next.x.toFixed(2)} V${next.y.toFixed(2)}`;
+    if (!hasOutflow) {
+      path += ` L${point.x.toFixed(2)} ${baseline.toFixed(2)}`;
       continue;
     }
 
-    const signX = dx >= 0 ? 1 : -1;
-    const signY = dy >= 0 ? 1 : -1;
-    const r = Math.min(cornerRadius, Math.abs(dx) * 0.45, Math.abs(dy) * 0.45);
+    const peakY = Math.max(6, Math.min(baseline - 5, point.y));
+    const preDipY = Math.min(height - 6, baseline + 5);
+    const recoveryY = Math.min(height - 6, baseline + 3);
+    const startX = Math.max(0, point.x - spikeWidth * 1.3);
+    const preDipX = Math.max(0, point.x - spikeWidth * 0.55);
+    const peakX = point.x;
+    const recoveryX = Math.min(VIEWBOX_WIDTH, point.x + spikeWidth * 0.55);
+    const endX = Math.min(VIEWBOX_WIDTH, point.x + spikeWidth * 1.25);
 
-    if (r <= 0) {
-      path += ` H${next.x.toFixed(2)} V${next.y.toFixed(2)}`;
-      continue;
-    }
-
-    const bendStartX = next.x - signX * r;
-    const bendEndY = prev.y + signY * r;
-    path += ` H${bendStartX.toFixed(2)} Q${next.x.toFixed(2)} ${prev.y.toFixed(2)} ${next.x.toFixed(2)} ${bendEndY.toFixed(2)} V${next.y.toFixed(2)}`;
+    path += ` L${startX.toFixed(2)} ${baseline.toFixed(2)}`;
+    path += ` L${preDipX.toFixed(2)} ${preDipY.toFixed(2)}`;
+    path += ` L${peakX.toFixed(2)} ${peakY.toFixed(2)}`;
+    path += ` L${recoveryX.toFixed(2)} ${recoveryY.toFixed(2)}`;
+    path += ` L${endX.toFixed(2)} ${baseline.toFixed(2)}`;
   }
 
+  const last = points[points.length - 1]!;
+  path += ` L${last.x.toFixed(2)} ${baseline.toFixed(2)}`;
   return path;
+}
+
+function getSpikeY(points: PlotPoint[], index: number, height: number) {
+  const point = points[index];
+  if (!point) return 0;
+
+  const baseline = Math.max(12, height * 0.72);
+  const previous = points[index - 1];
+  const hasOutflow =
+    point.dueCount > 0 || point.outflow > 0 || (previous ? point.balance < previous.balance : false);
+
+  return hasOutflow ? Math.max(6, Math.min(baseline - 5, point.y)) : baseline;
 }
 
 function buildAreaPath(linePath: string, points: PlotPoint[], height: number) {
@@ -128,7 +145,7 @@ export function CashflowProjectionChart({
 
   const { plotPoints, linePath, areaPath, lowestIndex } = useMemo(() => {
     const plotPoints = toPlotPoints(points, height);
-    const linePath = buildSteppedPath(plotPoints);
+    const linePath = buildSpikePath(plotPoints, height);
     const areaPath = buildAreaPath(linePath, plotPoints, height);
 
     let lowestIndex = -1;
@@ -175,7 +192,8 @@ export function CashflowProjectionChart({
   const hoveredPointIsLowest =
     hoveredPoint && lowestIndex >= 0 ? plotPoints[lowestIndex] === hoveredPoint : false;
   const hoverLeftPct = hoveredPoint ? (hoveredPoint.x / VIEWBOX_WIDTH) * 100 : 0;
-  const hoverTopPct = hoveredPoint ? (hoveredPoint.y / height) * 100 : 0;
+  const hoveredPointY = hoveredIndex != null ? getSpikeY(plotPoints, hoveredIndex, height) : 0;
+  const hoverTopPct = hoveredPoint ? (hoveredPointY / height) * 100 : 0;
   const tooltipShiftClass =
     hoverLeftPct > 82 ? "-translate-x-full" : hoverLeftPct < 18 ? "translate-x-0" : "-translate-x-1/2";
   const tooltipVerticalClass = hoverTopPct < 38 ? "translate-y-3" : "-translate-y-[calc(100%+0.55rem)]";
@@ -232,7 +250,7 @@ export function CashflowProjectionChart({
         stroke={`url(#${lineGradientId})`}
         strokeWidth="1"
         strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeLinejoin="miter"
         className="dark:opacity-85"
       />
 
@@ -251,7 +269,7 @@ export function CashflowProjectionChart({
         <circle
           key={`${point.x}-${point.y}-${index}`}
           cx={point.x}
-          cy={point.y}
+          cy={getSpikeY(plotPoints, plotPoints.indexOf(point), height)}
           r={Math.min(3.4, 1.9 + point.dueCount * 0.35)}
           className="fill-[#e9f6f5] stroke-[#14656b] dark:fill-[#203032] dark:stroke-[#6bd0c2]"
           strokeWidth="1.1"
@@ -266,7 +284,7 @@ export function CashflowProjectionChart({
           <>
             <circle
             cx={plotPoints[lowestIndex]!.x}
-            cy={plotPoints[lowestIndex]!.y}
+            cy={getSpikeY(plotPoints, lowestIndex, height)}
             r="4"
             className="fill-rose-50/95 stroke-rose-500 dark:fill-rose-500/20 dark:stroke-rose-300"
             strokeWidth="1.25"
@@ -275,7 +293,7 @@ export function CashflowProjectionChart({
           </circle>
           <circle
             cx={plotPoints[lowestIndex]!.x}
-            cy={plotPoints[lowestIndex]!.y}
+            cy={getSpikeY(plotPoints, lowestIndex, height)}
             r="1.35"
             className="fill-rose-500 dark:fill-rose-300"
           />
@@ -285,7 +303,7 @@ export function CashflowProjectionChart({
       {hoveredPoint ? (
         <circle
           cx={hoveredPoint.x}
-          cy={hoveredPoint.y}
+          cy={hoveredPointY}
           r="3.9"
           className="fill-white stroke-[#14656b] dark:fill-[#182123] dark:stroke-[#6bd0c2]"
           strokeWidth="1.35"

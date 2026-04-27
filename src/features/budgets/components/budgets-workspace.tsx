@@ -484,15 +484,6 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
               <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
                 Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
-                onClick={startCreate}
-              >
-                Create budget
-              </Button>
             </div>
 
             <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
@@ -711,7 +702,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
               </div>
               <div>
                 <p className="text-[0.72rem] uppercase tracking-[0.11em] text-muted-foreground">
-                  AI insight
+                  Veyra insight
                 </p>
                 <h3 className="text-[1.02rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
                   {aiInsightQuery.data?.headline ?? "Budget intelligence"}
@@ -768,34 +759,36 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
         </Card>
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.78fr)]">
-        <Card className="rounded-[2rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
-          <CardHeader className="space-y-4 border-b border-border/60 px-5 py-5 sm:px-7 sm:py-6">
-            <div className="flex flex-col gap-5 2xl:grid 2xl:grid-cols-[minmax(360px,1fr)_auto] 2xl:items-start">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.58fr)_minmax(300px,0.62fr)]">
+        <Card className="rounded-[1.65rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
+          <CardHeader className="space-y-3 border-b border-border/60 px-5 py-4 sm:px-6 sm:py-5">
+            <div className="flex flex-col gap-4 2xl:grid 2xl:grid-cols-[minmax(320px,1fr)_auto] 2xl:items-start">
               <div className="min-w-0 max-w-[34rem] space-y-2">
-                <CardTitle className="text-[1.45rem] tracking-tight">Active budgets</CardTitle>
-                <CardDescription className="max-w-[30rem] text-[0.95rem] leading-7">
+                <CardTitle className="text-[1.28rem] tracking-tight sm:text-[1.35rem]">
+                  Active budgets
+                </CardTitle>
+                <CardDescription className="max-w-[30rem] text-[0.88rem] leading-6">
                   Keep the list focused on active budget windows first. Child budgets roll upward;
                   the workspace helps you spot pressure before the cycle closes.
                 </CardDescription>
               </div>
 
               <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center 2xl:w-auto 2xl:justify-end">
-                <div className="relative min-w-0 flex-1 sm:min-w-[260px] 2xl:w-[380px] 2xl:flex-none">
+                <div className="relative min-w-0 flex-1 sm:min-w-[240px] 2xl:w-[340px] 2xl:flex-none">
                   <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Filter budgets..."
-                    className="h-12 w-full rounded-full border-border/70 bg-white pl-11"
+                    className="h-10 w-full rounded-full border-border/70 bg-white pl-11 text-[0.88rem]"
                   />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2 text-[0.84rem] text-muted-foreground">
                     <span>View</span>
                     <Select value="all" onValueChange={() => undefined}>
-                      <SelectTrigger className="h-12 w-[90px] rounded-2xl border-border/70 bg-white">
+                      <SelectTrigger className="h-10 w-[82px] rounded-full border-border/70 bg-white">
                         <SelectValue placeholder="All" />
                       </SelectTrigger>
                       <SelectContent>
@@ -807,7 +800,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   <Button
                     type="button"
                     onClick={startCreate}
-                    className="h-10 rounded-full px-4 text-[0.92rem]"
+                    className="h-10 rounded-full px-4 text-[0.86rem]"
                   >
                     Create budget
                   </Button>
@@ -822,13 +815,15 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                 Loading budget windows...
               </div>
             ) : activeRootBudgets.length === 0 ? (
-              <div className="px-6 py-8 sm:px-8 sm:py-10">
-                <div className="rounded-[1.6rem] border border-border/70 bg-white px-6 py-10 text-center">
-                  <div className="mx-auto mb-5 flex size-24 items-center justify-center rounded-full bg-muted/60 text-foreground">
-                    <CalendarClock className="size-10" />
+              <div className="px-4 py-5 sm:px-6 sm:py-7">
+                <div className="mx-auto max-w-[44rem] rounded-[1.25rem] border border-border/70 bg-white px-4 py-6 text-center sm:rounded-[1.45rem] sm:px-6 sm:py-7">
+                  <div className="mx-auto mb-3 flex size-14 items-center justify-center rounded-full bg-muted/60 text-foreground sm:size-16">
+                    <CalendarClock className="size-6 sm:size-7" />
                   </div>
-                  <p className="text-[1.9rem] font-medium tracking-tight">No active budgets yet</p>
-                  <p className="mx-auto mt-3 max-w-2xl text-[0.98rem] leading-8 text-muted-foreground">
+                  <p className="text-[1.22rem] font-medium leading-tight tracking-tight sm:text-[1.38rem]">
+                    No active budgets yet
+                  </p>
+                  <p className="mx-auto mt-2 max-w-[34rem] text-[0.84rem] leading-6 text-muted-foreground sm:text-[0.9rem]">
                     Start with one monthly or bi-weekly budget. Once transactions are assigned in
                     the ledger flow, this workspace will begin reading real spend against each
                     window.
@@ -836,7 +831,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   <Button
                     type="button"
                     onClick={startCreate}
-                    className="mt-7 h-10 rounded-full px-4 text-[0.92rem]"
+                    className="mt-4 h-9 rounded-full px-4 text-[0.84rem] sm:text-[0.88rem]"
                   >
                     Create your first budget
                   </Button>
@@ -1117,14 +1112,14 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card className="rounded-[1.7rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#151f21]">
-            <CardHeader className="px-6 pb-4 pt-6">
-              <CardTitle className="text-[1.32rem] tracking-tight">
+        <div className="space-y-4">
+          <Card className="rounded-[1.45rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#151f21]">
+            <CardHeader className="px-5 pb-3 pt-5">
+              <CardTitle className="text-[1.1rem] tracking-tight">
                 What this workspace helps you see
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 px-6 pb-6">
+            <CardContent className="space-y-3 px-5 pb-5">
               {[
                 {
                   icon: PiggyBank,
@@ -1148,14 +1143,14 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                 return (
                   <div
                     key={item.copy}
-                    className="flex items-start gap-4 rounded-[1.2rem] border border-border/70 bg-white px-4 py-4 dark:border-white/10 dark:bg-[#11191b]"
+                    className="flex items-start gap-3 rounded-[1rem] border border-border/70 bg-white px-3.5 py-3.5 dark:border-white/10 dark:bg-[#11191b]"
                   >
                     <span
-                      className={`flex size-11 shrink-0 items-center justify-center rounded-full ${item.tone}`}
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-full ${item.tone}`}
                     >
-                      <Icon className="size-4.5" />
+                      <Icon className="size-4" />
                     </span>
-                    <p className="text-sm leading-7 text-muted-foreground dark:text-slate-300">
+                    <p className="text-[0.82rem] leading-6 text-muted-foreground dark:text-slate-300">
                       {item.copy}
                     </p>
                   </div>
@@ -1164,21 +1159,21 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
             </CardContent>
           </Card>
 
-          <Card className="rounded-[1.7rem] border-white/75 bg-[linear-gradient(135deg,#17393c_0%,#204a4d_100%)] text-white shadow-[0_24px_55px_-42px_rgba(23,57,60,0.75)]">
-            <CardHeader className="px-6 pb-3 pt-6">
-              <CardDescription className="text-xs uppercase tracking-[0.28em] text-white/70">
+          <Card className="rounded-[1.25rem] border-white/75 bg-[linear-gradient(135deg,#17393c_0%,#204a4d_100%)] text-white shadow-[0_24px_55px_-42px_rgba(23,57,60,0.75)] sm:rounded-[1.45rem]">
+            <CardHeader className="px-4 pb-2 pt-4 sm:px-5 sm:pb-2 sm:pt-5">
+              <CardDescription className="text-[0.62rem] uppercase tracking-[0.22em] text-white/70 sm:text-[0.7rem] sm:tracking-[0.24em]">
                 Budget posture
               </CardDescription>
-              <CardTitle className="text-[1.78rem] font-semibold tracking-tight text-white">
+              <CardTitle className="text-[1.12rem] font-semibold leading-snug tracking-tight text-white sm:text-[1.32rem]">
                 Keep the cycle readable without turning the page into a control tower.
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 px-6 pb-6 text-sm leading-7 text-white/78">
+            <CardContent className="space-y-3 px-4 pb-4 text-[0.82rem] leading-6 text-white/78 sm:px-5 sm:pb-5 sm:text-[0.84rem]">
               <p className="max-w-[34rem]">
                 The key numbers should tell you whether the current budget window is healthy, tight,
                 or already exceeded at a glance.
               </p>
-              <div className="rounded-[1.2rem] border border-white/15  px-4 py-4 text-sm leading-7">
+              <div className="rounded-[1rem] border border-white/15 px-3 py-3 text-[0.8rem] leading-6 sm:text-[0.82rem]">
                 Total budgeted {formatBudgetMoney(totalBudgetAmount)} · Remaining{" "}
                 {formatBudgetMoney(totalRemaining)}
               </div>

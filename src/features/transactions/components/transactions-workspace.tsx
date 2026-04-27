@@ -13,6 +13,7 @@ import {
   HandCoins,
   Landmark,
   Loader2,
+  MoreHorizontal,
   Pencil,
   Search,
   ShieldAlert,
@@ -51,6 +52,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type RouterInputs = inferRouterInputs<AppRouter>;
 type RouterOutputs = inferRouterOutputs<AppRouter>;
@@ -79,6 +86,49 @@ type EventDraft = {
 };
 
 type DeleteTarget = { id: string; description: string } | null;
+
+function TransactionActionsMenu({
+  event,
+  onDelete,
+  onEdit,
+}: {
+  event: TransactionEventItem;
+  onDelete: (target: Exclude<DeleteTarget, null>) => void;
+  onEdit: (event: TransactionEventItem) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          className="h-8 w-8 rounded-full"
+          aria-label={`Open actions for ${event.description}`}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[0.82rem]"
+          onSelect={() => onEdit(event)}
+        >
+          <Pencil className="size-4" />
+          Edit event
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          className="gap-2 px-2 py-1.5 text-[0.82rem]"
+          onSelect={() => onDelete({ id: event.id, description: event.description })}
+        >
+          <Trash2 className="size-4" />
+          Delete event
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 function formatEditorAmount(value: number) {
   return (value / 1000).toFixed(2);
@@ -740,15 +790,6 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
                 Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
-                onClick={() => openComposer("expense")}
-              >
-                Record event
-              </Button>
             </div>
 
             <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
@@ -829,10 +870,10 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               </div>
               <div>
                 <p className="text-[0.72rem] uppercase tracking-[0.11em] text-muted-foreground">
-                  AI insight
+                  Veyra insight
                 </p>
                 <h3 className="text-[1.02rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground">
-                  AI financial advisor
+                  Veyra financial advisor
                 </h3>
               </div>
             </div>
@@ -1234,7 +1275,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200/65 bg-emerald-50/65 px-3 py-2.5 dark:border-emerald-500/25 dark:bg-emerald-500/10">
                   <p className="text-[0.78rem] text-emerald-800 dark:text-emerald-200">
                     {isDataQualityClean
-                      ? "Clean data leads to better forecasts, smarter budgets, and more accurate AI insights."
+                      ? "Clean data leads to better forecasts, smarter budgets, and more accurate Veyra insights."
                       : `${totalQualityIssues} issue${totalQualityIssues === 1 ? "" : "s"} found. Use quick actions to improve accuracy.`}
                   </p>
                   <Button
@@ -1590,8 +1631,8 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 </p>
               </div>
             ) : (
-              <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-white dark:bg-[#141d1f]">
-                <div className="hidden md:grid md:grid-cols-[minmax(0,2fr)_130px_minmax(0,1.55fr)_130px_150px_92px] md:items-center md:gap-4 md:border-b md:border-border/70 md:px-6 md:py-3.5">
+              <div className="mx-auto max-w-[78rem] overflow-hidden rounded-[1.55rem] border border-border/70 bg-white dark:bg-[#141d1f]">
+                <div className="hidden md:grid md:grid-cols-[minmax(0,1.55fr)_120px_minmax(0,1.3fr)_112px_130px_84px] md:items-center md:gap-3 md:border-b md:border-border/70 md:px-5 md:py-3">
                   <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
                     Event
                   </p>
@@ -1616,11 +1657,11 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   {visibleEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="px-4 py-4 sm:px-5 md:grid md:grid-cols-[minmax(0,2fr)_130px_minmax(0,1.55fr)_130px_150px_92px] md:items-center md:gap-4 md:px-6 md:py-4"
+                      className="px-4 py-4 sm:px-5 md:grid md:grid-cols-[minmax(0,1.55fr)_120px_minmax(0,1.3fr)_112px_130px_84px] md:items-center md:gap-3 md:px-5 md:py-3.5"
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2 md:block">
-                          <p className="truncate text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.97rem]">
+                          <p className="truncate text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.9rem]">
                             {event.description}
                           </p>
                           <span
@@ -1646,27 +1687,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                               {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
                             </p>
                           </div>
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              className="rounded-full"
-                              onClick={() => openEditComposer(event)}
-                            >
-                              <Pencil className="size-4" />
-                              <span className="sr-only">Edit event</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              className="rounded-full text-destructive hover:text-destructive"
-                              onClick={() =>
-                                setDeleteTarget({ id: event.id, description: event.description })
-                              }
-                            >
-                              <Trash2 className="size-4" />
-                              <span className="sr-only">Delete event</span>
-                            </Button>
+                          <div className="flex justify-end">
+                            <TransactionActionsMenu
+                              event={event}
+                              onDelete={setDeleteTarget}
+                              onEdit={openEditComposer}
+                            />
                           </div>
                         </div>
                       </div>
@@ -1675,53 +1701,38 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         <span className="inline-flex rounded-full border border-border/70 bg-background px-2.5 py-1 text-[0.72rem] font-medium text-foreground">
                           {event.category?.name ?? "Uncategorized"}
                         </span>
-                        <p className="mt-1 text-[0.72rem] text-muted-foreground">
+                        <p className="mt-1 text-[0.68rem] text-muted-foreground">
                           {getEventTypeLabel(event.type)}
                         </p>
                       </div>
 
                       <div className="hidden md:block md:min-w-0">
-                        <p className="truncate text-[0.82rem] leading-5.5 text-muted-foreground">
+                        <p className="truncate text-[0.76rem] leading-5 text-muted-foreground">
                           {getEventAccountsSummary(event)}
                         </p>
-                        <p className="mt-1 truncate text-[0.76rem] leading-5 text-muted-foreground">
+                        <p className="mt-1 truncate text-[0.7rem] leading-5 text-muted-foreground">
                           {event.notes || getEventTypeLabel(event.type)}
                         </p>
                       </div>
 
                       <div className="hidden md:block md:min-w-0">
-                        <p className="text-[0.82rem] leading-5.5 text-[#10292B] dark:text-foreground">
+                        <p className="text-[0.78rem] leading-5 text-[#10292B] dark:text-foreground">
                           {formatEventDate(event.occurredAt)}
                         </p>
                       </div>
 
                       <div className="hidden md:block md:text-right">
-                        <p className="text-[0.92rem] font-medium tracking-tight text-[#17393c] dark:text-foreground/90">
+                        <p className="text-[0.84rem] font-medium tracking-tight text-[#17393c] dark:text-foreground/90">
                           {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
                         </p>
                       </div>
 
-                      <div className="hidden md:flex md:justify-end md:gap-2">
-                        <Button
-                          variant="outline"
-                          size="icon-sm"
-                          className="rounded-full"
-                          onClick={() => openEditComposer(event)}
-                        >
-                          <Pencil className="size-4" />
-                          <span className="sr-only">Edit event</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon-sm"
-                          className="rounded-full text-destructive hover:text-destructive"
-                          onClick={() =>
-                            setDeleteTarget({ id: event.id, description: event.description })
-                          }
-                        >
-                          <Trash2 className="size-4" />
-                          <span className="sr-only">Delete event</span>
-                        </Button>
+                      <div className="hidden md:flex md:justify-end">
+                        <TransactionActionsMenu
+                          event={event}
+                          onDelete={setDeleteTarget}
+                          onEdit={openEditComposer}
+                        />
                       </div>
                     </div>
                   ))}

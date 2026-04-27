@@ -9,6 +9,7 @@ import {
   CalendarClock,
   CheckCircle2,
   Loader2,
+  MoreHorizontal,
   Pencil,
   ShieldAlert,
   ReceiptText,
@@ -21,6 +22,10 @@ import { toast } from "sonner";
 import type { AppRouter } from "@/server/api/root";
 import { trpc } from "@/trpc/react";
 import { formatCurrencyMiliunits, isSupportedCurrency } from "@/lib/currencies";
+import {
+  formatDateWithPreferences,
+  resolveDatePreferences,
+} from "@/features/settings/lib/date-format";
 import { CashflowProjectionChart } from "@/components/app/cashflow-projection-chart";
 import {
   type LoanPaymentPreset,
@@ -38,6 +43,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { DatePickerField } from "@/components/date-picker/date-picker";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -88,6 +99,101 @@ function getStatusTone(bill: BillItem) {
   if (bill.status === "paid") return "border-emerald-200 bg-emerald-50 text-emerald-700";
   if (bill.status === "overdue") return "border-rose-200 bg-rose-50 text-rose-700";
   return "border-amber-200 bg-amber-50 text-amber-700";
+}
+
+type BillActionsMenuProps = {
+  bill: BillItem;
+  isCompletingBill?: boolean;
+  isLoanLinked?: boolean;
+  isMarkingPaid?: boolean;
+  onDelete: (bill: BillItem) => void;
+  onEdit: (bill: BillItem) => void;
+  onComplete: (bill: BillItem) => void;
+  onMarkPaid: (bill: BillItem) => void;
+};
+
+function BillActionsMenu({
+  bill,
+  isCompletingBill,
+  isLoanLinked,
+  isMarkingPaid,
+  onComplete,
+  onDelete,
+  onEdit,
+  onMarkPaid,
+}: BillActionsMenuProps) {
+  const isPaid = bill.status === "paid";
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          className="h-8 w-8 rounded-full"
+          aria-label={`Open actions for ${bill.name}`}
+        >
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        {!isLoanLinked ? (
+          <DropdownMenuItem
+            className="gap-2 px-2 py-1.5 text-[0.82rem]"
+            disabled={isCompletingBill || isMarkingPaid || isPaid}
+            onSelect={() => onComplete(bill)}
+          >
+            {isCompletingBill ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            {isCompletingBill ? "Completing..." : "Complete"}
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem
+          className="gap-2 px-2 py-1.5 text-[0.82rem]"
+          disabled={isCompletingBill || isMarkingPaid || isPaid}
+          onSelect={() => onMarkPaid(bill)}
+        >
+          {isMarkingPaid ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <CheckCircle2 className="size-4" />
+          )}
+          {isMarkingPaid ? "Posting..." : "Mark paid"}
+        </DropdownMenuItem>
+        {isLoanLinked && bill.loanId ? (
+          <DropdownMenuItem asChild className="gap-2 px-2 py-1.5 text-[0.82rem]">
+            <Link href={`/loans/${bill.loanId}`}>
+              <ArrowUpRight className="size-4" />
+              View loan
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
+        {!isLoanLinked ? (
+          <>
+            <DropdownMenuItem
+              className="gap-2 px-2 py-1.5 text-[0.82rem]"
+              onSelect={() => onEdit(bill)}
+            >
+              <Pencil className="size-4" />
+              Edit bill
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              className="gap-2 px-2 py-1.5 text-[0.82rem]"
+              onSelect={() => onDelete(bill)}
+            >
+              <Trash2 className="size-4" />
+              Delete bill
+            </DropdownMenuItem>
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function toDateInputValue(value: Date | string | null | undefined) {
@@ -172,6 +278,8 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
     includeInactive: false,
   });
   const summaryQuery = trpc.bills.summary.useQuery();
+  const settingsQuery = trpc.settings.get.useQuery();
+  const datePreferences = resolveDatePreferences(settingsQuery.data);
   const recentBillsQuery = trpc.bills.list.useQuery({
     page: 1,
     pageSize: 80,
@@ -771,17 +879,8 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
           <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
             <div className="flex items-start justify-between gap-4">
               <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
-                Bills posture
+                Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="hidden h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white sm:inline-flex md:h-8 md:px-3.5 md:text-[0.79rem]"
-                onClick={openCreateDialog}
-              >
-                Create bill
-              </Button>
             </div>
 
             <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
@@ -1097,7 +1196,7 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-3 px-5 pb-5 sm:px-6 sm:pb-6">
+          <CardContent className="space-y-3 px-5 pb-[max(5rem,env(safe-area-inset-bottom))] sm:px-6 sm:pb-6">
             {listQuery.isLoading ? (
               <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background px-4 py-4 text-[0.9rem] text-muted-foreground dark:bg-[#141d1f]">
                 <Loader2 className="size-4 animate-spin" />
@@ -1118,32 +1217,70 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                 const isMarkingPaid = markPaid.isPending && markPaid.variables?.billId === bill.id;
                 const isCompletingBill =
                   completeBill.isPending && completeBill.variables?.id === bill.id;
+                const handleMarkPaid = () => {
+                  if (isLoanLinked && bill.loanId) {
+                    setLoanPaymentPreset({
+                      loanId: bill.loanId,
+                      installmentId: bill.loanInstallmentId ?? undefined,
+                      amountMiliunits: bill.nextPendingOccurrence?.amount ?? bill.amount,
+                      paidAt: bill.nextPendingOccurrence?.dueDate ?? bill.nextDueDate ?? new Date(),
+                      notes: `Loan-linked payment from Bills · ${bill.name}`,
+                      sourceAccountId:
+                        linkedAccount?.type === "cash" || linkedAccount?.type === "wallet"
+                          ? linkedAccount.id
+                          : defaultLiquidPaymentAccountId,
+                    });
+                    return;
+                  }
+
+                  markPaid.mutate({
+                    billId: bill.id,
+                    settleOnly: false,
+                    paymentAccountId:
+                      linkedAccount?.type === "credit" ? defaultLiquidPaymentAccountId : undefined,
+                  });
+                };
+
                 return (
                   <div
                     key={bill.id}
                     className="rounded-[1rem] border border-border/70 bg-background px-3.5 py-3.5 dark:bg-[#141d1f] md:px-4"
                   >
-                    <div className="flex flex-col gap-2.5 md:grid md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center md:gap-4">
-                      <div className="space-y-1.25">
-                        <div className="flex items-center gap-2.5">
+                    <div className="flex flex-col gap-3 md:grid md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:gap-5">
+                      <div className="min-w-0 space-y-1.25">
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2.5 gap-y-2 md:grid-cols-[auto_minmax(0,1fr)] md:items-center">
                           <span className="flex size-8 items-center justify-center rounded-full bg-[#eef6f7] text-[#14656B] dark:bg-[#203032] dark:text-primary">
                             <ReceiptText className="size-4" />
                           </span>
-                          <p className="text-[0.92rem] font-semibold text-foreground">
-                            {bill.name}
-                          </p>
-                          <span
-                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[0.69rem] font-medium ${getStatusTone(
-                              bill,
-                            )}`}
-                          >
-                            {getStatusLabel(bill)}
-                          </span>
-                          {bill.obligationType === "loan_repayment" ? (
-                            <span className="inline-flex items-center rounded-full border border-sky-300/60 bg-sky-100/65 px-2 py-0.5 text-[0.69rem] font-medium text-sky-800 dark:border-sky-800/70 dark:bg-sky-950/30 dark:text-sky-300">
-                              Linked loan repayment
+                          <div className="min-w-0 space-y-1.5 md:min-w-0">
+                            <p className="truncate text-[0.92rem] font-semibold leading-snug text-foreground md:text-[0.94rem]">
+                              {bill.name}
+                            </p>
+                            <span
+                              className={`inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[0.69rem] font-medium ${getStatusTone(
+                                bill,
+                              )}`}
+                            >
+                              {getStatusLabel(bill)}
                             </span>
-                          ) : null}
+                            {bill.obligationType === "loan_repayment" ? (
+                              <span className="inline-flex w-fit max-w-full items-center rounded-full border border-sky-300/60 bg-sky-100/65 px-2 py-0.5 text-[0.69rem] font-medium leading-4 text-sky-800 dark:border-sky-800/70 dark:bg-sky-950/30 dark:text-sky-300 sm:max-w-none">
+                                Linked loan repayment
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="justify-self-end md:hidden">
+                            <BillActionsMenu
+                              bill={bill}
+                              isCompletingBill={isCompletingBill}
+                              isLoanLinked={isLoanLinked}
+                              isMarkingPaid={isMarkingPaid}
+                              onComplete={(target) => completeBill.mutate({ id: target.id })}
+                              onDelete={setDeleteTarget}
+                              onEdit={openEditDialog}
+                              onMarkPaid={handleMarkPaid}
+                            />
+                          </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-3 text-[0.79rem] text-muted-foreground">
                           <span className="inline-flex items-center gap-1.5">
@@ -1161,118 +1298,27 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-start gap-1.5 md:justify-end md:text-right">
-                        <p className="text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">
-                          Amount
-                        </p>
-                        <p className="text-[0.9rem] font-medium tracking-tight text-foreground/90">
-                          {formatCurrencyMiliunits(bill.amount, bill.currency)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-full px-3 text-[0.8rem]"
-                          disabled={isCompletingBill || isMarkingPaid || isLoanLinked}
-                          onClick={() => completeBill.mutate({ id: bill.id })}
-                        >
-                          {isCompletingBill ? (
-                            <>
-                              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                              Completing...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="mr-1.5 size-3.5" />
-                              Complete
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="h-8 rounded-full px-3 text-[0.8rem]"
-                          disabled={isMarkingPaid || isCompletingBill || bill.status === "paid"}
-                          onClick={() => {
-                            if (isLoanLinked && bill.loanId) {
-                              setLoanPaymentPreset({
-                                loanId: bill.loanId,
-                                installmentId: bill.loanInstallmentId ?? undefined,
-                                amountMiliunits: bill.nextPendingOccurrence?.amount ?? bill.amount,
-                                paidAt: bill.nextPendingOccurrence?.dueDate ?? bill.nextDueDate ?? new Date(),
-                                notes: `Loan-linked payment from Bills · ${bill.name}`,
-                                sourceAccountId:
-                                  linkedAccount?.type === "cash" || linkedAccount?.type === "wallet"
-                                    ? linkedAccount.id
-                                    : defaultLiquidPaymentAccountId,
-                              });
-                              return;
-                            }
-
-                            markPaid.mutate({
-                              billId: bill.id,
-                              settleOnly: false,
-                              paymentAccountId:
-                                linkedAccount?.type === "credit"
-                                  ? defaultLiquidPaymentAccountId
-                                  : undefined,
-                            });
-                          }}
-                        >
-                          {isMarkingPaid ? (
-                            <>
-                              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                              Posting...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="mr-1.5 size-3.5" />
-                              Mark paid
-                            </>
-                          )}
-                        </Button>
-                        {!isLoanLinked ? (
-                          <>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon-sm"
-                              className="h-8 w-8 rounded-full"
-                              onClick={() => openEditDialog(bill)}
-                              disabled={isCompletingBill}
-                              aria-label={`Edit ${bill.name}`}
-                              title={`Edit ${bill.name}`}
-                            >
-                              <Pencil className="size-3.5" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon-sm"
-                              className="h-8 w-8 rounded-full text-destructive hover:text-destructive"
-                              onClick={() => setDeleteTarget(bill)}
-                              disabled={isCompletingBill}
-                              aria-label={`Delete ${bill.name}`}
-                              title={`Delete ${bill.name}`}
-                            >
-                              <Trash2 className="size-3.5" />
-                            </Button>
-                          </>
-                        ) : null}
-                        {isLoanLinked ? (
-                          <Button
-                            asChild
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 rounded-full px-3 text-[0.8rem]"
-                          >
-                            <Link href={`/loans/${bill.loanId}`}>View loan</Link>
-                          </Button>
-                        ) : null}
+                      <div className="flex items-center justify-between gap-3 md:justify-end md:gap-4">
+                        <div className="flex items-center gap-1.5 md:items-center md:text-right">
+                          <p className="text-[0.7rem] uppercase tracking-[0.14em] text-muted-foreground">
+                            Amount
+                          </p>
+                          <p className="text-[0.9rem] font-medium tracking-tight text-foreground/90 md:text-[0.94rem]">
+                            {formatCurrencyMiliunits(bill.amount, bill.currency)}
+                          </p>
+                        </div>
+                        <div className="hidden md:block">
+                          <BillActionsMenu
+                            bill={bill}
+                            isCompletingBill={isCompletingBill}
+                            isLoanLinked={isLoanLinked}
+                            isMarkingPaid={isMarkingPaid}
+                            onComplete={(target) => completeBill.mutate({ id: target.id })}
+                            onDelete={setDeleteTarget}
+                            onEdit={openEditDialog}
+                            onMarkPaid={handleMarkPaid}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>

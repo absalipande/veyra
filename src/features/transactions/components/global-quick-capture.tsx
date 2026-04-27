@@ -495,7 +495,7 @@ export function GlobalQuickCapture() {
                 Quick capture
               </div>
               <div className="inline-flex rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[0.68rem] font-medium text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200">
-                AI assist
+                Veyra assist
               </div>
               <div className="keyboard-hint hidden rounded-full border border-border/70 bg-white px-2.5 py-1 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
                 ⌘/Ctrl ⇧ K
@@ -511,26 +511,26 @@ export function GlobalQuickCapture() {
 
           <div className="space-y-3.5 px-4 py-4 sm:space-y-4 sm:px-6 sm:py-5">
             <div className="space-y-3">
-              <div className="flex h-12 items-center rounded-[1rem] border-2 border-[#7fb9b6]/85 bg-white px-4 dark:bg-[#141d1f]">
-                <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
+              <div className="flex min-h-11 items-center rounded-[1rem] border border-border/80 bg-white px-3 transition-colors focus-within:border-[#7fb9b6] focus-within:ring-2 focus-within:ring-[#7fb9b6]/20 dark:bg-[#141d1f] sm:min-h-12 sm:px-4">
+                <Search className="mr-2.5 size-4 shrink-0 text-muted-foreground sm:mr-3" />
                 <Input
                   autoFocus
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder="Describe a transaction in one sentence"
                   disabled={isSubmitting}
-                  className="h-auto border-0 bg-transparent px-0 py-0 text-[0.95rem] leading-[1.25] shadow-none placeholder:text-muted-foreground/90 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent"
+                  className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 py-0 text-[0.9rem] leading-[1.25] shadow-none outline-none placeholder:text-muted-foreground/90 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent sm:text-[0.95rem]"
                 />
               </div>
               {input.trim() ? (
                 <div className="flex flex-wrap items-center gap-2 text-[0.76rem]">
                   {aiDraftQuery.isFetching ? (
                     <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 font-medium text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200">
-                      AI is preparing draft
+                      Veyra is preparing draft
                     </span>
                   ) : aiDraftQuery.data ? (
                     <span className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 font-medium text-sky-700 dark:border-sky-500/25 dark:bg-sky-500/10 dark:text-sky-200">
-                      AI ready · {aiDraftQuery.data.confidence} confidence
+                      Veyra ready · {aiDraftQuery.data.confidence} confidence
                     </span>
                   ) : (
                     <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 font-medium text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
@@ -546,7 +546,7 @@ export function GlobalQuickCapture() {
               {input.trim() && isLowConfidenceDraft ? (
                 <div className="rounded-[0.9rem] border border-amber-200 bg-amber-50 px-3 py-2 text-[0.78rem] text-amber-800 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-200">
                   <p>
-                    AI confidence is low. Please verify amount, account, category, and budget before
+                    Veyra confidence is low. Please verify amount, account, category, and budget before
                     recording.
                   </p>
                   <Button
