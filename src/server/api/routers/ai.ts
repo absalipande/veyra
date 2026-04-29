@@ -55,13 +55,29 @@ const aiRateLimitedProcedure = protectedProcedure.use(({ ctx, path, next }) => {
   return next();
 });
 
-const HABIT_INSIGHT_COOLDOWN_MS = 25 * 60 * 1000;
+const HABIT_INSIGHT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 
 function getCooldownSecondsRemaining(generatedAtIso: string) {
   const generatedAtMs = new Date(generatedAtIso).getTime();
   if (!Number.isFinite(generatedAtMs)) return 0;
   const remainingMs = generatedAtMs + HABIT_INSIGHT_COOLDOWN_MS - Date.now();
   return Math.max(0, Math.ceil(remainingMs / 1000));
+}
+
+function formatCooldownRemaining(seconds: number) {
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3_600);
+  const minutes = Math.ceil((seconds % 3_600) / 60);
+
+  if (days > 0) {
+    return `${days}d ${hours}h`;
+  }
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+
+  return `${Math.max(1, minutes)}m`;
 }
 
 function getDisabledDashboardInsight() {
@@ -395,7 +411,7 @@ export const aiRouter = createTRPCRouter({
         if (remainingSeconds > 0) {
           throw new TRPCError({
             code: "TOO_MANY_REQUESTS",
-            message: `You can generate a new insight in ${remainingSeconds}s.`,
+            message: `You can generate a new Veyra insight in ${formatCooldownRemaining(remainingSeconds)}.`,
           });
         }
       }

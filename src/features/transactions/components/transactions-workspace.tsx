@@ -69,6 +69,8 @@ type AccountItem = RouterOutputs["accounts"]["list"][number];
 type BudgetItem = RouterOutputs["budgets"]["list"][number];
 type CategoryItem = RouterOutputs["categories"]["list"][number];
 
+const HABIT_INSIGHT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
 type EventDraft = {
   amount: string;
   creditAccountId: string;
@@ -447,7 +449,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const habitGeneratedAtMs = habitInsightQuery.data
     ? new Date(habitInsightQuery.data.generatedAt).getTime()
     : null;
-  const cooldownEndsAtMs = habitGeneratedAtMs ? habitGeneratedAtMs + 25 * 60 * 1000 : null;
+  const cooldownEndsAtMs = habitGeneratedAtMs
+    ? habitGeneratedAtMs + HABIT_INSIGHT_COOLDOWN_MS
+    : null;
   const cooldownRemainingMs = cooldownEndsAtMs ? Math.max(0, cooldownEndsAtMs - cooldownNowMs) : 0;
   const isInsightCooldownActive = cooldownRemainingMs > 0;
   const canGenerateInsight = !isGeneratingInsight && !isInsightCooldownActive;
@@ -466,9 +470,15 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     return () => window.clearInterval(timer);
   }, [isInsightCooldownActive]);
 
-  const cooldownMinutes = Math.floor(cooldownRemainingMs / 60_000);
-  const cooldownSeconds = Math.floor((cooldownRemainingMs % 60_000) / 1000);
-  const cooldownLabel = `${cooldownMinutes}:${String(cooldownSeconds).padStart(2, "0")}`;
+  const cooldownDays = Math.floor(cooldownRemainingMs / 86_400_000);
+  const cooldownHours = Math.floor((cooldownRemainingMs % 86_400_000) / 3_600_000);
+  const cooldownMinutes = Math.ceil((cooldownRemainingMs % 3_600_000) / 60_000);
+  const cooldownLabel =
+    cooldownDays > 0
+      ? `${cooldownDays}d ${cooldownHours}h`
+      : cooldownHours > 0
+        ? `${cooldownHours}h ${cooldownMinutes}m`
+        : `${Math.max(1, cooldownMinutes)}m`;
   const dataQualityTotals = dataQualityQuery.data?.totals;
   const isDataQualityClean =
     !dataQualityQuery.isLoading &&
@@ -896,10 +906,12 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 )}
               </Button>
               {isInsightCooldownActive ? (
-                <p className="text-[0.8rem] text-muted-foreground">Cooldown: {cooldownLabel}</p>
+                <p className="text-[0.8rem] text-muted-foreground">
+                  Weekly insight available in {cooldownLabel}
+                </p>
               ) : (
                 <p className="text-[0.82rem] text-muted-foreground">
-                  Ready to generate a fresh monthly coaching insight.
+                  Ready to generate this week&apos;s coaching insight.
                 </p>
               )}
             </div>
