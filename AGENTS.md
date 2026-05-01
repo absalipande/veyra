@@ -2524,14 +2524,15 @@ Every page gets one primary AI responsibility so behavior stays predictable, tes
 #### Non-goals for v1
 
 - no autonomous actions (AI never writes financial records without user confirmation)
-- no free-form chat thread as primary UX
+- no free-form chat thread as primary UX until the dedicated Private Finance Assistant contract is implemented
 - no heavy historical insight timeline yet
 - no personalized premium ranking until base signals are stable
 
 ### AI Rollout Plan (Veyra)
 
 The AI rollout should follow a feature-first sequence and stay grounded in real user finance data.
-Do not treat AI as a separate chatbot product surface.
+Do not treat AI as a generic chatbot product surface.
+If a conversational surface is added, it must follow the `Private Finance Assistant` contract below.
 
 #### Phase 1: Foundation + Dashboard + Quick Capture
 
@@ -2691,6 +2692,347 @@ Avoid:
 - prompts/schemas are versioned and testable
 - insight history should be auditable
 - limiter and usage metrics should be observable in production
+
+### Private Finance Assistant (Proposed)
+
+This is the product and architecture contract for a conversational AI surface inside Veyra.
+
+Product position:
+- this should be a private finance assistant, not a generic chatbot
+- the assistant should help the user understand their own money patterns, upcoming pressure, and practical next steps
+- the assistant should feel calm, precise, and personal to the user's finances
+- the assistant should not feel like a customer support bot, therapy bot, trading advisor, or novelty AI sidebar
+
+Recommended user-facing language:
+- prefer `Private finance assistant`, `Veyra Advisor`, or `Ask Veyra`
+- avoid claiming that the app `trains an AI on your finances` unless Veyra is actually fine-tuning a model per user
+- better copy:
+  - `Veyra learns from your financial patterns privately.`
+  - `Ask questions about your spending, budgets, loans, bills, and accounts.`
+  - `Answers are based on your tracked Veyra data.`
+
+#### Core capability
+
+The assistant should answer finance questions from user-scoped Veyra data:
+- spending habits and category trends
+- budget pacing and overspend risks
+- upcoming bills and loan obligations
+- account balances, liquidity, liabilities, and credit utilization
+- recurring merchants, subscriptions, and unusual changes
+- forecast pressure where the underlying data is strong enough
+- practical next actions the user can choose to take
+
+Example supported prompts:
+- `Why did I overspend this month?`
+- `What changed in my spending compared with last month?`
+- `Can I afford my upcoming loan payment?`
+- `Which subscriptions should I review?`
+- `What bills are coming up this week?`
+- `Where can I reduce spending without hurting essentials?`
+- `What should I watch before payday?`
+
+#### Deterministic-first intelligence policy
+
+Veyra's finance intelligence should remain deterministic by default.
+
+Keep these calculations in normal services, SQL queries, and domain engines:
+- balances
+- account summaries
+- budget spent / remaining / percentage used
+- budget period windows
+- loan schedules and installment status
+- loan payment state
+- bills due dates
+- forecast dedupe, especially loan-linked bills
+- category totals
+- period-over-period comparisons
+- credit utilization
+- liquidity and runway-style metrics
+
+AI should sit on top as an explanation and coaching layer:
+- explain deterministic facts in plain language
+- connect patterns across features
+- suggest practical next steps
+- make uncertainty clear when records are incomplete
+
+AI must not be the source of truth for money math.
+The assistant should receive computed facts such as `Food spending is up 18% vs prior 30 days`, not invent totals from raw vibes or replace feature service logic.
+
+#### Training vs retrieval policy
+
+Do not start by fine-tuning or training one local model per user.
+
+V1 should use retrieval-augmented generation:
+- compute trusted finance facts in Veyra services
+- summarize those facts into a compact user-scoped context packet
+- pass only the relevant context into the model for the current question
+- store small durable memory summaries where useful, not raw unrestricted chat dumps
+
+Reason:
+- per-user fine-tuning is expensive, operationally complex, hard to audit, and risky for privacy
+- most Veyra questions need accurate retrieval and calculations more than model retraining
+- user-specific learning can be achieved through structured profile signals and summaries first
+
+Possible later upgrade:
+- local adapter fine-tuning or embedding-based memory may be considered only after:
+  - export/delete controls exist
+  - retention policy is documented
+  - evaluation data proves retrieval-only is insufficient
+  - the user explicitly opts in
+
+#### Local LLM and token policy
+
+Local LLM path:
+- a truly local model does not require an external AI API token
+- it may require a local runtime such as Ollama, LM Studio, llama.cpp, or a self-hosted OpenAI-compatible endpoint
+- Veyra should connect through a provider adapter instead of hardcoding one runtime
+- default endpoint/config should come from env, not source code
+
+External model path:
+- any hosted model provider still requires a provider API key/token
+- tokens must follow the existing `Secrets and Token Policy`
+- hosted AI must be explicitly represented as hosted in settings/copy
+
+Current project reality:
+- existing AI surfaces currently use `OPENAI_API_KEY` for model-backed output when configured
+- the Private Finance Assistant can be designed provider-neutral:
+  - `local` provider for private/local inference
+  - `cloudflare-workers-ai` provider for hosted free-tier personal use
+  - `openai-compatible` provider for hosted or self-hosted endpoints
+  - fallback heuristic responses when no model is configured, where practical
+
+Recommended deployment direction for the current Veyra audience:
+- Veyra is currently hosted on Vercel and expected to be used by a very small private audience
+- local development should use Ollama when possible
+- hosted production should prefer Cloudflare Workers AI before paid hosted LLM providers
+- keep request volume low with explicit assistant entrypoints, short answers, and server-side rate limits
+- if the Cloudflare free allocation is exhausted, fail closed with a calm unavailable/quota message rather than auto-spending money
+
+Important rule:
+- never put a model token in client code
+- browser UI should call Veyra server routes only
+- server routes decide whether to use local inference, hosted inference, or safe fallback behavior
+
+#### Proposed feature ownership
+
+Preferred structure:
+
+```txt
+src/features/assistant/
+  components/
+    assistant-drawer.tsx
+    assistant-thread.tsx
+    assistant-composer.tsx
+    assistant-message.tsx
+  server/
+    schema.ts
+    service.ts
+    context.ts
+    memory.ts
+    providers.ts
+    tools.ts
+    safety.ts
+```
+
+Transport:
+- add a thin router at `src/server/api/routers/assistant.ts`
+- register it in `src/server/api/root.ts`
+- keep auth, validation, rate limits, and response transport in the router
+- keep finance interpretation, context building, provider calls, and safety checks in feature services
+
+UI entrypoint:
+- start as a right-side drawer or panel from the app shell
+- avoid replacing existing page-specific AI insight cards
+- assistant may link to relevant pages but should not duplicate full workspaces inside chat
+- keep messages compact and scannable
+
+#### Context builder contract
+
+The assistant must never receive unbounded raw database access.
+
+Build a server-side context packet per request:
+- authenticated `userId`
+- question intent and requested time window
+- relevant accounts summary
+- transaction aggregates by period/category/merchant
+- active budgets and period status
+- upcoming bills and loan installments
+- recent anomalies already computed by feature services
+- applicable user preferences such as currency and AI/privacy toggles
+
+Rules:
+- query only the authenticated user's data
+- use feature services and existing domain logic where possible
+- reuse budget period engine for budget windows
+- reuse loan schedule/payment state for loan answers
+- reuse bills/forecast dedupe rules to avoid double-counting loan-linked obligations
+- avoid sending sensitive free-text notes unless the user explicitly asks about notes
+- cap context size and summarize older history before model input
+
+#### Memory contract
+
+Assistant memory should be structured and inspectable.
+
+Allowed memory examples:
+- preferred explanation style
+- common income cadence inferred from records
+- recurring merchants/subscriptions detected from transactions
+- stable budget pressure themes
+- user-confirmed goals or constraints
+
+Do not store:
+- raw full conversation history indefinitely
+- secrets, credentials, card numbers, or unsupported identity details
+- sensitive personal notes that are not needed for finance analysis
+- inferred sensitive traits unrelated to personal finance
+
+Memory requirements:
+- user opt-in should be required before durable personalized memory
+- memory should be deletable by the user
+- memory updates should be auditable
+- memory should store summaries, not raw model transcripts, unless a future setting explicitly enables chat history
+
+#### Safety and advice rules
+
+The assistant may:
+- explain tracked behavior
+- point out patterns and tradeoffs
+- suggest budget, bill, loan, and spending review actions
+- produce drafts for user confirmation in later phases
+
+The assistant must not:
+- claim to be a licensed financial advisor
+- provide investment, tax, legal, or lending guarantees
+- make autonomous writes to financial records
+- silently categorize, delete, move, or mark anything paid
+- fabricate values when data is missing
+- imply certainty for weak forecasts
+
+Required answer behavior:
+- cite the data basis in plain language, for example `based on your tracked expenses this month`
+- state uncertainty when records are incomplete
+- give one or two practical next steps, not long generic lectures
+- ask a clarifying question only when required to avoid a materially wrong answer
+
+#### Action model
+
+V1 should be read-only:
+- answer questions
+- summarize
+- compare periods
+- explain why a budget, bill, loan, or account looks pressured
+
+V2 may support drafted actions:
+- create transaction draft
+- suggest budget adjustment
+- prepare bill payment draft
+- prepare loan payment draft
+- suggest category cleanup
+
+Drafted action rules:
+- every write must use the existing source-of-truth service path
+- every write requires explicit user confirmation
+- assistant output should show the exact pending change before submission
+- no direct database writes from assistant-specific code
+
+#### Privacy controls
+
+Assistant availability must respect:
+- `allowAiCoaching`
+- future assistant-specific opt-in if added
+- usage analytics opt-in for telemetry
+
+Settings should eventually expose:
+- enable/disable assistant
+- local vs hosted model status
+- whether durable memory is enabled
+- clear memory/delete memory control
+- short explanation of what data is used
+
+Audit requirements:
+- log assistant blocked-by-policy requests
+- log model/provider errors without storing sensitive prompts
+- log durable memory changes
+- log confirmed assistant-initiated financial writes when V2 actions exist
+
+#### Provider adapter contract
+
+Do not couple the assistant directly to OpenAI-specific code.
+
+Provider interface should support:
+- local OpenAI-compatible HTTP endpoint
+- Cloudflare Workers AI HTTP/API endpoint
+- hosted OpenAI-compatible endpoint
+- timeout and cancellation
+- model name configuration
+- structured JSON output where required
+- streaming text response later, but not required for V1
+
+Suggested env names:
+- `VEYRA_AI_PROVIDER`
+  - `local`
+  - `cloudflare-workers-ai`
+  - `openai`
+  - `openai-compatible`
+  - `disabled`
+- `VEYRA_AI_BASE_URL`
+- `VEYRA_AI_MODEL`
+- `CLOUDFLARE_ACCOUNT_ID` for Cloudflare Workers AI
+- `CLOUDFLARE_AI_TOKEN` for Cloudflare Workers AI
+- `OPENAI_API_KEY` for hosted OpenAI only
+
+Local development examples:
+- Ollama can expose a local endpoint and does not need a cloud API token
+- LM Studio can expose a local OpenAI-compatible endpoint and does not need a cloud API token
+- self-hosted models may still require an internal token depending on deployment
+
+Preferred current configs:
+
+```txt
+Local development:
+VEYRA_AI_PROVIDER=local
+VEYRA_AI_BASE_URL=http://localhost:11434
+VEYRA_AI_MODEL=llama3.2:3b
+
+Hosted Vercel production:
+VEYRA_AI_PROVIDER=cloudflare-workers-ai
+VEYRA_AI_MODEL=@cf/meta/llama-3.1-8b-instruct-fast
+```
+
+Cloudflare Workers AI notes:
+- this is the preferred hosted path while Veyra is a small private app and cost sensitivity matters
+- it still requires a server-side Cloudflare API token, but not a paid OpenAI-style model subscription
+- do not expose Cloudflare credentials to the browser
+- enforce Veyra-side daily limits even if Cloudflare also has limits
+- if usage hits the free allocation, show a friendly unavailable state instead of retry loops or provider switching to paid models
+
+#### Evaluation requirements
+
+Before enabling the assistant broadly, add test cases for:
+- user data isolation
+- missing/empty finance data
+- deterministic context builder outputs
+- budget-linked expense explanation
+- loan-linked bill dedupe
+- credit-linked loan repayment pressure
+- malformed model output
+- hosted provider unavailable
+- Cloudflare quota exhausted
+- local provider unavailable
+- AI disabled by settings
+- rate limit behavior
+
+Acceptance checklist:
+- assistant answers are grounded in user-scoped data
+- deterministic services remain the source of truth for calculations
+- no raw DB access is exposed to the model
+- no writes happen without confirmation
+- local provider works without external AI token
+- Cloudflare Workers AI works as the preferred hosted provider for low-volume personal use
+- hosted providers only work with server-side tokens
+- assistant respects `allowAiCoaching`
+- memory is opt-in, inspectable, and deletable before durable memory ships
+- answers clearly distinguish tracked facts from recommendations
 
 ## Secrets and Token Policy
 

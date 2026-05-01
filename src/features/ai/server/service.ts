@@ -680,6 +680,7 @@ const HABIT_SURFACE = "habit_coaching";
 const HABIT_INSIGHT_VERSION = 2;
 const OPENAI_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 const FALLBACK_OPENAI_MODEL = "gpt-4o-mini";
+const FALLBACK_CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast";
 
 const habitInsightDraftSchema = z.object({
   summary: z.string().min(1).max(260),
@@ -893,16 +894,96 @@ function buildCoachingAdvice(input: {
   return deduped.slice(0, 3);
 }
 
-function parseOpenAiChatContent(content: string | null | undefined): HabitInsightDraft | null {
+function parseHabitInsightDraftContent(content: string | null | undefined): HabitInsightDraft | null {
   if (!content) return null;
   try {
-    const parsed = JSON.parse(content);
+    const trimmed = content.trim();
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch?.[0] ?? trimmed);
     const validated = habitInsightDraftSchema.safeParse(parsed);
     if (!validated.success) return null;
     return validated.data;
   } catch {
     return null;
   }
+}
+
+function buildHabitInsightModelMessages(input: {
+  periodLabel: string;
+  currentTotal: number;
+  previousTotal: number;
+  topCategory: string;
+  topSharePct: number;
+  shiftCategory: string;
+  shiftLabel: string;
+  budgetSummary: Awaited<ReturnType<typeof getBudgetsSummary>>["summary"];
+  topCategories: Array<{
+    name: string;
+    currentAmount: number;
+    previousAmount: number;
+    currentSharePct: number;
+  }>;
+  recentExpenses: Array<{
+    date: string;
+    description: string;
+    category: string;
+    amount: number;
+    budgetName: string | null;
+  }>;
+}) {
+  const atRiskBudgets =
+    input.budgetSummary.warningBudgets +
+    input.budgetSummary.dangerBudgets +
+    input.budgetSummary.exceededBudgets;
+
+  const payload = {
+    periodLabel: input.periodLabel,
+    totals: {
+      currentMonthExpense: input.currentTotal,
+      previousMonthExpense: input.previousTotal,
+      currency: "PHP",
+    },
+    budgets: {
+      totalBudgets: input.budgetSummary.totalBudgets,
+      onTrackBudgets: input.budgetSummary.onTrackBudgets,
+      atRiskBudgets,
+      totalRemaining: input.budgetSummary.totalRemaining,
+    },
+    topCategory: {
+      name: input.topCategory,
+      sharePct: input.topSharePct,
+    },
+    shift: {
+      category: input.shiftCategory,
+      label: input.shiftLabel,
+    },
+    topCategories: input.topCategories,
+    recentExpenses: input.recentExpenses,
+  };
+
+  return [
+    {
+      role: "system",
+      content:
+        "You are a personal finance coaching assistant for Veyra. Use only the provided budget and transaction data. " +
+        "Return valid JSON only with keys: summary, keyFindings, advice, categoryNotes, budgetNote. " +
+        "Use plain, supportive language and avoid technical finance jargon. " +
+        "Focus on concrete category coaching (e.g., food, clothing), and give behavior-based actions " +
+        "like budget caps, cooking more, reducing delivery, or a waiting period before buying.",
+    },
+    {
+      role: "user",
+      content: JSON.stringify(payload),
+    },
+  ];
+}
+
+function shouldUseCloudflareAi() {
+  const provider = process.env.VEYRA_AI_PROVIDER?.trim().toLowerCase();
+  return (
+    provider === "cloudflare-workers-ai" ||
+    (!provider && Boolean(process.env.CLOUDFLARE_ACCOUNT_ID && process.env.CLOUDFLARE_AI_TOKEN))
+  );
 }
 
 function buildDefaultBudgetPosture(
@@ -953,36 +1034,7 @@ async function generateInsightDraftFromOpenAi(input: {
   if (!apiKey) return null;
 
   const model = process.env.OPENAI_HABIT_MODEL ?? process.env.OPENAI_MODEL ?? FALLBACK_OPENAI_MODEL;
-
-  const atRiskBudgets =
-    input.budgetSummary.warningBudgets +
-    input.budgetSummary.dangerBudgets +
-    input.budgetSummary.exceededBudgets;
-
-  const payload = {
-    periodLabel: input.periodLabel,
-    totals: {
-      currentMonthExpense: input.currentTotal,
-      previousMonthExpense: input.previousTotal,
-      currency: "PHP",
-    },
-    budgets: {
-      totalBudgets: input.budgetSummary.totalBudgets,
-      onTrackBudgets: input.budgetSummary.onTrackBudgets,
-      atRiskBudgets,
-      totalRemaining: input.budgetSummary.totalRemaining,
-    },
-    topCategory: {
-      name: input.topCategory,
-      sharePct: input.topSharePct,
-    },
-    shift: {
-      category: input.shiftCategory,
-      label: input.shiftLabel,
-    },
-    topCategories: input.topCategories,
-    recentExpenses: input.recentExpenses,
-  };
+  const messages = buildHabitInsightModelMessages(input);
 
   const response = await fetch(OPENAI_CHAT_COMPLETIONS_URL, {
     method: "POST",
@@ -994,21 +1046,7 @@ async function generateInsightDraftFromOpenAi(input: {
       model,
       temperature: 0.3,
       response_format: { type: "json_object" },
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a personal finance coaching assistant. Use only the provided budget and transaction data. " +
-            "Return valid JSON only with keys: summary, keyFindings, advice, categoryNotes, budgetNote. " +
-            "Use plain, supportive language and avoid technical finance jargon. " +
-            "Focus on concrete category coaching (e.g., food, clothing), and give behavior-based actions " +
-            "like budget caps, cooking more, reducing delivery, or a waiting period before buying.",
-        },
-        {
-          role: "user",
-          content: JSON.stringify(payload),
-        },
-      ],
+      messages,
     }),
   });
 
@@ -1019,7 +1057,57 @@ async function generateInsightDraftFromOpenAi(input: {
   const json = (await response.json()) as {
     choices?: Array<{ message?: { content?: string | null } }>;
   };
-  return parseOpenAiChatContent(json.choices?.[0]?.message?.content);
+  return parseHabitInsightDraftContent(json.choices?.[0]?.message?.content);
+}
+
+async function generateInsightDraftFromCloudflare(input: Parameters<typeof generateInsightDraftFromOpenAi>[0]) {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const apiToken = process.env.CLOUDFLARE_AI_TOKEN;
+  if (!accountId || !apiToken) return null;
+
+  const model =
+    process.env.CLOUDFLARE_AI_MODEL ?? process.env.VEYRA_AI_MODEL ?? FALLBACK_CLOUDFLARE_MODEL;
+  const messages = buildHabitInsightModelMessages(input);
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiToken}`,
+      },
+      body: JSON.stringify({
+        messages,
+        temperature: 0.3,
+        max_tokens: 700,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Cloudflare Workers AI request failed (${response.status})`);
+  }
+
+  const json = (await response.json()) as {
+    result?: { response?: string | null };
+    success?: boolean;
+    errors?: Array<{ message?: string }>;
+  };
+
+  if (json.success === false) {
+    const message = json.errors?.[0]?.message ?? "Cloudflare Workers AI request failed";
+    throw new Error(message);
+  }
+
+  return parseHabitInsightDraftContent(json.result?.response);
+}
+
+async function generateHabitInsightDraft(input: Parameters<typeof generateInsightDraftFromOpenAi>[0]) {
+  if (shouldUseCloudflareAi()) {
+    return generateInsightDraftFromCloudflare(input);
+  }
+
+  return generateInsightDraftFromOpenAi(input);
 }
 
 function parseHabitInsightPayload(payload: string): HabitCoachingInsight | null {
@@ -1387,7 +1475,7 @@ export async function generateMonthlyHabitCoachingInsight(
         budgetName: event.budgetId ? (budgetNameById.get(event.budgetId) ?? null) : null,
       }));
 
-    const aiDraft = await generateInsightDraftFromOpenAi({
+    const aiDraft = await generateHabitInsightDraft({
       periodLabel: fallbackInsight.periodLabel,
       currentTotal,
       previousTotal,
