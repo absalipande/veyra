@@ -985,12 +985,20 @@ export function DashboardRecentActivity() {
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.68rem] text-muted-foreground">
                   <span className="inline-flex items-center gap-1.5">
-                    <span className="size-2 rounded-full border border-[#14656b] bg-[#e9f6f5] dark:border-[#6bd0c2] dark:bg-[#203032]" />
-                    Due-date outflow marker
+                    <span className="size-2 rounded-sm bg-emerald-600/45" />
+                    Income
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-rose-600/35" />
+                    Spending
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="size-2 rounded-sm bg-sky-600/35" />
+                    Transfer
                   </span>
                   <span className="inline-flex items-center gap-1.5">
                     <span className="size-2 rounded-full border border-rose-500 bg-rose-100 dark:border-rose-300 dark:bg-rose-500/20" />
-                    Lowest projected balance
+                    Lowest balance
                   </span>
                 </div>
               </div>

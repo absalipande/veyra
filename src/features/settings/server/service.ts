@@ -5,6 +5,7 @@ import { z } from "zod";
 import {
   accounts,
   aiInsights,
+  assistantMemories,
   auditLogs,
   billOccurrences,
   billSeries,
@@ -49,6 +50,7 @@ const defaultPreferences = {
   dateFormat: "month-day-year" as const,
   timezone: "Asia/Manila" as const,
   allowAiCoaching: true,
+  allowAssistantMemory: false,
   allowUsageAnalytics: false,
 };
 
@@ -98,6 +100,7 @@ export async function updateUserSettings(
   if (current.dateFormat !== input.dateFormat) changedFields.push("dateFormat");
   if (current.timezone !== input.timezone) changedFields.push("timezone");
   if (current.allowAiCoaching !== input.allowAiCoaching) changedFields.push("allowAiCoaching");
+  if (current.allowAssistantMemory !== input.allowAssistantMemory) changedFields.push("allowAssistantMemory");
   if (current.allowUsageAnalytics !== input.allowUsageAnalytics) changedFields.push("allowUsageAnalytics");
 
   const [updated] = await ctx.db
@@ -109,6 +112,9 @@ export async function updateUserSettings(
       dateFormat: input.dateFormat,
       timezone: input.timezone,
       allowAiCoaching: input.allowAiCoaching,
+      allowAssistantMemory: input.allowAssistantMemory,
+      assistantMemoryUpdatedAt:
+        current.allowAssistantMemory !== input.allowAssistantMemory ? new Date() : current.assistantMemoryUpdatedAt,
       allowUsageAnalytics: input.allowUsageAnalytics,
       updatedAt: new Date(),
     })
@@ -148,7 +154,27 @@ export async function updateUserSettings(
     });
   }
 
-  if (changedFields.some((field) => field !== "allowAiCoaching" && field !== "allowUsageAnalytics")) {
+  if (current.allowAssistantMemory !== updated.allowAssistantMemory) {
+    await logAuditEvent(ctx, {
+      action: "settings.assistant_memory_changed",
+      entityType: "settings",
+      entityId: updated.id,
+      summary: `Assistant memory ${updated.allowAssistantMemory ? "enabled" : "disabled"}`,
+      metadata: {
+        from: current.allowAssistantMemory,
+        to: updated.allowAssistantMemory,
+      },
+    });
+  }
+
+  if (
+    changedFields.some(
+      (field) =>
+        field !== "allowAiCoaching" &&
+        field !== "allowUsageAnalytics" &&
+        field !== "allowAssistantMemory"
+    )
+  ) {
     await logAuditEvent(ctx, {
       action: "settings.preferences_changed",
       entityType: "settings",
@@ -166,6 +192,7 @@ export async function updateUserSettings(
     metadata: {
       changedFields,
       allowAiCoaching: updated.allowAiCoaching,
+      allowAssistantMemory: updated.allowAssistantMemory,
       allowUsageAnalytics: updated.allowUsageAnalytics,
     },
   });
@@ -191,6 +218,7 @@ export async function exportWorkspaceData(ctx: Pick<TRPCContext, "db" | "userId"
     loanRows,
     loanInstallmentRows,
     loanPaymentRows,
+    assistantMemoryRows,
   ] = await Promise.all([
     ensureUserPreferences(ctx),
     ctx.db.query.accounts.findMany({ where: eq(accounts.clerkUserId, userId) }),
@@ -204,6 +232,7 @@ export async function exportWorkspaceData(ctx: Pick<TRPCContext, "db" | "userId"
     ctx.db.query.loans.findMany({ where: eq(loans.clerkUserId, userId) }),
     ctx.db.query.loanInstallments.findMany({ where: eq(loanInstallments.clerkUserId, userId) }),
     ctx.db.query.loanPayments.findMany({ where: eq(loanPayments.clerkUserId, userId) }),
+    ctx.db.query.assistantMemories.findMany({ where: eq(assistantMemories.clerkUserId, userId) }),
   ]);
 
   await logAuditEvent(ctx, {
@@ -223,6 +252,7 @@ export async function exportWorkspaceData(ctx: Pick<TRPCContext, "db" | "userId"
       transactions: transactionRows.length,
       bills: billSeriesRows.length,
       loans: loanRows.length,
+      assistantMemories: assistantMemoryRows.length,
     },
   });
 
@@ -249,6 +279,7 @@ export async function exportWorkspaceData(ctx: Pick<TRPCContext, "db" | "userId"
     loans: loanRows,
     loanInstallments: loanInstallmentRows,
     loanPayments: loanPaymentRows,
+    assistantMemories: assistantMemoryRows,
   };
 }
 
@@ -274,6 +305,7 @@ export async function clearWorkspaceData(
 
   await ctx.db.delete(auditLogs).where(eq(auditLogs.clerkUserId, userId));
   await ctx.db.delete(aiInsights).where(eq(aiInsights.clerkUserId, userId));
+  await ctx.db.delete(assistantMemories).where(eq(assistantMemories.clerkUserId, userId));
   await ctx.db.delete(ledgerEntries).where(eq(ledgerEntries.clerkUserId, userId));
   await ctx.db.delete(billOccurrences).where(eq(billOccurrences.clerkUserId, userId));
   await ctx.db.delete(billSeries).where(eq(billSeries.clerkUserId, userId));

@@ -1,6 +1,18 @@
 "use client";
 
-import { useCallback, useId, useMemo, useState } from "react";
+import { useId } from "react";
+import {
+  Area,
+  Bar,
+  CartesianGrid,
+  ComposedChart,
+  Line,
+  ReferenceDot,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { formatCurrencyMiliunits } from "@/lib/currencies";
 
@@ -9,6 +21,9 @@ type CashflowProjectionPoint = {
   balance: number;
   outflow: number;
   dueCount: number;
+  income?: number;
+  spending?: number;
+  transfer?: number;
 };
 
 type CashflowProjectionChartProps = {
@@ -19,20 +34,32 @@ type CashflowProjectionChartProps = {
   scaleMode?: "fill" | "fit";
 };
 
-type PlotPoint = {
-  x: number;
-  y: number;
+type ChartPoint = {
+  date: string;
+  dateLabel: string;
+  shortDateLabel: string;
   balance: number;
-  dueCount: number;
   outflow: number;
-  date: Date | string;
+  dueCount: number;
+  income: number;
+  spending: number;
+  transfer: number;
+  lowestBalanceMarker: number | null;
 };
 
-const VIEWBOX_WIDTH = 320;
+function toDate(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toDateKey(value: Date | string) {
+  const date = toDate(value);
+  return date?.toISOString().slice(0, 10) ?? String(value);
+}
 
 function toDateLabel(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown date";
+  const date = toDate(value);
+  if (!date) return "Unknown date";
   return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -40,95 +67,88 @@ function toDateLabel(value: Date | string) {
   });
 }
 
-function toPlotPoints(points: CashflowProjectionPoint[], height: number): PlotPoint[] {
-  if (points.length === 0) return [];
+function toShortDateLabel(value: Date | string) {
+  const date = toDate(value);
+  if (!date) return "";
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
 
-  const topPadding = 6;
-  const bottomPadding = 4;
-  const plotHeight = Math.max(12, height - topPadding - bottomPadding);
-  const balances = points.map((point) => point.balance);
-  const min = Math.min(...balances);
-  const max = Math.max(...balances);
-  const span = max - min;
+function formatCompactCurrency(value: number, currency: string) {
+  const absoluteValue = Math.abs(value / 1000);
+  if (absoluteValue >= 1_000_000) {
+    return `${currency} ${(absoluteValue / 1_000_000).toFixed(1)}M`;
+  }
+  if (absoluteValue >= 1_000) {
+    return `${currency} ${(absoluteValue / 1_000).toFixed(0)}K`;
+  }
+  return formatCurrencyMiliunits(value, currency);
+}
 
-  return points.map((point, index) => {
-    const x =
-      points.length === 1
-        ? VIEWBOX_WIDTH / 2
-        : (index / Math.max(1, points.length - 1)) * VIEWBOX_WIDTH;
-    const normalized = span === 0 ? 0.5 : (point.balance - min) / span;
-    const y = topPadding + (1 - normalized) * plotHeight;
+function buildChartData(points: CashflowProjectionPoint[]) {
+  let lowestIndex = -1;
+  for (let index = 0; index < points.length; index += 1) {
+    if (lowestIndex < 0 || points[index]!.balance < points[lowestIndex]!.balance) {
+      lowestIndex = index;
+    }
+  }
+
+  return points.map((point, index): ChartPoint => {
+    const spending = point.spending ?? point.outflow;
     return {
-      x,
-      y,
+      date: toDateKey(point.date),
+      dateLabel: toDateLabel(point.date),
+      shortDateLabel: toShortDateLabel(point.date),
       balance: point.balance,
-      dueCount: point.dueCount,
       outflow: point.outflow,
-      date: point.date,
+      dueCount: point.dueCount,
+      income: point.income ?? 0,
+      spending,
+      transfer: point.transfer ?? 0,
+      lowestBalanceMarker: index === lowestIndex ? point.balance : null,
     };
   });
 }
 
-function buildSpikePath(points: PlotPoint[], height: number) {
-  if (points.length === 0) return "";
-  if (points.length === 1) {
-    const point = points[0];
-    return point ? `M${point.x.toFixed(2)} ${point.y.toFixed(2)}` : "";
-  }
+function CashflowTooltip({
+  active,
+  payload,
+  label,
+  currency,
+}: {
+  active?: boolean;
+  payload?: ReadonlyArray<{ payload?: ChartPoint }>;
+  label?: string | number;
+  currency: string;
+}) {
+  if (!active || !payload?.length) return null;
 
-  const baseline = Math.max(12, height * 0.72);
-  const spikeWidth = 8;
-  let path = `M${points[0]!.x.toFixed(2)} ${baseline.toFixed(2)}`;
+  const row = payload[0]?.payload as ChartPoint | undefined;
+  if (!row) return null;
 
-  for (let i = 1; i < points.length; i += 1) {
-    const point = points[i]!;
-    const previous = points[i - 1]!;
-    const hasOutflow = point.dueCount > 0 || point.outflow > 0 || point.balance < previous.balance;
-
-    if (!hasOutflow) {
-      path += ` L${point.x.toFixed(2)} ${baseline.toFixed(2)}`;
-      continue;
-    }
-
-    const peakY = Math.max(6, Math.min(baseline - 5, point.y));
-    const preDipY = Math.min(height - 6, baseline + 5);
-    const recoveryY = Math.min(height - 6, baseline + 3);
-    const startX = Math.max(0, point.x - spikeWidth * 1.3);
-    const preDipX = Math.max(0, point.x - spikeWidth * 0.55);
-    const peakX = point.x;
-    const recoveryX = Math.min(VIEWBOX_WIDTH, point.x + spikeWidth * 0.55);
-    const endX = Math.min(VIEWBOX_WIDTH, point.x + spikeWidth * 1.25);
-
-    path += ` L${startX.toFixed(2)} ${baseline.toFixed(2)}`;
-    path += ` L${preDipX.toFixed(2)} ${preDipY.toFixed(2)}`;
-    path += ` L${peakX.toFixed(2)} ${peakY.toFixed(2)}`;
-    path += ` L${recoveryX.toFixed(2)} ${recoveryY.toFixed(2)}`;
-    path += ` L${endX.toFixed(2)} ${baseline.toFixed(2)}`;
-  }
-
-  const last = points[points.length - 1]!;
-  path += ` L${last.x.toFixed(2)} ${baseline.toFixed(2)}`;
-  return path;
-}
-
-function getSpikeY(points: PlotPoint[], index: number, height: number) {
-  const point = points[index];
-  if (!point) return 0;
-
-  const baseline = Math.max(12, height * 0.72);
-  const previous = points[index - 1];
-  const hasOutflow =
-    point.dueCount > 0 || point.outflow > 0 || (previous ? point.balance < previous.balance : false);
-
-  return hasOutflow ? Math.max(6, Math.min(baseline - 5, point.y)) : baseline;
-}
-
-function buildAreaPath(linePath: string, points: PlotPoint[], height: number) {
-  if (!linePath || points.length === 0) return "";
-  const baseline = Math.max(0, height - 2);
-  const first = points[0]!;
-  const last = points[points.length - 1]!;
-  return `${linePath} L${last.x.toFixed(2)} ${baseline.toFixed(2)} L${first.x.toFixed(2)} ${baseline.toFixed(2)} Z`;
+  return (
+    <div className="min-w-[12rem] rounded-lg border border-border/70 bg-white/96 px-2.5 py-2 text-[0.72rem] text-foreground shadow-md dark:border-white/8 dark:bg-[#182123]/96">
+      <p className="font-medium">{row.dateLabel || label}</p>
+      <p className="mt-0.5 text-muted-foreground">
+        Balance: {formatCurrencyMiliunits(row.balance, currency)}
+      </p>
+      <p className="text-emerald-700 dark:text-emerald-300">
+        Income spike: {formatCurrencyMiliunits(row.income, currency)}
+      </p>
+      <p className="text-rose-700 dark:text-rose-300">
+        Spending spike: {formatCurrencyMiliunits(row.spending, currency)}
+      </p>
+      <p className="text-sky-700 dark:text-sky-300">
+        Transfer spike: {formatCurrencyMiliunits(row.transfer, currency)}
+      </p>
+      <p className="text-muted-foreground">
+        Due items: {row.dueCount}
+        {row.lowestBalanceMarker != null ? " · Lowest point" : ""}
+      </p>
+    </div>
+  );
 }
 
 export function CashflowProjectionChart({
@@ -138,199 +158,168 @@ export function CashflowProjectionChart({
   ariaLabel = "Projected balance trend",
   scaleMode = "fill",
 }: CashflowProjectionChartProps) {
-  const gradientId = useId().replace(/:/g, "");
-  const areaGradientId = `${gradientId}-area`;
-  const lineGradientId = `${gradientId}-line`;
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-
-  const { plotPoints, linePath, areaPath, lowestIndex } = useMemo(() => {
-    const plotPoints = toPlotPoints(points, height);
-    const linePath = buildSpikePath(plotPoints, height);
-    const areaPath = buildAreaPath(linePath, plotPoints, height);
-
-    let lowestIndex = -1;
-    for (let i = 0; i < plotPoints.length; i += 1) {
-      if (lowestIndex < 0 || plotPoints[i]!.balance < plotPoints[lowestIndex]!.balance) {
-        lowestIndex = i;
-      }
-    }
-
-    return { plotPoints, linePath, areaPath, lowestIndex };
-  }, [height, points]);
-
-  const handlePointerMove = useCallback(
-    (event: React.PointerEvent<SVGSVGElement>) => {
-      const rect = event.currentTarget.getBoundingClientRect();
-      if (rect.width <= 0) {
-        setHoveredIndex(null);
-        return;
-      }
-
-      const relativeX = ((event.clientX - rect.left) / rect.width) * VIEWBOX_WIDTH;
-      let nearestIndex = 0;
-      let nearestDistance = Number.POSITIVE_INFINITY;
-
-      for (let i = 0; i < plotPoints.length; i += 1) {
-        const distance = Math.abs(plotPoints[i]!.x - relativeX);
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          nearestIndex = i;
-        }
-      }
-
-      setHoveredIndex(nearestIndex);
-    },
-    [plotPoints]
+  const id = useId().replace(/:/g, "");
+  const balanceGradientId = `${id}-balance`;
+  const chartData = buildChartData(points);
+  const lowestPoint = chartData.find((point) => point.lowestBalanceMarker != null) ?? null;
+  const hasActivitySpikes = chartData.some(
+    (point) => point.income > 0 || point.spending > 0 || point.transfer > 0
   );
 
-  if (plotPoints.length === 0) {
+  if (chartData.length === 0) {
     return <div className="h-14 w-full rounded-md border border-dashed border-border/70 bg-background/70" />;
   }
 
-  const dueMarkers = plotPoints.filter((point) => point.dueCount > 0 || point.outflow > 0);
-  const hoveredPoint = hoveredIndex != null ? (plotPoints[hoveredIndex] ?? null) : null;
-  const hoveredPointIsLowest =
-    hoveredPoint && lowestIndex >= 0 ? plotPoints[lowestIndex] === hoveredPoint : false;
-  const hoverLeftPct = hoveredPoint ? (hoveredPoint.x / VIEWBOX_WIDTH) * 100 : 0;
-  const hoveredPointY = hoveredIndex != null ? getSpikeY(plotPoints, hoveredIndex, height) : 0;
-  const hoverTopPct = hoveredPoint ? (hoveredPointY / height) * 100 : 0;
-  const tooltipShiftClass =
-    hoverLeftPct > 82 ? "-translate-x-full" : hoverLeftPct < 18 ? "translate-x-0" : "-translate-x-1/2";
-  const tooltipVerticalClass = hoverTopPct < 38 ? "translate-y-3" : "-translate-y-[calc(100%+0.55rem)]";
+  const margins =
+    scaleMode === "fit"
+      ? { top: 4, right: 4, bottom: 0, left: 4 }
+      : { top: 4, right: 2, bottom: 0, left: 2 };
 
   return (
-    <div className="relative h-full w-full">
-      <svg
-        viewBox={`0 0 ${VIEWBOX_WIDTH} ${height}`}
-        role="img"
-        aria-label={ariaLabel}
-        className="h-full w-full"
-        preserveAspectRatio={scaleMode === "fit" ? "xMidYMid meet" : "none"}
-        onPointerMove={handlePointerMove}
-        onPointerLeave={() => setHoveredIndex(null)}
-      >
-        <defs>
-          <linearGradient id={lineGradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="rgb(20 101 107)" />
-            <stop offset="100%" stopColor="rgb(16 41 43)" />
-          </linearGradient>
-          <linearGradient id={areaGradientId} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="rgb(20 101 107 / 0.18)" />
-            <stop offset="100%" stopColor="rgb(20 101 107 / 0.02)" />
-          </linearGradient>
-        </defs>
-
-        {[0.2, 0.4, 0.6, 0.8].map((ratio) => (
-          <line
-            key={`h-${ratio}`}
-            x1="0"
-            y1={height * ratio}
-            x2={VIEWBOX_WIDTH}
-            y2={height * ratio}
-            className="stroke-border/20"
-          />
-        ))}
-        {[0.2, 0.4, 0.6, 0.8].map((ratio) => (
-          <line
-            key={`v-${ratio}`}
-            x1={VIEWBOX_WIDTH * ratio}
-            y1="0"
-            x2={VIEWBOX_WIDTH * ratio}
-            y2={height}
-            className="stroke-border/18"
-            strokeDasharray="3 4"
-          />
-        ))}
-        <line x1="0" y1={height - 2} x2={VIEWBOX_WIDTH} y2={height - 2} className="stroke-border/45" />
-
-        {areaPath ? <path d={areaPath} fill={`url(#${areaGradientId})`} /> : null}
-      <path
-        d={linePath}
-        fill="none"
-        stroke={`url(#${lineGradientId})`}
-        strokeWidth="1"
-        strokeLinecap="round"
-        strokeLinejoin="miter"
-        className="dark:opacity-85"
-      />
-
-        {hoveredPoint ? (
-          <line
-            x1={hoveredPoint.x}
-            y1={0}
-            x2={hoveredPoint.x}
-            y2={height}
-            className="stroke-[#14656b]/35 dark:stroke-[#6bd0c2]/40"
-            strokeDasharray="4 4"
-          />
-        ) : null}
-
-        {dueMarkers.map((point, index) => (
-        <circle
-          key={`${point.x}-${point.y}-${index}`}
-          cx={point.x}
-          cy={getSpikeY(plotPoints, plotPoints.indexOf(point), height)}
-          r={Math.min(3.4, 1.9 + point.dueCount * 0.35)}
-          className="fill-[#e9f6f5] stroke-[#14656b] dark:fill-[#203032] dark:stroke-[#6bd0c2]"
-          strokeWidth="1.1"
+    <div className="relative h-full w-full" role="img" aria-label={ariaLabel}>
+      <ResponsiveContainer width="100%" height={height}>
+        <ComposedChart
+          data={chartData}
+          margin={margins}
+          barCategoryGap="38%"
+          stackOffset="sign"
+          accessibilityLayer
         >
-            <title>
-              {`Due date marker (${point.dueCount} item${point.dueCount === 1 ? "" : "s"}) · ${toDateLabel(point.date)}`}
-            </title>
-          </circle>
-        ))}
+          <defs>
+            <linearGradient id={balanceGradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#14656b" stopOpacity={0.18} />
+              <stop offset="100%" stopColor="#14656b" stopOpacity={0.03} />
+            </linearGradient>
+          </defs>
 
-        {lowestIndex >= 0 ? (
-          <>
-            <circle
-            cx={plotPoints[lowestIndex]!.x}
-            cy={getSpikeY(plotPoints, lowestIndex, height)}
-            r="4"
-            className="fill-rose-50/95 stroke-rose-500 dark:fill-rose-500/20 dark:stroke-rose-300"
-            strokeWidth="1.25"
-          >
-            <title>Lowest projected balance point</title>
-          </circle>
-          <circle
-            cx={plotPoints[lowestIndex]!.x}
-            cy={getSpikeY(plotPoints, lowestIndex, height)}
-            r="1.35"
-            className="fill-rose-500 dark:fill-rose-300"
+          <CartesianGrid
+            stroke="currentColor"
+            strokeDasharray="4 6"
+            vertical
+            className="text-border/24"
           />
-        </>
-      ) : null}
+          <XAxis
+            dataKey="shortDateLabel"
+            axisLine={false}
+            tickLine={false}
+            tick={false}
+            interval="preserveStartEnd"
+            height={4}
+          />
+          <YAxis
+            yAxisId="balance"
+            hide
+            domain={["dataMin", "dataMax"]}
+            padding={{ top: 12, bottom: 8 }}
+          />
+          <YAxis yAxisId="activity" hide domain={[0, "dataMax"]} />
+          <Tooltip
+            cursor={{ stroke: "#14656b", strokeOpacity: 0.28, strokeDasharray: "4 4" }}
+            content={(props) => <CashflowTooltip {...props} currency={currency} />}
+          />
 
-      {hoveredPoint ? (
-        <circle
-          cx={hoveredPoint.x}
-          cy={hoveredPointY}
-          r="3.9"
-          className="fill-white stroke-[#14656b] dark:fill-[#182123] dark:stroke-[#6bd0c2]"
-          strokeWidth="1.35"
-        />
-      ) : null}
-      </svg>
+          {hasActivitySpikes ? (
+            <>
+              <Bar
+                yAxisId="activity"
+                dataKey="income"
+                name="Income"
+                fill="#059669"
+                fillOpacity={0.44}
+                radius={[5, 5, 0, 0]}
+                maxBarSize={12}
+              />
+              <Bar
+                yAxisId="activity"
+                dataKey="spending"
+                name="Spending"
+                fill="#e11d48"
+                fillOpacity={0.32}
+                radius={[5, 5, 0, 0]}
+                maxBarSize={12}
+              />
+              <Bar
+                yAxisId="activity"
+                dataKey="transfer"
+                name="Transfer"
+                fill="#0284c7"
+                fillOpacity={0.34}
+                radius={[5, 5, 0, 0]}
+                maxBarSize={12}
+              />
+            </>
+          ) : null}
 
-      {hoveredPoint ? (
-        <div
-          className={`pointer-events-none absolute z-10 ${tooltipShiftClass} ${tooltipVerticalClass}`}
-          style={{ left: `${hoverLeftPct}%`, top: `${hoverTopPct}%` }}
-        >
-          <div className="min-w-[11rem] rounded-lg border border-border/70 bg-white/96 px-2.5 py-2 text-[0.72rem] text-foreground shadow-md dark:bg-[#182123]/96">
-            <p className="font-medium">{toDateLabel(hoveredPoint.date)}</p>
-            <p className="mt-0.5 text-muted-foreground">
-              Balance: {formatCurrencyMiliunits(hoveredPoint.balance, currency)}
-            </p>
-            <p className="text-muted-foreground">
-              Outflow: {formatCurrencyMiliunits(hoveredPoint.outflow, currency)}
-            </p>
-            <p className="text-muted-foreground">
-              Due items: {hoveredPoint.dueCount}
-              {hoveredPointIsLowest ? " · Lowest point" : ""}
-            </p>
-          </div>
+          <Area
+            yAxisId="balance"
+            type="monotone"
+            dataKey="balance"
+            stroke="#14656b"
+            strokeOpacity={0.3}
+            fill={`url(#${balanceGradientId})`}
+            strokeWidth={1}
+            activeDot={false}
+            isAnimationActive={false}
+          />
+          <Line
+            yAxisId="balance"
+            type="monotone"
+            dataKey="balance"
+            stroke="#10292b"
+            strokeWidth={1.6}
+            dot={(props) => {
+              const point = props.payload as ChartPoint;
+              if (point.dueCount <= 0 && point.outflow <= 0) return <g />;
+              return (
+                <circle
+                  cx={props.cx}
+                  cy={props.cy}
+                  r={Math.min(4, 2.4 + point.dueCount * 0.4)}
+                  className="fill-[#e9f6f5] stroke-[#14656b] dark:fill-[#203032] dark:stroke-[#6bd0c2]"
+                  strokeWidth={1.25}
+                />
+              );
+            }}
+            activeDot={{
+              r: 4,
+              stroke: "#14656b",
+              strokeWidth: 1.4,
+              fill: "#ffffff",
+            }}
+            isAnimationActive={false}
+            className="dark:[&_path]:stroke-[#b9eeea]"
+          />
+
+          {lowestPoint ? (
+            <ReferenceDot
+              yAxisId="balance"
+              x={lowestPoint.shortDateLabel}
+              y={lowestPoint.balance}
+              r={4.5}
+              fill="#fff1f2"
+              stroke="#e11d48"
+              strokeWidth={1.5}
+              ifOverflow="extendDomain"
+            />
+          ) : null}
+        </ComposedChart>
+      </ResponsiveContainer>
+
+      {hasActivitySpikes ? null : (
+        <div className="pointer-events-none absolute inset-x-0 bottom-1 text-center text-[0.68rem] text-muted-foreground/70">
+          No scheduled spikes
         </div>
-      ) : null}
+      )}
+
+      <span className="sr-only">
+        {chartData
+          .slice(0, 3)
+          .map(
+            (point) =>
+              `${point.dateLabel}: balance ${formatCompactCurrency(point.balance, currency)}, spending spike ${formatCompactCurrency(point.spending, currency)}`
+          )
+          .join("; ")}
+      </span>
     </div>
   );
 }

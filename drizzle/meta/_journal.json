@@ -134,6 +134,13 @@
       "when": 1777219917421,
       "tag": "0018_mute_blackheart",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777734989321,
+      "tag": "0019_tan_blue_shield",
+      "breakpoints": true
     }
   ]
 }

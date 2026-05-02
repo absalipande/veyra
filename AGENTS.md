@@ -2841,10 +2841,35 @@ Transport:
 - keep finance interpretation, context building, provider calls, and safety checks in feature services
 
 UI entrypoint:
-- start as a right-side drawer or panel from the app shell
+- mount one universal bottom-right launcher inside the protected app shell
+- opening the launcher should reveal a right-side drawer/panel on desktop
+- on mobile, prefer a bottom sheet or full-height drawer that respects safe areas
 - avoid replacing existing page-specific AI insight cards
 - assistant may link to relevant pages but should not duplicate full workspaces inside chat
 - keep messages compact and scannable
+- do not create separate chatbot instances per page
+
+Launcher behavior:
+- position: fixed bottom-right on authenticated app routes
+- label: `Ask Veyra` or compact icon + tooltip when space is tight
+- should stay visually calm and consistent with Veyra UI v2
+- should not cover primary floating actions, destructive dialogs, or mobile navigation
+- should respect `allowAiCoaching`; if disabled, show a short disabled state with a Settings link
+
+Empty assistant state:
+- show concise positioning copy, not a marketing panel
+- starter prompts should be finance-specific and user-actionable:
+  - `What changed in my spending this month?`
+  - `What bills should I watch this week?`
+  - `Am I overspending anywhere?`
+  - `Can I afford my next loan payment?`
+  - `What should I review before payday?`
+
+Visual direction:
+- calm, compact, premium
+- use Veyra theme tokens
+- avoid loud gradients, oversized chat bubbles, mascot styling, and generic support-widget visuals
+- messages should be readable and dense enough for finance work without feeling like a wall of text
 
 #### Context builder contract
 
@@ -2934,6 +2959,123 @@ Drafted action rules:
 - every write requires explicit user confirmation
 - assistant output should show the exact pending change before submission
 - no direct database writes from assistant-specific code
+
+#### Phased implementation plan
+
+Phase 0: Provider foundation - Done
+- Cloudflare Workers AI is the preferred hosted provider for low-volume personal use
+- existing model-backed habit insight generation should be able to use Cloudflare
+- deterministic fallback must remain available when provider config is missing or a provider fails
+- provider logs may show provider/model for debugging, but must never print tokens or account IDs
+- completed:
+  - Cloudflare Workers AI env path is configured and verified locally
+  - existing habit insight generation can use Cloudflare
+  - provider/model logs exist without token/account-id exposure
+  - local cooldown override exists for testing only
+
+Phase 1: Read-only Ask Veyra MVP - Done
+- add `src/features/assistant`
+- add `src/server/api/routers/assistant.ts`
+- add `assistant.ask` mutation
+- mount one universal bottom-right launcher in the protected app shell
+- add drawer/thread/composer UI
+- support one-shot Q&A with short local message history in component state
+- build a deterministic context packet per request
+- call Cloudflare Workers AI through the provider adapter
+- no durable memory
+- no financial writes
+- no action drafts
+- completed:
+  - `src/features/assistant` server and UI slice exists
+  - `assistant.ask` is registered in the root tRPC router
+  - universal bottom-right launcher is mounted in the protected app shell
+  - mobile opens full-screen; desktop opens as a right drawer
+  - assistant uses deterministic context and Cloudflare Workers AI
+  - assistant is read-only
+
+Phase 1 context scope:
+- accounts summary
+- recent transaction category totals
+- active budget posture
+- upcoming bills
+- upcoming loan installments / repayment pressure when available
+- credit utilization and liquidity summary
+- currently available deterministic insight summaries where useful
+
+Phase 1 acceptance:
+- launcher appears across authenticated app pages
+- assistant answers basic questions from user-scoped data
+- assistant refuses or clarifies when data is insufficient
+- assistant respects `allowAiCoaching`
+- assistant handles Cloudflare errors and quota exhaustion gracefully
+- no raw unrestricted database records are sent to the model
+- no writes are possible from the assistant
+
+Phase 2: Assistant quality and grounding - Done
+- add intent detection for common finance questions
+- improve context selection by intent to reduce token usage
+- add citations/data-basis phrases to responses
+- add server-side daily assistant cap separate from insight cards
+- add audit events for assistant requests and provider failures without storing sensitive prompt text
+- add empty-data and sparse-data UX
+- completed:
+  - intent detection exists for accounts, budgets, bills, loans, spending, cashflow, and general questions
+  - context is trimmed by detected intent
+  - short in-session history is sent with each ask
+  - answers return/display data-basis text
+  - assistant route has a separate burst/daily limiter
+  - provider failures are audited without storing prompt text
+
+Phase 3: Optional durable memory - Done
+- add explicit user opt-in before storing assistant memory
+- store structured summaries only
+- add memory viewer/delete control in Settings
+- audit memory updates
+- do not store raw full chat transcripts by default
+- completed:
+  - `veyra_assistant_memories` table exists
+  - `allowAssistantMemory` and `assistantMemoryUpdatedAt` preferences exist
+  - Settings can enable/disable assistant memory
+  - Settings can view, delete one, or clear all memory summaries
+  - Ask Veyra uses memory only when enabled
+  - Ask Veyra exposes an explicit `Remember` action on answers when memory is enabled
+  - memory writes are audited
+  - memory delete/clear actions are audited
+  - raw chat transcripts are not stored by default
+
+Phase 3 implementation guidance:
+- add assistant-specific persisted preferences before writing memory:
+  - `allowAssistantMemory`
+  - optional `assistantMemoryUpdatedAt`
+- add a user-scoped memory table only for compact structured facts, not transcripts
+- memory should capture stable, user-confirmed patterns such as:
+  - preferred explanation style
+  - recurring merchants/subscriptions
+  - common income cadence
+  - budget pressure themes
+  - user-confirmed constraints
+- memory writes should happen only after explicit user consent or an explicit "remember this" action
+- Settings must include:
+  - enable/disable memory
+  - view memory summaries
+  - delete memory
+- do not proceed to Phase 4 until memory can be disabled and deleted cleanly
+
+Phase 4: Drafted actions with confirmation
+- allow the assistant to propose drafts only
+- possible drafts:
+  - transaction draft
+  - budget adjustment draft
+  - bill payment review draft
+  - loan payment draft
+- every draft must route through the existing feature service and require explicit confirmation
+- keep assistant-created drafts visually distinct from completed records
+
+Phase 5: Cross-surface assistant polish
+- add page-aware prompt suggestions based on current route
+- add links from answers to relevant pages or records
+- add compact "review this" entrypoints from budgets, bills, loans, and transactions
+- keep the global launcher as the single assistant home
 
 #### Privacy controls
 

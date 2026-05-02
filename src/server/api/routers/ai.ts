@@ -55,12 +55,24 @@ const aiRateLimitedProcedure = protectedProcedure.use(({ ctx, path, next }) => {
   return next();
 });
 
-const HABIT_INSIGHT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const DEFAULT_HABIT_INSIGHT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getHabitInsightCooldownMs() {
+  const override = process.env.VEYRA_HABIT_INSIGHT_COOLDOWN_MS;
+  if (!override) return DEFAULT_HABIT_INSIGHT_COOLDOWN_MS;
+
+  const value = Number(override);
+  if (!Number.isFinite(value) || value < 0) {
+    return DEFAULT_HABIT_INSIGHT_COOLDOWN_MS;
+  }
+
+  return value;
+}
 
 function getCooldownSecondsRemaining(generatedAtIso: string) {
   const generatedAtMs = new Date(generatedAtIso).getTime();
   if (!Number.isFinite(generatedAtMs)) return 0;
-  const remainingMs = generatedAtMs + HABIT_INSIGHT_COOLDOWN_MS - Date.now();
+  const remainingMs = generatedAtMs + getHabitInsightCooldownMs() - Date.now();
   return Math.max(0, Math.ceil(remainingMs / 1000));
 }
 

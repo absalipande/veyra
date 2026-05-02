@@ -15,6 +15,7 @@ export const updateSettingsSchema = z.object({
   dateFormat: z.enum(settingsDateFormatOptions),
   timezone: z.enum(settingsTimezoneOptions),
   allowAiCoaching: z.boolean().default(true),
+  allowAssistantMemory: z.boolean().default(false),
   allowUsageAnalytics: z.boolean().default(false),
 });
 

@@ -10,7 +10,6 @@ import {
   HandCoins,
   MoreHorizontal,
   Pencil,
-  Plus,
   Sparkles,
   Search,
   Trash2,
@@ -374,6 +373,7 @@ type AccountSectionProps = {
   emptyBody: string;
   emptyTitle: string;
   filterValue: string;
+  onCreate: () => void;
   onCreateLinkedLoan?: (account: AccountItem) => void;
   onDelete: (id: string, name: string) => void;
   onEdit: (accountId: string) => void;
@@ -445,6 +445,7 @@ function AccountSection({
   emptyBody,
   emptyTitle,
   filterValue,
+  onCreate,
   onCreateLinkedLoan,
   onDelete,
   onEdit,
@@ -457,13 +458,22 @@ function AccountSection({
   return (
     <Card className="border-white/75 bg-white/82 shadow-[0_28px_75px_-55px_rgba(10,31,34,0.28)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_32px_85px_-55px_rgba(0,0,0,0.62)]">
       <CardHeader className="gap-2.5 pb-3.5">
-        <div className="space-y-1">
-          <CardTitle className="text-[1.02rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.08rem]">
-            {title}
-          </CardTitle>
-          <CardDescription className="max-w-[34rem] text-[0.82rem] leading-5.5 sm:text-[0.84rem]">
-            {description} · Total {totalBalanceLabel}
-          </CardDescription>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-[1.02rem] tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.08rem]">
+              {title}
+            </CardTitle>
+            <CardDescription className="max-w-[34rem] text-[0.82rem] leading-5.5 sm:text-[0.84rem]">
+              {description} · Total {totalBalanceLabel}
+            </CardDescription>
+          </div>
+          <Button
+            type="button"
+            onClick={onCreate}
+            className="h-9 w-fit shrink-0 rounded-full px-4 text-[0.82rem] sm:h-10 sm:px-4 sm:text-[0.86rem]"
+          >
+            Add account
+          </Button>
         </div>
 
         <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_170px] sm:items-center">
@@ -506,6 +516,13 @@ function AccountSection({
             <p className="mx-auto mt-3 max-w-md text-[0.98rem] leading-8 text-muted-foreground">
               {emptyBody}
             </p>
+            <Button
+              type="button"
+              onClick={onCreate}
+              className="mt-5 h-9 rounded-full px-4 text-[0.84rem] sm:text-[0.88rem]"
+            >
+              Add account
+            </Button>
           </div>
         ) : (
           <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-white dark:bg-[#141d1f]">
@@ -1205,11 +1222,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
           </div>
 
           <CardContent className="relative space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
-            <div className="flex items-start justify-between gap-4">
-              <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
-                Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
-              </p>
-            </div>
+            <p className="text-[0.84rem] font-medium tracking-[0.01em] text-white/72 md:text-[0.88rem]">
+              Today · {formatDateWithPreferences(new Date(), datePreferences, "date")}
+            </p>
 
             <div className="grid gap-4 border-border/70 md:min-h-[7.7rem] md:grid-cols-[minmax(0,1.5fr)_minmax(0,1.02fr)_minmax(0,0.92fr)] md:gap-0">
               <div className="space-y-2.5 md:space-y-3 md:pr-7">
@@ -2138,6 +2153,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             sortValue={liquidSort}
             onSortChange={setLiquidSort}
             accounts={visibleLiquidAccounts}
+            onCreate={startCreate}
             onEdit={startEditById}
             onDelete={onDelete}
             emptyTitle="No liquid accounts yet"
@@ -2153,6 +2169,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
             sortValue={liabilitySort}
             onSortChange={setLiabilitySort}
             accounts={visibleLiabilityAccounts}
+            onCreate={startCreate}
             onCreateLinkedLoan={startCreateLinkedLoan}
             onEdit={startEditById}
             onDelete={onDelete}
@@ -2162,17 +2179,6 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
         </section>
       )}
 
-      <div className="fixed bottom-[max(0.9rem,env(safe-area-inset-bottom))] right-4 z-30 md:hidden">
-        <Button
-          type="button"
-          size="icon"
-          className="h-12 w-12 rounded-full bg-[#17393c] text-white shadow-[0_22px_36px_-22px_rgba(10,31,34,0.45)] hover:bg-[#1d4a4d] hover:text-white"
-          onClick={startCreate}
-        >
-          <Plus className="size-5" />
-          <span className="sr-only">Add account</span>
-        </Button>
-      </div>
     </div>
   );
 }

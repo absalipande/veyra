@@ -69,7 +69,21 @@ type AccountItem = RouterOutputs["accounts"]["list"][number];
 type BudgetItem = RouterOutputs["budgets"]["list"][number];
 type CategoryItem = RouterOutputs["categories"]["list"][number];
 
-const HABIT_INSIGHT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const DEFAULT_HABIT_INSIGHT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+
+function getHabitInsightCooldownMs() {
+  const override = process.env.NEXT_PUBLIC_VEYRA_HABIT_INSIGHT_COOLDOWN_MS;
+  if (!override) return DEFAULT_HABIT_INSIGHT_COOLDOWN_MS;
+
+  const value = Number(override);
+  if (!Number.isFinite(value) || value < 0) {
+    return DEFAULT_HABIT_INSIGHT_COOLDOWN_MS;
+  }
+
+  return value;
+}
+
+const HABIT_INSIGHT_COOLDOWN_MS = getHabitInsightCooldownMs();
 
 type EventDraft = {
   amount: string;

@@ -20,12 +20,37 @@ export const userPreferences = pgTable(
       .notNull(),
     timezone: text("timezone").default("Asia/Manila").notNull(),
     allowAiCoaching: boolean("allow_ai_coaching").default(true).notNull(),
+    allowAssistantMemory: boolean("allow_assistant_memory").default(false).notNull(),
+    assistantMemoryUpdatedAt: timestamp("assistant_memory_updated_at"),
     allowUsageAnalytics: boolean("allow_usage_analytics").default(false).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => ({
     clerkUserIdx: index("veyra_user_preferences_clerk_user_idx").on(table.clerkUserId),
+  })
+);
+
+export const assistantMemories = pgTable(
+  "veyra_assistant_memories",
+  {
+    id: text("id").primaryKey(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    kind: text("kind", {
+      enum: ["preference", "recurring_pattern", "income_cadence", "budget_pressure", "constraint", "note"],
+    })
+      .default("note")
+      .notNull(),
+    summary: text("summary").notNull(),
+    source: text("source").default("user_confirmed").notNull(),
+    metadata: text("metadata"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    clerkUserIdx: index("veyra_assistant_memories_clerk_user_idx").on(table.clerkUserId),
+    kindIdx: index("veyra_assistant_memories_kind_idx").on(table.kind),
+    createdAtIdx: index("veyra_assistant_memories_created_at_idx").on(table.createdAt),
   })
 );
 

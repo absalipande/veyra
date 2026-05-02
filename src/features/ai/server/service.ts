@@ -986,6 +986,13 @@ function shouldUseCloudflareAi() {
   );
 }
 
+function logAiProviderSelection(provider: string, model: string | null) {
+  console.info("[ai.provider]", {
+    provider,
+    model,
+  });
+}
+
 function buildDefaultBudgetPosture(
   budgetSummary: Awaited<ReturnType<typeof getBudgetsSummary>>["summary"]
 ) {
@@ -1104,9 +1111,19 @@ async function generateInsightDraftFromCloudflare(input: Parameters<typeof gener
 
 async function generateHabitInsightDraft(input: Parameters<typeof generateInsightDraftFromOpenAi>[0]) {
   if (shouldUseCloudflareAi()) {
+    logAiProviderSelection(
+      "cloudflare-workers-ai",
+      process.env.CLOUDFLARE_AI_MODEL ?? process.env.VEYRA_AI_MODEL ?? FALLBACK_CLOUDFLARE_MODEL
+    );
     return generateInsightDraftFromCloudflare(input);
   }
 
+  logAiProviderSelection(
+    process.env.OPENAI_API_KEY ? "openai" : "deterministic-fallback",
+    process.env.OPENAI_API_KEY
+      ? (process.env.OPENAI_HABIT_MODEL ?? process.env.OPENAI_MODEL ?? FALLBACK_OPENAI_MODEL)
+      : null
+  );
   return generateInsightDraftFromOpenAi(input);
 }
 

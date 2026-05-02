@@ -12,6 +12,7 @@ import { GlobalSearch } from "@/components/app/global-search";
 import { SidebarTodaySnapshot } from "@/components/app/sidebar-today-snapshot";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import { ControlCenterProvider, useControlCenter } from "@/components/app/control-center";
+import { AssistantLauncher } from "@/features/assistant/components/assistant-launcher";
 import { GlobalQuickCapture } from "@/features/transactions/components/global-quick-capture";
 import { Button } from "@/components/ui/button";
 
@@ -123,6 +124,7 @@ function AppShellLayout({ children }: AppShellProps) {
           </div>
         </div>
       </div>
+      <AssistantLauncher />
     </div>
   );
 }

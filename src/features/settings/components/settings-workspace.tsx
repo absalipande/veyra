@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 import {
   AlertTriangle,
+  Brain,
   CircleAlert,
   Download,
   Globe2,
@@ -69,6 +70,7 @@ const auditFilterOptions: Array<{ label: string; value: AuditFilter }> = [
 function getAuditBucket(action: string): AuditFilter {
   if (action.startsWith("settings.")) return "settings";
   if (action.startsWith("ai.")) return "ai";
+  if (action.startsWith("assistant.")) return "ai";
   if (action.startsWith("analytics.")) return "analytics";
   if (action.startsWith("goal.")) return "goals";
   if (action.startsWith("data_quality.")) return "data-quality";
@@ -84,6 +86,7 @@ function toDraft(settings: SettingsItem): UpdateSettingsInput {
     dateFormat: settings.dateFormat as UpdateSettingsInput["dateFormat"],
     timezone: settings.timezone as UpdateSettingsInput["timezone"],
     allowAiCoaching: settings.allowAiCoaching,
+    allowAssistantMemory: settings.allowAssistantMemory,
     allowUsageAnalytics: settings.allowUsageAnalytics,
   };
 }
@@ -92,6 +95,7 @@ export function SettingsWorkspace() {
   const { openControlCenter } = useControlCenter();
   const utils = trpc.useUtils();
   const settingsQuery = trpc.settings.get.useQuery();
+  const assistantMemoriesQuery = trpc.assistant.memories.useQuery();
   const exportDataQuery = trpc.settings.exportData.useQuery(undefined, { enabled: false });
   const auditLogQuery = trpc.settings.auditLog.useQuery({ limit: 12 });
 
@@ -113,6 +117,7 @@ export function SettingsWorkspace() {
       baseDraft.dateFormat !== draft.dateFormat ||
       baseDraft.timezone !== draft.timezone ||
       baseDraft.allowAiCoaching !== draft.allowAiCoaching ||
+      baseDraft.allowAssistantMemory !== draft.allowAssistantMemory ||
       baseDraft.allowUsageAnalytics !== draft.allowUsageAnalytics
     );
   }, [baseDraft, draft]);
@@ -230,6 +235,39 @@ export function SettingsWorkspace() {
     },
     onError: (error) => {
       toast.error("Could not clear workspace", {
+        description: error.message,
+      });
+    },
+  });
+  const deleteAssistantMemory = trpc.assistant.deleteMemory.useMutation({
+    onSuccess: async () => {
+      await Promise.all([
+        utils.assistant.memories.invalidate(),
+        utils.settings.auditLog.invalidate(),
+      ]);
+      toast.success("Memory deleted", {
+        description: "The assistant memory summary was removed.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Could not delete memory", {
+        description: error.message,
+      });
+    },
+  });
+  const clearAssistantMemories = trpc.assistant.clearMemories.useMutation({
+    onSuccess: async (result) => {
+      await Promise.all([
+        utils.assistant.memories.invalidate(),
+        utils.settings.get.invalidate(),
+        utils.settings.auditLog.invalidate(),
+      ]);
+      toast.success("Assistant memory cleared", {
+        description: `${result.deletedCount} memor${result.deletedCount === 1 ? "y" : "ies"} removed.`,
+      });
+    },
+    onError: (error) => {
+      toast.error("Could not clear memory", {
         description: error.message,
       });
     },
@@ -528,7 +566,7 @@ export function SettingsWorkspace() {
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-3">
               <div className="rounded-xl border border-border/70 bg-background px-4 py-3 dark:bg-[#141d1f]">
                 <p className="text-sm font-medium text-foreground">AI coaching access</p>
                 <p className="mt-1 text-[0.82rem] leading-6 text-muted-foreground">
@@ -553,6 +591,46 @@ export function SettingsWorkspace() {
                     className="rounded-full"
                     onClick={() =>
                       setDraftOverride((current) => ({ ...(current ?? draft), allowAiCoaching: false }))
+                    }
+                  >
+                    Disabled
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border/70 bg-background px-4 py-3 dark:bg-[#141d1f]">
+                <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Brain className="size-4 text-primary" />
+                  Assistant memory
+                </p>
+                <p className="mt-1 text-[0.82rem] leading-6 text-muted-foreground">
+                  Lets Ask Veyra remember compact user-approved summaries. Raw chat transcripts are not stored.
+                </p>
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={draft.allowAssistantMemory ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() =>
+                      setDraftOverride((current) => ({
+                        ...(current ?? draft),
+                        allowAssistantMemory: true,
+                      }))
+                    }
+                  >
+                    Enabled
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!draft.allowAssistantMemory ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() =>
+                      setDraftOverride((current) => ({
+                        ...(current ?? draft),
+                        allowAssistantMemory: false,
+                      }))
                     }
                   >
                     Disabled
@@ -592,6 +670,74 @@ export function SettingsWorkspace() {
               </div>
             </div>
           </section>
+        </CardContent>
+      </Card>
+
+      <Card className="border-white/75 bg-white/82 dark:border-white/8 dark:bg-[#182123]">
+        <CardHeader className="space-y-2 border-b border-border/60 pb-5">
+          <CardTitle className="flex items-center gap-2 text-[1.15rem] tracking-tight">
+            <Brain className="size-4 text-primary" />
+            Assistant memory
+          </CardTitle>
+          <CardDescription>
+            User-approved summaries Ask Veyra may use as lightweight future hints.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-5">
+          {!settingsQuery.data?.allowAssistantMemory ? (
+            <div className="rounded-xl border border-dashed border-border/70 bg-background px-4 py-4 text-sm leading-6 text-muted-foreground dark:bg-[#141d1f]">
+              Assistant memory is disabled. Enable it above and save settings before Ask Veyra can remember anything.
+            </div>
+          ) : assistantMemoriesQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading assistant memory...</p>
+          ) : (assistantMemoriesQuery.data ?? []).length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/70 bg-background px-4 py-4 text-sm leading-6 text-muted-foreground dark:bg-[#141d1f]">
+              No memory summaries yet. Use the Remember action under an Ask Veyra answer to save one.
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                {(assistantMemoriesQuery.data ?? []).map((memory) => (
+                  <div
+                    key={memory.id}
+                    className="flex flex-col gap-3 rounded-xl border border-border/70 bg-background px-4 py-3 dark:bg-[#141d1f] sm:flex-row sm:items-start sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-[0.72rem] uppercase tracking-[0.12em] text-muted-foreground">
+                        {memory.kind.replace(/_/g, " ")}
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-foreground">{memory.summary}</p>
+                      <p className="mt-1 text-[0.74rem] text-muted-foreground">
+                        Updated {memory.updatedAt.toLocaleString()}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 shrink-0 rounded-full px-3 text-[0.78rem]"
+                      onClick={() => deleteAssistantMemory.mutate({ id: memory.id })}
+                      disabled={deleteAssistantMemory.isPending}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-full border-destructive/30 px-4 text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  onClick={() => clearAssistantMemories.mutate()}
+                  disabled={clearAssistantMemories.isPending}
+                >
+                  <Trash2 className="size-4" />
+                  {clearAssistantMemories.isPending ? "Clearing..." : "Clear all memory"}
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
