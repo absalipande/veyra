@@ -502,7 +502,7 @@ export function GlobalQuickCapture() {
     ? {
         side: "bottom" as const,
         className:
-          "h-[74dvh] max-h-[42rem] rounded-t-[1.15rem] border border-border/70 bg-card p-0",
+          "h-[84dvh] rounded-t-[1.15rem] border border-border/70 bg-card p-0",
       }
     : {
         mobileBehavior: "modal" as const,
@@ -577,6 +577,7 @@ export function GlobalQuickCapture() {
           {...surfaceProps}
         >
           <div className="mx-auto mt-2 h-1.5 w-12 shrink-0 rounded-full bg-border sm:hidden" />
+          <div className={isMobile ? "h-[calc(84dvh-0.5rem)] overflow-y-auto" : "contents"}>
           <DialogHeader className="shrink-0 border-b border-border/70 px-4 pb-3 pt-3 pr-14 sm:px-5 sm:pb-3.5 sm:pt-4 sm:pr-16">
             <div className="flex items-center gap-2">
               <DialogTitle className="text-[1.02rem] tracking-tight sm:text-[1.12rem]">
@@ -594,7 +595,7 @@ export function GlobalQuickCapture() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3.5 sm:max-h-[calc(80vh-7.5rem)] sm:px-5 sm:py-4">
+          <div className="space-y-3 px-4 py-3.5 sm:min-h-0 sm:flex-1 sm:overflow-y-auto sm:px-5 sm:py-4">
             <div className="space-y-2.5">
               <div className="flex h-11 items-center rounded-xl border border-border/80 bg-white px-3 transition-colors focus-within:border-[#7fb9b6] focus-within:ring-2 focus-within:ring-[#7fb9b6]/20 dark:bg-[#141d1f]">
                 <Search className="mr-2.5 size-4 shrink-0 text-muted-foreground sm:mr-3" />
@@ -1005,6 +1006,7 @@ export function GlobalQuickCapture() {
               </Button>
             </div>
           </DialogFooter>
+          </div>
         </Surface>
       </Root>
     </>
