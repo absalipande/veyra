@@ -37,6 +37,17 @@ type ParsedDraft = {
   >;
 };
 
+type QuickCaptureModelSuggestion = {
+  intent?: "expense" | "income" | "transfer" | null;
+  amount?: number | null;
+  description?: string | null;
+  dateValue?: string | null;
+  sourceAccountName?: string | null;
+  destinationAccountName?: string | null;
+  categoryName?: string | null;
+  budgetName?: string | null;
+};
+
 function checkpointValue(value: Date | string | null | undefined) {
   if (!value) return "0";
   if (value instanceof Date) return value.toISOString();
@@ -134,6 +145,18 @@ function toDateValue(offsetDays = 0) {
   return date.toISOString().slice(0, 10);
 }
 
+function isValidDateValue(value: string | null | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T12:00:00`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function normalizeDraftDescription(value: string | null | undefined) {
+  const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
+  if (!normalized || normalized.length < 2) return null;
+  return normalized.slice(0, 120);
+}
+
 function formatDraftDescription(input: string, intent: Intent) {
   const merchantInParentheses = input.match(/\(([^)]+)\)/)?.[1]?.trim() ?? null;
   if (merchantInParentheses) {
@@ -199,6 +222,160 @@ function deriveConfidence(parsed: Omit<ParsedDraft, "confidence">): ParsedDraft[
   if (score >= 0.8) return "high";
   if (score >= 0.52) return "medium";
   return "low";
+}
+
+function parseQuickCaptureSuggestion(content: string | null | undefined) {
+  if (!content) return null;
+
+  try {
+    const trimmed = content.trim();
+    const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch?.[0] ?? trimmed) as QuickCaptureModelSuggestion;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function buildQuickCaptureSuggestionMessages(input: {
+  text: string;
+  today: string;
+  accounts: Array<{ name: string; type: string }>;
+  categories: Array<{ name: string; kind: "income" | "expense" }>;
+  budgets: Array<{ name: string }>;
+}) {
+  return [
+    {
+      role: "system" as const,
+      content:
+        "You improve quick transaction capture drafts for Veyra. Return valid JSON only. " +
+        "Use these exact keys: intent, amount, description, dateValue, sourceAccountName, destinationAccountName, categoryName, budgetName. " +
+        "intent must be expense, income, transfer, or null. dateValue must be YYYY-MM-DD. " +
+        "Use only account, category, and budget names from the provided lists. " +
+        "Make description short, natural, merchant-like, and suitable for a finance ledger.",
+    },
+    {
+      role: "user" as const,
+      content: JSON.stringify({
+        today: input.today,
+        text: input.text,
+        accounts: input.accounts,
+        categories: input.categories,
+        budgets: input.budgets,
+      }),
+    },
+  ];
+}
+
+async function generateQuickCaptureSuggestionFromLocal(input: {
+  text: string;
+  today: string;
+  accounts: Array<{ name: string; type: string }>;
+  categories: Array<{ name: string; kind: "income" | "expense" }>;
+  budgets: Array<{ name: string }>;
+}) {
+  const provider = process.env.VEYRA_AI_PROVIDER?.trim().toLowerCase();
+  if (provider !== "local-llm" && provider !== "local" && provider !== "ollama") return null;
+
+  const messages = buildQuickCaptureSuggestionMessages(input);
+
+  if (provider === "ollama") {
+    const baseUrl = (process.env.VEYRA_LOCAL_LLM_BASE_URL ?? "http://127.0.0.1:11434").replace(/\/$/, "");
+    const model = process.env.VEYRA_LOCAL_LLM_MODEL ?? process.env.OLLAMA_MODEL ?? "llama3.1";
+    const response = await fetch(`${baseUrl}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages,
+        stream: false,
+        format: "json",
+        options: { temperature: 0.1 },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Local Ollama request failed (${response.status})`);
+    }
+
+    const json = (await response.json()) as { message?: { content?: string | null } };
+    return parseQuickCaptureSuggestion(json.message?.content);
+  }
+
+  const baseUrl = (process.env.VEYRA_LOCAL_LLM_BASE_URL ?? "http://127.0.0.1:1234/v1").replace(/\/$/, "");
+  const model = process.env.VEYRA_LOCAL_LLM_MODEL ?? "local-model";
+  const response = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.1,
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Local LLM request failed (${response.status})`);
+  }
+
+  const json = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string | null } }>;
+  };
+  return parseQuickCaptureSuggestion(json.choices?.[0]?.message?.content);
+}
+
+function applyQuickCaptureSuggestion(
+  parsed: Omit<ParsedDraft, "confidence" | "missing">,
+  suggestion: QuickCaptureModelSuggestion | null,
+  context: {
+    liquidAccounts: Array<{ id: string; name: string }>;
+    spendableAccounts: Array<{ id: string; name: string }>;
+    categories: Array<{ id: string; name: string; kind: "income" | "expense" }>;
+    budgets: Array<{ id: string; name: string }>;
+  }
+) {
+  if (!suggestion) return parsed;
+
+  const intent = suggestion.intent ?? parsed.intent;
+  const candidateAccounts = intent === "income" ? context.liquidAccounts : context.spendableAccounts;
+  const description = normalizeDraftDescription(suggestion.description) ?? parsed.description;
+  const amountMiliunits =
+    typeof suggestion.amount === "number" && Number.isFinite(suggestion.amount) && suggestion.amount > 0
+      ? Math.round(suggestion.amount * 1000)
+      : parsed.amountMiliunits;
+  const sourceAccountId =
+    findAccountMatch(suggestion.sourceAccountName ?? null, candidateAccounts)?.id ??
+    parsed.sourceAccountId;
+  const destinationAccountId =
+    findAccountMatch(suggestion.destinationAccountName ?? null, context.liquidAccounts)?.id ??
+    parsed.destinationAccountId;
+  const categoryId =
+    (intent === "expense" || intent === "income"
+      ? findCategoryMatch(suggestion.categoryName ?? description, intent, context.categories)?.id
+      : null) ?? parsed.categoryId;
+  const budgetId =
+    intent === "expense"
+      ? (context.budgets.find((budget) => {
+          const suggestedBudget = normalizeValue(suggestion.budgetName ?? "");
+          if (!suggestedBudget) return false;
+          const budgetName = normalizeValue(budget.name);
+          return budgetName.includes(suggestedBudget) || suggestedBudget.includes(budgetName);
+        })?.id ?? parsed.budgetId)
+      : null;
+  const suggestedDateValue = suggestion.dateValue;
+
+  return {
+    ...parsed,
+    intent,
+    amountMiliunits,
+    description,
+    dateValue: isValidDateValue(suggestedDateValue) ? suggestedDateValue : parsed.dateValue,
+    sourceAccountId,
+    destinationAccountId,
+    categoryId,
+    budgetId,
+  };
 }
 
 async function parseQuickCaptureDraft(
@@ -268,18 +445,6 @@ async function parseQuickCaptureDraft(
     }
   }
 
-  const missing: ParsedDraft["missing"] = [];
-  if (!intent) missing.push("intent");
-  if (!amountMiliunits) missing.push("amount");
-  if (!description) missing.push("description");
-
-  if (intent === "transfer") {
-    if (!sourceAccountId) missing.push("sourceAccount");
-    if (!destinationAccountId) missing.push("destinationAccount");
-  } else if (intent === "expense" || intent === "income") {
-    if (!sourceAccountId) missing.push("account");
-  }
-
   const baseParsed = {
     intent,
     amountMiliunits,
@@ -289,12 +454,43 @@ async function parseQuickCaptureDraft(
     destinationAccountId,
     categoryId,
     budgetId,
-    missing,
   };
 
+  let enrichedParsed = baseParsed;
+  try {
+    const suggestion = await generateQuickCaptureSuggestionFromLocal({
+      text: raw,
+      today: toDateValue(),
+      accounts: accountRows.map((account) => ({ name: account.name, type: account.type })),
+      categories: categoryRows.map((category) => ({ name: category.name, kind: category.kind })),
+      budgets: budgetRows.map((budget) => ({ name: budget.name })),
+    });
+    enrichedParsed = applyQuickCaptureSuggestion(baseParsed, suggestion, {
+      liquidAccounts,
+      spendableAccounts,
+      categories: categoryRows,
+      budgets: budgetRows,
+    });
+  } catch (error) {
+    console.info("[ai.quickCaptureDraft.local] falling back to deterministic parser", error);
+  }
+
+  const enrichedMissing: ParsedDraft["missing"] = [];
+  if (!enrichedParsed.intent) enrichedMissing.push("intent");
+  if (!enrichedParsed.amountMiliunits) enrichedMissing.push("amount");
+  if (!enrichedParsed.description) enrichedMissing.push("description");
+
+  if (enrichedParsed.intent === "transfer") {
+    if (!enrichedParsed.sourceAccountId) enrichedMissing.push("sourceAccount");
+    if (!enrichedParsed.destinationAccountId) enrichedMissing.push("destinationAccount");
+  } else if (enrichedParsed.intent === "expense" || enrichedParsed.intent === "income") {
+    if (!enrichedParsed.sourceAccountId) enrichedMissing.push("account");
+  }
+
   return {
-    ...baseParsed,
-    confidence: deriveConfidence(baseParsed),
+    ...enrichedParsed,
+    missing: enrichedMissing,
+    confidence: deriveConfidence({ ...enrichedParsed, missing: enrichedMissing }),
   };
 }
 
