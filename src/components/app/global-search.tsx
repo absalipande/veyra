@@ -10,6 +10,7 @@ import { trpc } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { getInstitutionDisplay } from "@/features/accounts/lib/institutions";
 import { InstitutionAvatar } from "@/components/app/institution-avatar";
 
@@ -70,6 +71,7 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [mobileSection, setMobileSection] = useState<MobileSearchSection>("all");
+  const [isMobile, setIsMobile] = useState(false);
   const deferredQuery = useDeferredValue(query);
 
 
@@ -101,6 +103,17 @@ export function GlobalSearch() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(max-width: 639px)");
+    const onChange = () => setIsMobile(media.matches);
+    onChange();
+    media.addEventListener("change", onChange);
+
+    return () => media.removeEventListener("change", onChange);
   }, []);
 
   const accounts = useMemo(() => {
@@ -147,6 +160,21 @@ export function GlobalSearch() {
   const isLoading = accountsQuery.isLoading || transactionsQuery.isLoading;
   const hasQuery = deferredQuery.trim().length > 0;
   const hasResults = accounts.length > 0 || transactions.length > 0;
+  const Root = isMobile ? Sheet : Dialog;
+  const Surface = isMobile ? SheetContent : DialogContent;
+  const surfaceProps = isMobile
+    ? {
+        side: "bottom" as const,
+        showCloseButton: false,
+        className:
+          "h-[84dvh] rounded-t-[1.15rem] border border-border/70 bg-card p-0",
+      }
+    : {
+        mobileBehavior: "modal" as const,
+        showCloseButton: false,
+        className:
+          "max-h-[78vh] w-[calc(100vw-1rem)] overflow-hidden rounded-[1.25rem] border-border/70 bg-card p-0 text-foreground shadow-[0_34px_120px_-70px_rgba(10,31,34,0.4)] sm:w-[min(92vw,56rem)] sm:max-w-[56rem]",
+      };
 
   return (
     <>
@@ -175,7 +203,7 @@ export function GlobalSearch() {
         <span className="sr-only">Open search</span>
       </Button>
 
-      <Dialog
+      <Root
         open={open}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
@@ -185,31 +213,26 @@ export function GlobalSearch() {
           setOpen(nextOpen);
         }}
       >
-        <DialogContent
-          showCloseButton={false}
-          className="max-h-[calc(88dvh-env(safe-area-inset-top))] w-[min(94vw,48rem)] overflow-x-hidden overflow-y-auto rounded-[1.35rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(255,255,255,0.99))] px-0 py-0 text-foreground shadow-[0_34px_120px_-70px_rgba(10,31,34,0.4)] dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.99),rgba(18,27,29,0.99))] sm:max-h-[90vh] sm:w-auto sm:max-w-[48rem] sm:rounded-[2rem]"
-        >
+        <Surface {...surfaceProps}>
+          <div className="mx-auto mt-2 h-1.5 w-12 shrink-0 rounded-full bg-border sm:hidden" />
           <DialogTitle className="sr-only">Global search</DialogTitle>
           <DialogDescription className="sr-only">
             Search accounts and transactions across your workspace.
           </DialogDescription>
 
-          <div className="border-b border-border/70 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:pb-4 sm:pt-5">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <div className="inline-flex rounded-full border border-[#17393c]/10 bg-[#17393c]/5 px-3 py-1 text-[0.64rem] font-semibold uppercase tracking-[0.18em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
-                  Global search
-                </div>
-                <div className="keyboard-hint hidden items-center rounded-full border border-border/70 bg-white px-2 py-0.5 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
-                  ⌘ K
-                </div>
+          <div className="shrink-0 border-b border-border/70 px-4 pb-3 pt-3 pr-14 sm:px-6 sm:pb-4 sm:pt-5 sm:pr-16">
+            <div className="flex items-center gap-2">
+              <h2 className="text-[1.02rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.12rem]">
+                Search
+              </h2>
+              <div className="keyboard-hint hidden h-7 items-center rounded-full border border-border/70 bg-white px-2.5 text-[0.66rem] font-medium text-muted-foreground sm:inline-flex">
+                ⌘ K
               </div>
-
               <Button
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                className="rounded-full border border-border/70 text-muted-foreground hover:text-foreground"
+                className="absolute right-3 top-3 rounded-full border border-border/70 text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   setQuery("");
                   setOpen(false);
@@ -220,58 +243,58 @@ export function GlobalSearch() {
               </Button>
             </div>
 
-            <div className="mt-4 space-y-3">
-              <div>
-                <h2 className="text-[1.02rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.16rem]">
-                  Find accounts and transactions fast
-                </h2>
-                <p className="mt-1 max-w-[52ch] text-[0.82rem] leading-6 text-muted-foreground sm:text-[0.86rem]">
-                  Search by account name, transaction description, notes, or event type.
-                </p>
-              </div>
-
-              <div className="flex h-12 items-center rounded-[1rem] border-2 border-[#7fb9b6]/85 bg-white px-4 dark:bg-[#162022]">
-                <Search className="mr-3 size-4 shrink-0 text-muted-foreground" />
+            <div className="mt-3 space-y-3">
+              <div className="flex h-11 items-center rounded-xl border border-border/80 bg-white px-3 transition-colors focus-within:border-[#7fb9b6] focus-within:ring-2 focus-within:ring-[#7fb9b6]/20 dark:bg-[#141d1f]">
+                <Search className="mr-2.5 size-4 shrink-0 text-muted-foreground sm:mr-3" />
                 <Input
                   autoFocus
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search accounts, transactions, notes, or events..."
-                  className="h-auto border-0 bg-transparent px-0 py-0 text-[0.94rem] leading-[1.25] shadow-none placeholder:text-muted-foreground/90 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent sm:text-[0.95rem]"
+                  placeholder="Search accounts, transactions, notes, or events"
+                  className="h-10 min-w-0 flex-1 rounded-none border-0 bg-transparent px-0 py-0 text-[0.86rem] leading-[1.25] shadow-none placeholder:text-muted-foreground/90 focus-visible:border-0 focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-transparent"
                 />
-                <div className="keyboard-hint ml-3 hidden shrink-0 items-center rounded-full border border-border/70 bg-white px-2 py-0.5 text-[0.68rem] font-medium text-muted-foreground sm:inline-flex">
-                  ⌘ K
-                </div>
+                {query.trim() ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="ml-2 size-7 shrink-0 rounded-full text-muted-foreground hover:bg-muted"
+                    onClick={() => setQuery("")}
+                  >
+                    <X className="size-4" />
+                    <span className="sr-only">Clear search</span>
+                  </Button>
+                ) : null}
               </div>
-            </div>
 
-            <div className="mt-3.5 flex gap-2 sm:hidden">
-              {([
-                { value: "all", label: "All" },
-                { value: "accounts", label: "Accounts" },
-                { value: "transactions", label: "Transactions" },
-              ] as const).map((section) => (
-                <button
-                  key={section.value}
-                  type="button"
-                  onClick={() => setMobileSection(section.value)}
-                  className={`rounded-full border px-3 py-1.5 text-[0.76rem] font-medium transition-colors ${
-                    mobileSection === section.value
-                      ? "border-[#17393c] bg-[#17393c] text-white dark:border-primary dark:bg-primary dark:text-primary-foreground"
-                      : "border-border/70 bg-background text-muted-foreground"
-                  }`}
-                >
-                  {section.label}
-                </button>
-              ))}
+              <div className="grid grid-cols-3 gap-1 rounded-xl border border-border/70 bg-muted/40 p-1 sm:hidden">
+                {([
+                  { value: "all", label: "All" },
+                  { value: "accounts", label: "Accounts" },
+                  { value: "transactions", label: "Transactions" },
+                ] as const).map((section) => (
+                  <button
+                    key={section.value}
+                    type="button"
+                    onClick={() => setMobileSection(section.value)}
+                    className={`h-8 rounded-lg px-2 text-[0.74rem] font-semibold transition-colors ${
+                      mobileSection === section.value
+                        ? "bg-[#0f766e] text-white shadow-none"
+                        : "text-muted-foreground hover:bg-white hover:text-foreground"
+                    }`}
+                  >
+                    {section.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-4 px-4 py-4 sm:px-6 sm:py-5">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-3.5 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 sm:px-6 sm:py-5">
             {(mobileSection === "all" || mobileSection === "accounts") && (
-              <section className="space-y-3">
+              <section className="space-y-2.5">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-foreground">
+                  <div className="flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     <Landmark className="size-[0.95rem] text-primary" />
                     Accounts
                   </div>
@@ -284,13 +307,13 @@ export function GlobalSearch() {
                   </button>
                 </div>
 
-                <div className="overflow-hidden rounded-[1.05rem] border border-border/70 bg-white/72 dark:bg-[#162022]">
+                <div className="overflow-hidden rounded-xl border border-border/70 bg-white dark:bg-[#162022]">
                   {accounts.map((account, index) => (
                     <button
                       key={account.id}
                       type="button"
                       onClick={() => openAccountsResult(account.name)}
-                      className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-white dark:hover:bg-[#1b2527] ${
+                      className={`flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-muted/35 dark:hover:bg-[#1b2527] ${
                         index !== accounts.length - 1 ? "border-b border-border/70" : ""
                       }`}
                     >
@@ -313,13 +336,13 @@ export function GlobalSearch() {
                           <p className="truncate text-[0.92rem] font-medium text-[#10292B] dark:text-foreground">
                             {account.name}
                           </p>
-                          <p className="mt-0.5 text-[0.76rem] text-muted-foreground">
+                          <p className="mt-0.5 text-[0.72rem] text-muted-foreground">
                             {getAccountTypeLabel(account.type)} · {account.currency}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 pl-3">
-                        <span className="hidden text-[0.92rem] font-semibold text-[#10292B] dark:text-foreground sm:inline-flex">
+                        <span className="hidden text-[0.88rem] font-semibold text-[#10292B] dark:text-foreground sm:inline-flex">
                           {new Intl.NumberFormat("en-PH", { style: "currency", currency: account.currency, maximumFractionDigits: 2 }).format((account.balance ?? 0) / 1000)}
                         </span>
                         <ArrowUpRight className="size-[0.95rem] shrink-0 text-muted-foreground" />
@@ -329,7 +352,7 @@ export function GlobalSearch() {
                 </div>
 
                 {!isLoading && hasQuery && accounts.length === 0 ? (
-                  <p className="rounded-[1.05rem] border border-dashed border-border/70 px-4 py-4 text-[0.92rem] text-muted-foreground">
+                  <p className="rounded-xl border border-dashed border-border/70 px-4 py-4 text-[0.84rem] text-muted-foreground">
                     No accounts matched that search.
                   </p>
                 ) : null}
@@ -337,9 +360,9 @@ export function GlobalSearch() {
             )}
 
             {(mobileSection === "all" || mobileSection === "transactions") && (
-              <section className="space-y-3">
+              <section className="space-y-2.5">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-[0.78rem] font-semibold uppercase tracking-[0.14em] text-foreground">
+                  <div className="flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                     <ReceiptIcon />
                     Transactions
                   </div>
@@ -352,7 +375,7 @@ export function GlobalSearch() {
                   </button>
                 </div>
 
-                <div className="overflow-hidden rounded-[1.05rem] border border-border/70 bg-white/72 dark:bg-[#162022]">
+                <div className="overflow-hidden rounded-xl border border-border/70 bg-white dark:bg-[#162022]">
                   {transactions.map((event, index) => {
                     const isPositive = event.type === "income";
                     const amountLabel = event.amount
@@ -368,7 +391,7 @@ export function GlobalSearch() {
                         key={event.id}
                         type="button"
                         onClick={() => openTransactionResult(event.description)}
-                        className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-white dark:hover:bg-[#1b2527] ${
+                        className={`flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-muted/35 dark:hover:bg-[#1b2527] ${
                           index !== transactions.length - 1 ? "border-b border-border/70" : ""
                         }`}
                       >
@@ -384,14 +407,14 @@ export function GlobalSearch() {
                             <p className="truncate text-[0.92rem] font-medium text-[#10292B] dark:text-foreground">
                               {event.description}
                             </p>
-                            <p className="mt-0.5 text-[0.76rem] text-muted-foreground">
+                            <p className="mt-0.5 text-[0.72rem] text-muted-foreground">
                               {getTransactionTypeLabel(event.type)} · Today
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-3 pl-3">
                           {amountLabel ? (
-                            <span className={`hidden text-[0.92rem] font-semibold sm:inline-flex ${
+                            <span className={`hidden text-[0.88rem] font-semibold sm:inline-flex ${
                               isPositive
                                 ? "text-emerald-700 dark:text-emerald-300"
                                 : "text-rose-700 dark:text-rose-300"
@@ -407,28 +430,27 @@ export function GlobalSearch() {
                 </div>
 
                 {!isLoading && hasQuery && transactions.length === 0 ? (
-                  <p className="rounded-[1.05rem] border border-dashed border-border/70 px-4 py-4 text-[0.92rem] text-muted-foreground">
+                  <p className="rounded-xl border border-dashed border-border/70 px-4 py-4 text-[0.84rem] text-muted-foreground">
                     No transactions matched that search.
                   </p>
                 ) : null}
               </section>
             )}
+
+            {isLoading ? (
+              <div className="rounded-xl border border-border/70 bg-white px-4 py-3 text-[0.82rem] text-muted-foreground dark:bg-[#162022] sm:col-span-2">
+                Searching your workspace...
+              </div>
+            ) : null}
+
+            {hasQuery && !isLoading && !hasResults ? (
+              <div className="rounded-xl border border-border/70 bg-white px-4 py-3 text-[0.82rem] text-muted-foreground dark:bg-[#162022] sm:col-span-2">
+                Nothing matched &quot;{deferredQuery.trim()}&quot;.
+              </div>
+            ) : null}
           </div>
-
-
-          {isLoading ? (
-            <div className="border-t border-border/70 px-5 py-4 text-[0.88rem] text-muted-foreground sm:px-6">
-              Searching your workspace...
-            </div>
-          ) : null}
-
-          {hasQuery && !isLoading && !hasResults ? (
-            <div className="border-t border-border/70 px-5 py-4 text-[0.88rem] text-muted-foreground sm:px-6">
-              Nothing matched “{deferredQuery.trim()}”.
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+        </Surface>
+      </Root>
     </>
   );
 }

@@ -503,8 +503,18 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const qualityDuplicates = dataQualityTotals?.duplicateCount ?? 0;
   const qualityOdd = dataQualityTotals?.oddCount ?? 0;
   const totalQualityIssues = qualityUncategorized + qualityDuplicates + qualityOdd;
-  const qualityScore = Math.max(0, 100 - qualityUncategorized * 8 - qualityDuplicates * 10 - qualityOdd * 6);
-  const qualityGrade = qualityScore >= 90 ? "Excellent" : qualityScore >= 75 ? "Good" : qualityScore >= 55 ? "Watch" : "Needs cleanup";
+  const qualityScore = Math.max(
+    0,
+    100 - qualityUncategorized * 8 - qualityDuplicates * 10 - qualityOdd * 6,
+  );
+  const qualityGrade =
+    qualityScore >= 90
+      ? "Excellent"
+      : qualityScore >= 75
+        ? "Good"
+        : qualityScore >= 55
+          ? "Watch"
+          : "Needs cleanup";
 
   const refreshTransactions = async () => {
     await Promise.all([
@@ -915,8 +925,10 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     <Loader2 className="mr-1.5 size-3.5 animate-spin" />
                     Analyzing...
                   </>
+                ) : habitInsightQuery.data ? (
+                  "Refresh analysis"
                 ) : (
-                  habitInsightQuery.data ? "Refresh analysis" : "Generate insights"
+                  "Generate insights"
                 )}
               </Button>
               {isInsightCooldownActive ? (
@@ -1057,7 +1069,10 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-sky-500 dark:bg-sky-300" />
                         <span className="leading-6">
                           <span className="font-medium">
-                            {item.name} {item.amountLabel !== "—" ? `(${item.sharePct}% · ${item.amountLabel})` : ""}
+                            {item.name}{" "}
+                            {item.amountLabel !== "—"
+                              ? `(${item.sharePct}% · ${item.amountLabel})`
+                              : ""}
                           </span>{" "}
                           {item.note}
                         </span>
@@ -1079,8 +1094,9 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     ))}
                   </ul>
                   <p className="mt-2 text-[0.76rem] text-muted-foreground">
-                    Based on {habitInsightQuery.data.dataWindow?.expensesAnalyzed ?? 0} expense events across{" "}
-                    {habitInsightQuery.data.dataWindow?.budgetsAnalyzed ?? 0} active budgets.
+                    Based on {habitInsightQuery.data.dataWindow?.expensesAnalyzed ?? 0} expense
+                    events across {habitInsightQuery.data.dataWindow?.budgetsAnalyzed ?? 0} active
+                    budgets.
                   </p>
                 </div>
               </div>
@@ -1102,221 +1118,6 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 </Button>
               </div>
             ) : null}
-          </CardContent>
-        </Card>
-      </section>
-
-      <section>
-        <Card className="border-white/75 bg-white/84 shadow-[0_20px_55px_-48px_rgba(10,31,34,0.24)] dark:border-white/8 dark:bg-[#182123] dark:shadow-[0_24px_70px_-52px_rgba(0,0,0,0.58)]">
-          <CardHeader className="gap-3 px-4 py-4 sm:px-5 sm:py-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200">
-                  <ShieldAlert className="size-4.5" />
-                </div>
-                <div>
-                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Data quality assistant
-                  </p>
-                  <h3 className="text-[1.06rem] leading-tight font-semibold tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.12rem]">
-                    Fix uncategorized, duplicates, and odd spend
-                  </h3>
-                  <p className="mt-0.5 text-[0.82rem] text-muted-foreground">
-                    Better transaction quality improves forecasts, budgets, and AI coaching.
-                  </p>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-8 rounded-full border-violet-200 bg-violet-50 px-3 text-[0.78rem] text-violet-700 hover:bg-violet-100 hover:text-violet-800 dark:border-violet-500/35 dark:bg-violet-500/12 dark:text-violet-200 dark:hover:bg-violet-500/20"
-                onClick={() => dataQualityQuery.refetch()}
-                disabled={dataQualityQuery.isFetching}
-              >
-                {dataQualityQuery.isFetching ? (
-                  <>
-                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                    Scanning...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="mr-1.5 size-3.5" />
-                    Run data scan
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3 px-4 pb-4 sm:px-5 sm:pb-5">
-            {dataQualityQuery.isLoading ? (
-              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-background px-3 py-3 text-[0.86rem] text-muted-foreground dark:bg-[#141d1f]">
-                <Loader2 className="size-4 animate-spin" />
-                Scanning transaction quality...
-              </div>
-            ) : (
-              <>
-                <div className="grid gap-2.5 lg:grid-cols-3">
-                  <div className="rounded-lg border-l-2 border-amber-400 border-r border-y border-border/70 bg-background px-3 py-2.5 dark:border-amber-400/70 dark:bg-[#141d1f]">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <span className="flex size-9 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200">
-                          <FolderOpen className="size-4" />
-                        </span>
-                        <div>
-                          <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">Uncategorized</p>
-                          <p className="text-[1.15rem] leading-none font-semibold tracking-tight text-foreground">{qualityUncategorized}</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="size-4 text-muted-foreground" />
-                    </div>
-                    <p className="mt-1.5 text-[0.78rem] text-muted-foreground">Review and categorize</p>
-                  </div>
-
-                  <div className="rounded-lg border-l-2 border-violet-400 border-r border-y border-border/70 bg-background px-3 py-2.5 dark:border-violet-400/70 dark:bg-[#141d1f]">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <span className="flex size-9 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
-                          <Copy className="size-4" />
-                        </span>
-                        <div>
-                          <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">Duplicates</p>
-                          <p className="text-[1.15rem] leading-none font-semibold tracking-tight text-foreground">{qualityDuplicates}</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="size-4 text-muted-foreground" />
-                    </div>
-                    <p className="mt-1.5 text-[0.78rem] text-muted-foreground">Find and merge</p>
-                  </div>
-
-                  <div className="rounded-lg border-l-2 border-emerald-400 border-r border-y border-border/70 bg-background px-3 py-2.5 dark:border-emerald-400/70 dark:bg-[#141d1f]">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2.5">
-                        <span className="flex size-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
-                          <Activity className="size-4" />
-                        </span>
-                        <div>
-                          <p className="text-[0.68rem] uppercase tracking-[0.1em] text-muted-foreground">Odd transactions</p>
-                          <p className="text-[1.15rem] leading-none font-semibold tracking-tight text-foreground">{qualityOdd}</p>
-                        </div>
-                      </div>
-                      <ChevronRight className="size-4 text-muted-foreground" />
-                    </div>
-                    <p className="mt-1.5 text-[0.78rem] text-muted-foreground">Review unusual activity</p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-border/70 bg-white/60 p-2.5 dark:bg-[#141d1f]">
-                  <p className="mb-1.5 text-[0.66rem] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-                    Quick actions
-                  </p>
-                  <div className="grid gap-2 lg:grid-cols-4">
-                    <button
-                      type="button"
-                      className="rounded-lg border border-border/70 bg-background px-2.5 py-2 text-left transition hover:bg-muted/45 disabled:opacity-60 dark:bg-[#111a1c]"
-                      onClick={() => {
-                        const row = (dataQualityQuery.data?.uncategorized ?? []).find((item) => Boolean(item.suggestedCategoryId));
-                        if (!row?.suggestedCategoryId) return;
-                        applyCategoryFix.mutate({ eventId: row.id, categoryId: row.suggestedCategoryId });
-                      }}
-                      disabled={
-                        applyCategoryFix.isPending ||
-                        !(dataQualityQuery.data?.uncategorized ?? []).some((item) => Boolean(item.suggestedCategoryId))
-                      }
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="flex size-7 items-center justify-center rounded-full bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200">
-                            <Wand2 className="size-3.5" />
-                          </span>
-                          <p className="text-[0.82rem] font-medium text-foreground">One-tap category fixes</p>
-                        </div>
-                        <ChevronRight className="size-3.5 text-muted-foreground" />
-                      </div>
-                      <p className="mt-1 text-[0.74rem] text-muted-foreground">Auto-fix low confidence categories</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="rounded-lg border border-border/70 bg-background px-2.5 py-2 text-left transition hover:bg-muted/45 disabled:opacity-60 dark:bg-[#111a1c]"
-                      onClick={() => {
-                        const row = (dataQualityQuery.data?.duplicateCandidates ?? [])[0];
-                        if (!row) return;
-                        removeDuplicateFix.mutate({ eventId: row.removeEventId });
-                      }}
-                      disabled={removeDuplicateFix.isPending || (dataQualityQuery.data?.duplicateCandidates ?? []).length === 0}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="flex size-7 items-center justify-center rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
-                            <Copy className="size-3.5" />
-                          </span>
-                          <p className="text-[0.82rem] font-medium text-foreground">Duplicate candidates</p>
-                        </div>
-                        <ChevronRight className="size-3.5 text-muted-foreground" />
-                      </div>
-                      <p className="mt-1 text-[0.74rem] text-muted-foreground">Review possible duplicate transactions</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      className="rounded-lg border border-border/70 bg-background px-2.5 py-2 text-left transition hover:bg-muted/45 disabled:opacity-60 dark:bg-[#111a1c]"
-                      onClick={() => {
-                        const row = (dataQualityQuery.data?.oddTransactions ?? [])[0];
-                        if (!row) return;
-                        markOddReviewed.mutate({ eventId: row.id });
-                      }}
-                      disabled={markOddReviewed.isPending || (dataQualityQuery.data?.oddTransactions ?? []).length === 0}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="flex size-7 items-center justify-center rounded-full bg-orange-100 text-orange-700 dark:bg-orange-500/15 dark:text-orange-200">
-                            <Activity className="size-3.5" />
-                          </span>
-                          <p className="text-[0.82rem] font-medium text-foreground">Odd spend review</p>
-                        </div>
-                        <ChevronRight className="size-3.5 text-muted-foreground" />
-                      </div>
-                      <p className="mt-1 text-[0.74rem] text-muted-foreground">Check flagged unusual spending</p>
-                    </button>
-
-                    <div className="rounded-lg border border-border/70 bg-background px-2.5 py-2 dark:bg-[#111a1c]">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="flex size-7 items-center justify-center rounded-full bg-teal-100 text-teal-700 dark:bg-teal-500/15 dark:text-teal-200">
-                            <ShieldCheck className="size-3.5" />
-                          </span>
-                          <p className="text-[0.82rem] font-medium text-foreground">Data health summary</p>
-                        </div>
-                        <ChevronRight className="size-3.5 text-muted-foreground" />
-                      </div>
-                      <p className="mt-1 text-[0.74rem] text-muted-foreground">
-                        Score {qualityScore}/100 · {qualityGrade}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-200/65 bg-emerald-50/65 px-3 py-2.5 dark:border-emerald-500/25 dark:bg-emerald-500/10">
-                  <p className="text-[0.78rem] text-emerald-800 dark:text-emerald-200">
-                    {isDataQualityClean
-                      ? "Clean data leads to better forecasts, smarter budgets, and more accurate Veyra insights."
-                      : `${totalQualityIssues} issue${totalQualityIssues === 1 ? "" : "s"} found. Use quick actions to improve accuracy.`}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 shrink-0 rounded-full px-2.5 text-[0.76rem] text-emerald-700 hover:bg-emerald-100/60 hover:text-emerald-800 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
-                    onClick={() => setIsDataQualityHelpOpen(true)}
-                  >
-                    Learn more
-                    <ChevronRight className="ml-1 size-3.5" />
-                  </Button>
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
       </section>
@@ -1512,7 +1313,8 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   Uncategorized
                 </p>
                 <p className="mt-1 text-[0.78rem] leading-5.5 text-muted-foreground">
-                  Expense entries without a category. We suggest a category when merchant history is clear.
+                  Expense entries without a category. We suggest a category when merchant history is
+                  clear.
                 </p>
               </div>
               <div className="rounded-[1rem] border border-border/70 bg-white/60 p-3 dark:bg-[#1a2426]">
@@ -1541,19 +1343,22 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 <li className="flex items-start gap-2">
                   <span className="mt-1 size-1.5 rounded-full bg-sky-500 dark:bg-sky-300" />
                   <span>
-                    <span className="font-medium">One-tap category fixes:</span> applies a suggested category to one uncategorized expense.
+                    <span className="font-medium">One-tap category fixes:</span> applies a suggested
+                    category to one uncategorized expense.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-1 size-1.5 rounded-full bg-violet-500 dark:bg-violet-300" />
                   <span>
-                    <span className="font-medium">Duplicate candidates:</span> removes one likely duplicate event and keeps the original.
+                    <span className="font-medium">Duplicate candidates:</span> removes one likely
+                    duplicate event and keeps the original.
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-1 size-1.5 rounded-full bg-orange-500 dark:bg-orange-300" />
                   <span>
-                    <span className="font-medium">Odd spend review:</span> tags an outlier as reviewed without deleting it.
+                    <span className="font-medium">Odd spend review:</span> tags an outlier as
+                    reviewed without deleting it.
                   </span>
                 </li>
               </ul>
@@ -1565,10 +1370,19 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
           </div>
 
           <DialogFooter className="border-t border-border/70 px-5 py-3 sm:px-7 sm:py-4">
-            <Button type="button" variant="outline" className="rounded-full" onClick={() => dataQualityQuery.refetch()}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => dataQualityQuery.refetch()}
+            >
               Run data scan
             </Button>
-            <Button type="button" className="rounded-full" onClick={() => setIsDataQualityHelpOpen(false)}>
+            <Button
+              type="button"
+              className="rounded-full"
+              onClick={() => setIsDataQualityHelpOpen(false)}
+            >
               Got it
             </Button>
           </DialogFooter>
@@ -1835,142 +1649,93 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
           <div className="flex min-h-0 flex-1 flex-col">
             <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
               <div className="grid grid-cols-2 gap-2.5">
-              {eventTypeOptions.map((option) => (
-                <EventTypeButton
-                  key={option.value}
-                  label={option.label}
-                  icon={option.icon}
-                  isActive={draft.type === option.value}
-                  onClick={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      type: option.value,
-                      budgetId: "none",
-                      categoryId: "none",
-                      description: getDefaultDescriptionForType(option.value),
-                    }))
-                  }
-                />
-              ))}
+                {eventTypeOptions.map((option) => (
+                  <EventTypeButton
+                    key={option.value}
+                    label={option.label}
+                    icon={option.icon}
+                    isActive={draft.type === option.value}
+                    onClick={() =>
+                      setDraft((current) => ({
+                        ...current,
+                        type: option.value,
+                        budgetId: "none",
+                        categoryId: "none",
+                        description: getDefaultDescriptionForType(option.value),
+                      }))
+                    }
+                  />
+                ))}
               </div>
               <div className="space-y-4 rounded-[1rem] border border-border/70 bg-white p-5">
-              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-[0.68rem] sm:tracking-[0.22em]">
-                Primary details
-              </p>
-              <div className="space-y-1.5">
-                <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                  Amount
-                </label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  autoFocus
-                  value={draft.amount}
-                  onChange={(event) =>
-                    setDraft((current) => ({ ...current, amount: event.target.value }))
-                  }
-                  placeholder="0.00"
-                  className={composerAmountFieldClassName}
-                />
-              </div>
-              {(draft.type === "income" || draft.type === "expense") && (
-                <div className="grid gap-4">
-                  <div className="min-w-0 space-y-2.5">
-                    <label className="block leading-none text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Account
-                    </label>
-                    <Select
-                      value={draft.accountId}
-                      onValueChange={(value) =>
-                        setDraft((current) => ({ ...current, accountId: value }))
-                      }
-                    >
-                      <SelectTrigger className={composerFieldClassName}>
-                        <SelectValue
-                          placeholder={
-                            draft.type === "expense"
-                              ? "Select a bank, wallet, or credit account"
-                              : "Select a bank or wallet account"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(draft.type === "expense" ? spendableAccounts : liquidAccounts).map(
-                          (account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name} · {getAccountTypeLabel(account.type)}
-                            </SelectItem>
-                          ),
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="min-w-0 space-y-2.5">
-                    <label className="block leading-none text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Date
-                    </label>
-                    <DatePickerField
-                      value={draft.date}
-                      onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
-                      className={composerDateFieldClassName}
-                    />
-                  </div>
+                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-[0.68rem] sm:tracking-[0.22em]">
+                  Primary details
+                </p>
+                <div className="space-y-1.5">
+                  <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                    Amount
+                  </label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    autoFocus
+                    value={draft.amount}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, amount: event.target.value }))
+                    }
+                    placeholder="0.00"
+                    className={composerAmountFieldClassName}
+                  />
                 </div>
-              )}
-              {draft.type === "transfer" && (
-                <div className="grid gap-4">
-                  <div className="min-w-0 space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      From
-                    </label>
-                    <Select
-                      value={draft.sourceAccountId}
-                      onValueChange={(value) =>
-                        setDraft((current) => ({ ...current, sourceAccountId: value }))
-                      }
-                    >
-                      <SelectTrigger className={composerFieldClassName}>
-                        <SelectValue placeholder="Source account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {liquidAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.name} · {getAccountTypeLabel(account.type)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {(draft.type === "income" || draft.type === "expense") && (
+                  <div className="grid gap-4">
+                    <div className="min-w-0 space-y-2.5">
+                      <label className="block leading-none text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Account
+                      </label>
+                      <Select
+                        value={draft.accountId}
+                        onValueChange={(value) =>
+                          setDraft((current) => ({ ...current, accountId: value }))
+                        }
+                      >
+                        <SelectTrigger className={composerFieldClassName}>
+                          <SelectValue
+                            placeholder={
+                              draft.type === "expense"
+                                ? "Select a bank, wallet, or credit account"
+                                : "Select a bank or wallet account"
+                            }
+                          />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(draft.type === "expense" ? spendableAccounts : liquidAccounts).map(
+                            (account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name} · {getAccountTypeLabel(account.type)}
+                              </SelectItem>
+                            ),
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="min-w-0 space-y-2.5">
+                      <label className="block leading-none text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Date
+                      </label>
+                      <DatePickerField
+                        value={draft.date}
+                        onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
+                        className={composerDateFieldClassName}
+                      />
+                    </div>
                   </div>
-                  <div className="min-w-0 space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      To
-                    </label>
-                    <Select
-                      value={draft.destinationAccountId}
-                      onValueChange={(value) =>
-                        setDraft((current) => ({ ...current, destinationAccountId: value }))
-                      }
-                    >
-                      <SelectTrigger className={composerFieldClassName}>
-                        <SelectValue placeholder="Destination account" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {liquidAccounts.map((account) => (
-                          <SelectItem key={account.id} value={account.id}>
-                            {account.name} · {getAccountTypeLabel(account.type)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              )}
-              {draft.type === "credit_payment" && (
-                <>
+                )}
+                {draft.type === "transfer" && (
                   <div className="grid gap-4">
                     <div className="min-w-0 space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Payment account
+                        From
                       </label>
                       <Select
                         value={draft.sourceAccountId}
@@ -1979,7 +1744,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         }
                       >
                         <SelectTrigger className={composerFieldClassName}>
-                          <SelectValue placeholder="Bank or wallet account" />
+                          <SelectValue placeholder="Source account" />
                         </SelectTrigger>
                         <SelectContent>
                           {liquidAccounts.map((account) => (
@@ -1992,67 +1757,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                     </div>
                     <div className="min-w-0 space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Credit account
-                      </label>
-                      <Select
-                        value={draft.creditAccountId}
-                        onValueChange={(value) =>
-                          setDraft((current) => ({ ...current, creditAccountId: value }))
-                        }
-                      >
-                        <SelectTrigger className={composerFieldClassName}>
-                          <SelectValue placeholder="Credit account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {creditAccounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Date
-                    </label>
-                    <DatePickerField
-                      value={draft.date}
-                      onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
-                      className={composerDateFieldClassName}
-                    />
-                  </div>
-                </>
-              )}
-              {draft.type === "loan_disbursement" && (
-                <>
-                  <div className="grid gap-4">
-                    <div className="min-w-0 space-y-2.5">
-                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Loan account
-                      </label>
-                      <Select
-                        value={draft.loanAccountId}
-                        onValueChange={(value) =>
-                          setDraft((current) => ({ ...current, loanAccountId: value }))
-                        }
-                      >
-                        <SelectTrigger className={composerFieldClassName}>
-                          <SelectValue placeholder="Loan account" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {loanAccounts.map((account) => (
-                            <SelectItem key={account.id} value={account.id}>
-                              {account.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="min-w-0 space-y-2.5">
-                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Destination account
+                        To
                       </label>
                       <Select
                         value={draft.destinationAccountId}
@@ -2061,7 +1766,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         }
                       >
                         <SelectTrigger className={composerFieldClassName}>
-                          <SelectValue placeholder="Bank or wallet account" />
+                          <SelectValue placeholder="Destination account" />
                         </SelectTrigger>
                         <SelectContent>
                           {liquidAccounts.map((account) => (
@@ -2073,198 +1778,256 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                       </Select>
                     </div>
                   </div>
-                  <div className="space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Date
-                    </label>
-                    <DatePickerField
-                      value={draft.date}
-                      onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
-                      className={composerDateFieldClassName}
-                    />
-                  </div>
-                </>
-              )}
-              </div>
-            <div className="space-y-4 rounded-[1rem] border border-border/70 bg-white p-5">
-              <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-[0.68rem] sm:tracking-[0.22em]">
-                Optional details
-              </p>
-              {draft.type === "income" && (
-                <>
-                  <div className="space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Description
-                    </label>
-                    <Input
-                      value={draft.description}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, description: event.target.value }))
-                      }
-                      placeholder="Optional short label"
-                      className={composerFieldClassName}
-                    />
-                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                      Short label for this income.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4">
-                    <div className="min-w-0 space-y-2.5">
-                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Category
-                      </label>
-                      <Select
-                        value={draft.categoryId}
-                        onValueChange={(value) =>
-                          setDraft((current) => ({ ...current, categoryId: value }))
-                        }
-                      >
-                        <SelectTrigger className={composerFieldClassName}>
-                          <SelectValue placeholder="No category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No category</SelectItem>
-                          {categoryOptions.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="min-h-[1.15rem] text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                        Optional grouping for this income.
-                      </p>
+                )}
+                {draft.type === "credit_payment" && (
+                  <>
+                    <div className="grid gap-4">
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Payment account
+                        </label>
+                        <Select
+                          value={draft.sourceAccountId}
+                          onValueChange={(value) =>
+                            setDraft((current) => ({ ...current, sourceAccountId: value }))
+                          }
+                        >
+                          <SelectTrigger className={composerFieldClassName}>
+                            <SelectValue placeholder="Bank or wallet account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {liquidAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name} · {getAccountTypeLabel(account.type)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Credit account
+                        </label>
+                        <Select
+                          value={draft.creditAccountId}
+                          onValueChange={(value) =>
+                            setDraft((current) => ({ ...current, creditAccountId: value }))
+                          }
+                        >
+                          <SelectTrigger className={composerFieldClassName}>
+                            <SelectValue placeholder="Credit account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {creditAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-
-                    <div className="min-w-0 space-y-2.5">
+                    <div className="space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Notes
+                        Date
+                      </label>
+                      <DatePickerField
+                        value={draft.date}
+                        onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
+                        className={composerDateFieldClassName}
+                      />
+                    </div>
+                  </>
+                )}
+                {draft.type === "loan_disbursement" && (
+                  <>
+                    <div className="grid gap-4">
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Loan account
+                        </label>
+                        <Select
+                          value={draft.loanAccountId}
+                          onValueChange={(value) =>
+                            setDraft((current) => ({ ...current, loanAccountId: value }))
+                          }
+                        >
+                          <SelectTrigger className={composerFieldClassName}>
+                            <SelectValue placeholder="Loan account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {loanAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Destination account
+                        </label>
+                        <Select
+                          value={draft.destinationAccountId}
+                          onValueChange={(value) =>
+                            setDraft((current) => ({ ...current, destinationAccountId: value }))
+                          }
+                        >
+                          <SelectTrigger className={composerFieldClassName}>
+                            <SelectValue placeholder="Bank or wallet account" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {liquidAccounts.map((account) => (
+                              <SelectItem key={account.id} value={account.id}>
+                                {account.name} · {getAccountTypeLabel(account.type)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Date
+                      </label>
+                      <DatePickerField
+                        value={draft.date}
+                        onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
+                        className={composerDateFieldClassName}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="space-y-4 rounded-[1rem] border border-border/70 bg-white p-5">
+                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-[0.68rem] sm:tracking-[0.22em]">
+                  Optional details
+                </p>
+                {draft.type === "income" && (
+                  <>
+                    <div className="space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Description
                       </label>
                       <Input
-                        value={draft.notes}
+                        value={draft.description}
                         onChange={(event) =>
-                          setDraft((current) => ({ ...current, notes: event.target.value }))
+                          setDraft((current) => ({ ...current, description: event.target.value }))
                         }
-                        placeholder="Optional context"
+                        placeholder="Optional short label"
                         className={composerFieldClassName}
                       />
-                      <p className="min-h-[1.15rem] text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                        Add any extra context about this income.
+                      <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                        Short label for this income.
                       </p>
                     </div>
-                  </div>
-                </>
-              )}
-              {draft.type === "expense" && (
-                <>
+
+                    <div className="grid gap-4">
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Category
+                        </label>
+                        <Select
+                          value={draft.categoryId}
+                          onValueChange={(value) =>
+                            setDraft((current) => ({ ...current, categoryId: value }))
+                          }
+                        >
+                          <SelectTrigger className={composerFieldClassName}>
+                            <SelectValue placeholder="No category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No category</SelectItem>
+                            {categoryOptions.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="min-h-[1.15rem] text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                          Optional grouping for this income.
+                        </p>
+                      </div>
+
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Notes
+                        </label>
+                        <Input
+                          value={draft.notes}
+                          onChange={(event) =>
+                            setDraft((current) => ({ ...current, notes: event.target.value }))
+                          }
+                          placeholder="Optional context"
+                          className={composerFieldClassName}
+                        />
+                        <p className="min-h-[1.15rem] text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                          Add any extra context about this income.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {draft.type === "expense" && (
+                  <>
+                    <div className="grid gap-4">
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Category
+                        </label>
+                        <Select
+                          value={draft.categoryId}
+                          onValueChange={(value) =>
+                            setDraft((current) => ({ ...current, categoryId: value }))
+                          }
+                        >
+                          <SelectTrigger className={composerFieldClassName}>
+                            <SelectValue placeholder="No category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No category</SelectItem>
+                            {categoryOptions.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Budget
+                        </label>
+                        <Select
+                          value={draft.budgetId}
+                          onValueChange={(value) =>
+                            setDraft((current) => ({ ...current, budgetId: value }))
+                          }
+                        >
+                          <SelectTrigger className={composerFieldClassName}>
+                            <SelectValue placeholder="No budget" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No budget</SelectItem>
+                            {activeBudgetOptions.map((budget) => (
+                              <SelectItem key={budget.id} value={budget.id}>
+                                {budget.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {draft.type === "transfer" && (
                   <div className="grid gap-4">
                     <div className="min-w-0 space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Category
-                      </label>
-                      <Select
-                        value={draft.categoryId}
-                        onValueChange={(value) =>
-                          setDraft((current) => ({ ...current, categoryId: value }))
-                        }
-                      >
-                        <SelectTrigger className={composerFieldClassName}>
-                          <SelectValue placeholder="No category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No category</SelectItem>
-                          {categoryOptions.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="min-w-0 space-y-2.5">
-                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Budget
-                      </label>
-                      <Select
-                        value={draft.budgetId}
-                        onValueChange={(value) =>
-                          setDraft((current) => ({ ...current, budgetId: value }))
-                        }
-                      >
-                        <SelectTrigger className={composerFieldClassName}>
-                          <SelectValue placeholder="No budget" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No budget</SelectItem>
-                          {activeBudgetOptions.map((budget) => (
-                            <SelectItem key={budget.id} value={budget.id}>
-                              {budget.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </>
-              )}
-              {draft.type === "transfer" && (
-                <div className="grid gap-4">
-                  <div className="min-w-0 space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Transfer fee
-                    </label>
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      value={draft.feeAmount}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, feeAmount: event.target.value }))
-                      }
-                      placeholder="0.00"
-                      className={composerFieldClassName}
-                    />
-                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                      Optional. Fee is deducted from the source account.
-                    </p>
-                  </div>
-
-                  <div className="min-w-0 space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Date
-                    </label>
-                    <DatePickerField
-                      value={draft.date}
-                      onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
-                      className={composerDateFieldClassName}
-                    />
-                  </div>
-                </div>
-              )}
-              {draft.type === "credit_payment" && (
-                <>
-                  <div className="space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Description
-                    </label>
-                    <Input
-                      value={draft.description}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, description: event.target.value }))
-                      }
-                      placeholder="Optional short label"
-                      className={composerFieldClassName}
-                    />
-                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                      Short label for this payment.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4">
-                    <div className="min-w-0 space-y-2.5">
-                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                        Payment fee
+                        Transfer fee
                       </label>
                       <Input
                         type="number"
@@ -2277,11 +2040,99 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         className={composerFieldClassName}
                       />
                       <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                        Optional. Fee is deducted from the payment account.
+                        Optional. Fee is deducted from the source account.
                       </p>
                     </div>
 
                     <div className="min-w-0 space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Date
+                      </label>
+                      <DatePickerField
+                        value={draft.date}
+                        onChange={(value) => setDraft((current) => ({ ...current, date: value }))}
+                        className={composerDateFieldClassName}
+                      />
+                    </div>
+                  </div>
+                )}
+                {draft.type === "credit_payment" && (
+                  <>
+                    <div className="space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Description
+                      </label>
+                      <Input
+                        value={draft.description}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, description: event.target.value }))
+                        }
+                        placeholder="Optional short label"
+                        className={composerFieldClassName}
+                      />
+                      <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                        Short label for this payment.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4">
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Payment fee
+                        </label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={draft.feeAmount}
+                          onChange={(event) =>
+                            setDraft((current) => ({ ...current, feeAmount: event.target.value }))
+                          }
+                          placeholder="0.00"
+                          className={composerFieldClassName}
+                        />
+                        <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                          Optional. Fee is deducted from the payment account.
+                        </p>
+                      </div>
+
+                      <div className="min-w-0 space-y-2.5">
+                        <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                          Notes
+                        </label>
+                        <Input
+                          value={draft.notes}
+                          onChange={(event) =>
+                            setDraft((current) => ({ ...current, notes: event.target.value }))
+                          }
+                          placeholder="Optional context"
+                          className={composerFieldClassName}
+                        />
+                        <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                          Add any extra context about this payment.
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {draft.type !== "income" && draft.type !== "credit_payment" && (
+                  <div className="grid gap-4">
+                    <div className="space-y-2.5">
+                      <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
+                        Description
+                      </label>
+                      <Input
+                        value={draft.description}
+                        onChange={(event) =>
+                          setDraft((current) => ({ ...current, description: event.target.value }))
+                        }
+                        placeholder="Optional short label"
+                        className={composerFieldClassName}
+                      />
+                      <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
+                        Short label for this for this event.
+                      </p>
+                    </div>
+                    <div className="space-y-2.5">
                       <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
                         Notes
                       </label>
@@ -2294,48 +2145,11 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         className={composerFieldClassName}
                       />
                       <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                        Add any extra context about this payment.
+                        Add any extra context about this event.{" "}
                       </p>
                     </div>
                   </div>
-                </>
-              )}
-              {draft.type !== "income" && draft.type !== "credit_payment" && (
-                <div className="grid gap-4">
-                  <div className="space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Description
-                    </label>
-                    <Input
-                      value={draft.description}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, description: event.target.value }))
-                      }
-                      placeholder="Optional short label"
-                      className={composerFieldClassName}
-                    />
-                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                      Short label for this for this event.
-                    </p>
-                  </div>
-                  <div className="space-y-2.5">
-                    <label className="text-[0.88rem] font-semibold text-foreground sm:text-[0.95rem]">
-                      Notes
-                    </label>
-                    <Input
-                      value={draft.notes}
-                      onChange={(event) =>
-                        setDraft((current) => ({ ...current, notes: event.target.value }))
-                      }
-                      placeholder="Optional context"
-                      className={composerFieldClassName}
-                    />
-                    <p className="text-[0.74rem] text-muted-foreground sm:text-[0.78rem]">
-                      Add any extra context about this event.{" "}
-                    </p>
-                  </div>
-                </div>
-              )}
+                )}
               </div>
             </div>
             <DialogFooter className="sticky bottom-0 z-10 !mx-0 !mb-0 shrink-0 flex-row items-center justify-end gap-3 border-t border-border/60 bg-white px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-4 sm:pt-3 dark:bg-[#1a2325] [&>button]:w-auto">
