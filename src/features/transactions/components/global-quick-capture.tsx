@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 type RouterOutputs = inferRouterOutputs<AppRouter>;
 type AccountItem = RouterOutputs["accounts"]["list"][number];
@@ -292,6 +293,7 @@ export function GlobalQuickCapture() {
   const [dateManuallyChanged, setDateManuallyChanged] = useState(false);
   const [overrideIntent, setOverrideIntent] = useState<Exclude<QuickCaptureIntent, null> | null>(null);
   const [confirmedDraftKey, setConfirmedDraftKey] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const deferredInput = useDeferredValue(input.trim());
 
   const aiDraftQuery = trpc.ai.quickCaptureDraft.useQuery(
@@ -337,6 +339,17 @@ export function GlobalQuickCapture() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const media = window.matchMedia("(max-width: 639px)");
+    const onChange = () => setIsMobile(media.matches);
+    onChange();
+    media.addEventListener("change", onChange);
+
+    return () => media.removeEventListener("change", onChange);
   }, []);
 
   useEffect(() => {
@@ -443,8 +456,8 @@ export function GlobalQuickCapture() {
     activeBudgetOptions.find((budget) => budget.id === selectedBudgetId)?.name ?? "No budget";
   const previewMetaGridClass =
     activeIntent === "expense"
-      ? "grid grid-cols-2 overflow-hidden rounded-lg border border-border/60 text-[0.68rem] sm:border-0"
-      : "grid grid-cols-1 overflow-hidden rounded-lg border border-border/60 text-[0.68rem] sm:grid-cols-3 sm:border-0";
+      ? "grid h-full grid-cols-2 overflow-hidden rounded-lg border border-border/60 text-[0.68rem] sm:border-0"
+      : "grid h-full grid-cols-1 overflow-hidden rounded-lg border border-border/60 text-[0.68rem] sm:grid-cols-3 sm:border-0";
   const detailGridClass =
     activeIntent === "expense" ? "grid gap-3 sm:grid-cols-2" : "grid gap-3 sm:grid-cols-3";
   const draftReviewKey = [
@@ -482,6 +495,20 @@ export function GlobalQuickCapture() {
       setSelectedBudgetId("");
     }
   };
+
+  const Surface = isMobile ? SheetContent : DialogContent;
+  const Root = isMobile ? Sheet : Dialog;
+  const surfaceProps = isMobile
+    ? {
+        side: "bottom" as const,
+        className:
+          "h-[74dvh] max-h-[42rem] rounded-t-[1.15rem] border border-border/70 bg-card p-0",
+      }
+    : {
+        mobileBehavior: "modal" as const,
+        className:
+          "max-h-[80vh] w-[calc(100vw-1rem)] overflow-hidden rounded-[1.25rem] border-border/70 bg-card p-0 sm:max-w-[46rem]",
+      };
 
   const submit = () => {
     if (!canSubmit || !parsed.amountMiliunits) return;
@@ -535,7 +562,7 @@ export function GlobalQuickCapture() {
         <span className="hidden sm:inline">Quick capture</span>
       </Button>
 
-      <Dialog
+      <Root
         open={open}
         onOpenChange={(nextOpen) => {
           if (isSubmitting && !nextOpen) return;
@@ -545,13 +572,12 @@ export function GlobalQuickCapture() {
           }
         }}
       >
-        <DialogContent
+        <Surface
           onCloseAutoFocus={(event) => event.preventDefault()}
-          mobileBehavior="modal"
-          className="top-auto bottom-0 h-[min(74dvh,44rem)] max-h-[74dvh] w-full translate-y-0 overflow-hidden rounded-b-none rounded-t-[1.4rem] border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.99),rgba(255,255,255,0.99))] px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.99),rgba(18,27,29,0.99))] sm:top-1/2 sm:bottom-auto sm:h-auto sm:max-h-[80vh] sm:w-auto sm:max-w-[46rem] sm:-translate-y-1/2 sm:rounded-[1.25rem]"
+          {...surfaceProps}
         >
-          <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-muted sm:hidden" />
-          <DialogHeader className="border-b border-border/70 px-4 pb-3 pt-3 pr-14 sm:px-5 sm:pb-3.5 sm:pt-4 sm:pr-16">
+          <div className="mx-auto mt-2 h-1.5 w-12 shrink-0 rounded-full bg-border sm:hidden" />
+          <DialogHeader className="shrink-0 border-b border-border/70 px-4 pb-3 pt-3 pr-14 sm:px-5 sm:pb-3.5 sm:pt-4 sm:pr-16">
             <div className="flex items-center gap-2">
               <DialogTitle className="text-[1.02rem] tracking-tight sm:text-[1.12rem]">
                 Quick capture
@@ -568,7 +594,7 @@ export function GlobalQuickCapture() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-[calc(74dvh-8rem)] space-y-3 overflow-y-auto px-4 py-3.5 sm:max-h-[calc(80vh-7.5rem)] sm:px-5 sm:py-4">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3.5 sm:max-h-[calc(80vh-7.5rem)] sm:px-5 sm:py-4">
             <div className="space-y-2.5">
               <div className="flex h-11 items-center rounded-xl border border-border/80 bg-white px-3 transition-colors focus-within:border-[#7fb9b6] focus-within:ring-2 focus-within:ring-[#7fb9b6]/20 dark:bg-[#141d1f]">
                 <Search className="mr-2.5 size-4 shrink-0 text-muted-foreground sm:mr-3" />
@@ -670,44 +696,46 @@ export function GlobalQuickCapture() {
 
             {input.trim() ? (
               <div className="space-y-3">
-                <div className="rounded-xl border border-border/70 bg-white px-3.5 py-3 dark:bg-[#162022]">
-                  <div className="grid gap-3 sm:grid-cols-[18rem_1fr] sm:items-center">
+                <div className="rounded-xl border border-border/70 bg-white px-3.5 py-3.5 dark:bg-[#162022]">
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,0.95fr)_minmax(18rem,1.05fr)] sm:items-stretch">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className={`flex size-12 shrink-0 items-center justify-center rounded-full ${
-                      activeIntent === "income"
-                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
-                        : activeIntent === "expense"
-                          ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200"
-                          : activeIntent === "transfer"
-                            ? "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200"
-                            : "bg-muted text-muted-foreground"
-                    }`}>
-                        <IntentIcon className="size-5" />
+                      <div
+                        className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+                          activeIntent === "income"
+                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200"
+                            : activeIntent === "expense"
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200"
+                              : activeIntent === "transfer"
+                                ? "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-200"
+                                : "bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        <IntentIcon className="size-4.5" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-1.5 text-[0.72rem] text-muted-foreground">
                           <span className="font-semibold text-foreground">{intentMeta.label}</span>
                           <span>·</span>
                           <span>{selectedDateLabel}</span>
-                        {parsed.missing.length === 0 ? (
+                          {parsed.missing.length === 0 ? (
                             <span className="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[0.64rem] font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
-                            Looks ok
-                          </span>
-                        ) : null}
+                              Looks ok
+                            </span>
+                          ) : null}
                         </div>
                         <p className="mt-1 text-[1.08rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground sm:text-[1.14rem]">
-                            {parsed.amountMiliunits
-                              ? formatCurrencyMiliunits(parsed.amountMiliunits, "PHP")
-                              : "Amount needed"}
-                          </p>
+                          {parsed.amountMiliunits
+                            ? formatCurrencyMiliunits(parsed.amountMiliunits, "PHP")
+                            : "Amount needed"}
+                        </p>
                         <p className="mt-0.5 truncate text-[0.78rem] text-muted-foreground">
-                            {parsed.description ?? "Add a clearer description."}
-                          </p>
-                        </div>
+                          {parsed.description ?? "Add a clearer description."}
+                        </p>
+                      </div>
                     </div>
                     <div className={previewMetaGridClass}>
                       <div
-                        className={`space-y-0.5 px-3 py-2 sm:px-3.5 ${
+                        className={`flex min-h-12 flex-col justify-center space-y-0.5 px-3 py-2 sm:px-3.5 ${
                           activeIntent === "expense"
                             ? "border-b border-r border-border/60"
                             : "border-b border-border/60 sm:border-b-0 sm:border-r"
@@ -720,7 +748,7 @@ export function GlobalQuickCapture() {
                         <p className="font-semibold text-foreground">{selectedDateLabel}</p>
                       </div>
                       <div
-                        className={`space-y-0.5 px-3 py-2 sm:px-3.5 ${
+                        className={`flex min-h-12 flex-col justify-center space-y-0.5 px-3 py-2 sm:px-3.5 ${
                           activeIntent === "expense"
                             ? "border-b border-border/60"
                             : "border-b border-border/60 sm:border-b-0 sm:border-r"
@@ -735,7 +763,7 @@ export function GlobalQuickCapture() {
                         </p>
                       </div>
                       <div
-                        className={`space-y-0.5 px-3 py-2 sm:px-3.5 ${
+                        className={`flex min-h-12 flex-col justify-center space-y-0.5 px-3 py-2 sm:px-3.5 ${
                           activeIntent === "expense" ? "border-r border-border/60" : ""
                         }`}
                       >
@@ -748,7 +776,7 @@ export function GlobalQuickCapture() {
                         </p>
                       </div>
                       {activeIntent === "expense" ? (
-                        <div className="space-y-0.5 px-3 py-2 sm:px-3.5">
+                        <div className="flex min-h-12 flex-col justify-center space-y-0.5 px-3 py-2 sm:px-3.5">
                           <div className="flex items-center gap-1.5 text-muted-foreground">
                             <PiggyBank className="size-3.5" />
                             <span>Budget</span>
@@ -756,7 +784,7 @@ export function GlobalQuickCapture() {
                           <p className="truncate font-semibold text-foreground">{selectedBudgetName}</p>
                         </div>
                       ) : null}
-                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -947,7 +975,7 @@ export function GlobalQuickCapture() {
             )}
           </div>
 
-          <DialogFooter className="!mx-0 !mb-0 border-t border-border/60 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pt-3 sm:pb-4">
+          <DialogFooter className="!mx-0 !mb-0 shrink-0 border-t border-border/60 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pt-3 sm:pb-4">
             <div className="flex w-full flex-col-reverse gap-2.5 sm:flex-row sm:items-center sm:justify-end">
               <Button
                 type="button"
@@ -977,8 +1005,8 @@ export function GlobalQuickCapture() {
               </Button>
             </div>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </Surface>
+      </Root>
     </>
   );
 }
