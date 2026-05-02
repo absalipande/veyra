@@ -501,6 +501,7 @@ export function GlobalQuickCapture() {
   const surfaceProps = isMobile
     ? {
         side: "bottom" as const,
+        showCloseButton: false,
         className:
           "h-[84dvh] rounded-t-[1.15rem] border border-border/70 bg-card p-0",
       }
@@ -589,6 +590,17 @@ export function GlobalQuickCapture() {
               <div className="keyboard-hint ml-auto hidden h-7 items-center rounded-full border border-border/70 bg-white px-2.5 text-[0.66rem] font-medium text-muted-foreground sm:inline-flex">
                 ⌘/Ctrl ⇧ K
               </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="absolute right-4 top-3 rounded-full border border-border/70 bg-white text-muted-foreground hover:text-foreground sm:hidden"
+                onClick={() => setOpen(false)}
+                disabled={isSubmitting}
+              >
+                <X className="size-4" />
+                <span className="sr-only">Close quick capture</span>
+              </Button>
             </div>
             <DialogDescription className="max-w-xl text-[0.8rem] leading-5 sm:text-[0.82rem]">
               Record one transaction. Review the draft before saving.
@@ -977,11 +989,11 @@ export function GlobalQuickCapture() {
           </div>
 
           <DialogFooter className="!mx-0 !mb-0 shrink-0 border-t border-border/60 bg-white px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 sm:px-5 sm:pt-3 sm:pb-4">
-            <div className="flex w-full flex-col-reverse gap-2.5 sm:flex-row sm:items-center sm:justify-end">
+            <div className="flex w-full items-center gap-2.5 sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 w-full rounded-lg bg-white px-6 text-[0.86rem] text-foreground/88 sm:w-[10.5rem]"
+                className="h-10 flex-1 rounded-lg bg-white px-4 text-[0.86rem] text-foreground/88 hover:bg-muted sm:w-[10.5rem] sm:flex-none"
                 onClick={() => setOpen(false)}
                 disabled={isSubmitting}
               >
@@ -989,7 +1001,7 @@ export function GlobalQuickCapture() {
               </Button>
               <Button
                 type="button"
-                className="h-10 w-full rounded-lg bg-[#0f766e] px-6 text-[0.86rem] font-semibold text-white hover:bg-[#0d615a] hover:text-white disabled:opacity-65 disabled:text-white/85 sm:w-[14.5rem]"
+                className="h-10 flex-1 rounded-lg bg-[#0f766e] px-4 text-[0.86rem] font-semibold text-white hover:bg-[#0d615a] hover:text-white disabled:opacity-65 disabled:text-white/85 sm:w-[14.5rem] sm:flex-none"
                 onClick={submit}
                 disabled={!canSubmit || isSubmitting || (isLowConfidenceDraft && !lowConfidenceConfirmed)}
               >

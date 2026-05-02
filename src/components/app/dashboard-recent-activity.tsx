@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import {
   AlertTriangle,
@@ -171,6 +171,8 @@ function getForecastRiskMeta(risk: "safe" | "watch" | "shortfall") {
 }
 
 export function DashboardRecentActivity() {
+  const [forecastKpiIndex, setForecastKpiIndex] = useState(0);
+  const forecastKpiScrollRef = useRef<HTMLDivElement | null>(null);
   const accountsQuery = trpc.accounts.list.useQuery();
   const loansForDashboardQuery = trpc.loans.list.useQuery({
     page: 1,
@@ -433,6 +435,14 @@ export function DashboardRecentActivity() {
   const forecastRiskMeta = forecastQuery.data
     ? getForecastRiskMeta(forecastQuery.data.riskLevel)
     : getForecastRiskMeta("safe");
+  const handleForecastKpiScroll = () => {
+    const container = forecastKpiScrollRef.current;
+    if (!container) return;
+
+    const cardWidth = container.querySelector("[data-forecast-kpi]")?.clientWidth ?? container.clientWidth;
+    const nextIndex = Math.round(container.scrollLeft / (cardWidth + 10));
+    setForecastKpiIndex(Math.max(0, Math.min(2, nextIndex)));
+  };
   const trendMetrics = useMemo(() => {
     const latestReferenceTime =
       transactions.length > 0
@@ -912,56 +922,81 @@ export function DashboardRecentActivity() {
             </div>
           ) : forecastQuery.data ? (
             <div className="space-y-3">
-              <div className="grid gap-2.5 sm:grid-cols-3">
-                <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
-                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Lowest point
-                  </p>
-                  <p className="mt-0.5 text-[0.98rem] font-semibold tracking-tight text-foreground">
-                    {formatCurrencyMiliunits(
-                      forecastQuery.data.lowestBalance,
-                      forecastQuery.data.currency,
-                    )}
-                  </p>
-                  <p className="text-[0.76rem] text-muted-foreground">
-                    {formatDateWithPreferences(
-                      forecastQuery.data.lowestBalanceDate,
-                      datePreferences,
-                      "date",
-                    )}
-                  </p>
+              <div className="space-y-2 sm:space-y-0">
+                <div
+                  ref={forecastKpiScrollRef}
+                  onScroll={handleForecastKpiScroll}
+                  className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:grid sm:grid-cols-3 sm:overflow-visible sm:pb-0"
+                >
+                  <div
+                    data-forecast-kpi
+                    className="min-w-full snap-start rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f] sm:min-w-0"
+                  >
+                    <p className="text-[0.64rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Lowest point
+                    </p>
+                    <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-foreground sm:text-[0.92rem]">
+                      {formatCurrencyMiliunits(
+                        forecastQuery.data.lowestBalance,
+                        forecastQuery.data.currency,
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-[0.74rem] text-muted-foreground">
+                      {formatDateWithPreferences(
+                        forecastQuery.data.lowestBalanceDate,
+                        datePreferences,
+                        "date",
+                      )}
+                    </p>
+                  </div>
+                  <div
+                    data-forecast-kpi
+                    className="min-w-full snap-start rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f] sm:min-w-0"
+                  >
+                    <p className="text-[0.64rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Due in 7 days
+                    </p>
+                    <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-foreground sm:text-[0.92rem]">
+                      {forecastQuery.data.dueSoonCount} items
+                    </p>
+                    <p className="mt-0.5 text-[0.74rem] text-muted-foreground">
+                      {formatCurrencyMiliunits(
+                        forecastQuery.data.dueSoonAmount,
+                        forecastQuery.data.currency,
+                      )}
+                    </p>
+                  </div>
+                  <div
+                    data-forecast-kpi
+                    className="min-w-full snap-start rounded-xl border border-border/70 bg-background px-3.5 py-3 dark:bg-[#141d1f] sm:min-w-0"
+                  >
+                    <p className="text-[0.64rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Ending balance
+                    </p>
+                    <p className="mt-1 text-[0.9rem] font-semibold tracking-tight text-foreground sm:text-[0.92rem]">
+                      {formatCurrencyMiliunits(
+                        forecastQuery.data.projectedEndingBalance,
+                        forecastQuery.data.currency,
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-[0.74rem] text-muted-foreground">
+                      Outflow{" "}
+                      {formatCurrencyMiliunits(
+                        forecastQuery.data.obligationsTotal,
+                        forecastQuery.data.currency,
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
-                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Due in 7 days
-                  </p>
-                  <p className="mt-0.5 text-[0.98rem] font-semibold tracking-tight text-foreground">
-                    {forecastQuery.data.dueSoonCount} items
-                  </p>
-                  <p className="text-[0.76rem] text-muted-foreground">
-                    {formatCurrencyMiliunits(
-                      forecastQuery.data.dueSoonAmount,
-                      forecastQuery.data.currency,
-                    )}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-border/70 bg-background px-3 py-2.5 dark:bg-[#141d1f]">
-                  <p className="text-[0.66rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    Ending balance
-                  </p>
-                  <p className="mt-0.5 text-[0.98rem] font-semibold tracking-tight text-foreground">
-                    {formatCurrencyMiliunits(
-                      forecastQuery.data.projectedEndingBalance,
-                      forecastQuery.data.currency,
-                    )}
-                  </p>
-                  <p className="text-[0.76rem] text-muted-foreground">
-                    Outflow{" "}
-                    {formatCurrencyMiliunits(
-                      forecastQuery.data.obligationsTotal,
-                      forecastQuery.data.currency,
-                    )}
-                  </p>
+                <div className="flex justify-center gap-1.5 sm:hidden" aria-hidden="true">
+                  {[0, 1, 2].map((index) => (
+                    <span
+                      key={index}
+                      className={`h-1.5 rounded-full transition-all ${
+                        forecastKpiIndex === index ? "w-5 bg-[#0f766e]" : "w-1.5 bg-border"
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
 
