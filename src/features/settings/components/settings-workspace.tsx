@@ -9,6 +9,7 @@ import {
   Download,
   Globe2,
   History,
+  Loader2,
   Upload,
   ShieldCheck,
   SlidersHorizontal,
@@ -325,7 +326,14 @@ export function SettingsWorkspace() {
               disabled={!hasChanges || updateSettings.isPending}
               className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
             >
-              {updateSettings.isPending ? "Saving..." : "Save preferences"}
+              {updateSettings.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Saving
+                </>
+              ) : (
+                "Save preferences"
+              )}
             </Button>
           </div>
 
@@ -936,7 +944,14 @@ export function SettingsWorkspace() {
                 }
                 className="h-10 min-w-[10.5rem] rounded-full px-4"
               >
-                {clearWorkspace.isPending ? "Deleting..." : "Delete permanently"}
+                {clearWorkspace.isPending ? (
+                  <>
+                    <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                    Deleting
+                  </>
+                ) : (
+                  "Delete permanently"
+                )}
               </Button>
             </div>
           </DialogFooter>

@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Keyboard,
+  Loader2,
   LogOut,
   Moon,
   Shield,
@@ -218,7 +219,14 @@ function ControlCenterModal({ open, onOpenChange }: { open: boolean; onOpenChang
                   onClick={() => draft && updateSettings.mutate(draft)}
                   disabled={updateSettings.isPending || !draft}
                 >
-                  {updateSettings.isPending ? "Saving..." : "Save"}
+                  {updateSettings.isPending ? (
+                    <>
+                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      Saving
+                    </>
+                  ) : (
+                    "Save"
+                  )}
                 </Button>
               ) : null}
             </div>

@@ -356,14 +356,14 @@ export function GoalsWorkspace() {
                   <ShieldCheck className="size-4" />
                   Projection
                 </div>
-                <p className="line-clamp-2 text-[0.95rem] font-semibold tracking-tight text-white lg:text-[0.99rem]">
+                <div className="line-clamp-2 min-h-[1.5rem] text-[0.95rem] font-semibold tracking-tight text-white lg:text-[0.99rem]">
                   {goalsQuery.data
                     ? formatCurrencyMiliunits(
                         goalsQuery.data.cashflowPreview.projectedEndingBalance,
                         goalsQuery.data.cashflowPreview.currency
                       )
-                    : "Loading..."}
-                </p>
+                    : <Loader2 className="size-4 animate-spin text-white/70" />}
+                </div>
                 <p className="text-[0.82rem] leading-6 text-white/70">
                   Projected liquid balance in 30 days
                 </p>
@@ -424,7 +424,11 @@ export function GoalsWorkspace() {
                   goalsQuery.data.cashflowPreview.projectedEndingBalance,
                   goalsQuery.data.cashflowPreview.currency
                 )
-              : "Loading..."}{" "}
+              : (
+                  <span className="inline-flex items-center align-middle">
+                    <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                  </span>
+                )}{" "}
             projected in 30 days
           </CardDescription>
         </CardHeader>
@@ -777,7 +781,14 @@ export function GoalsWorkspace() {
               }
               className="h-10 min-w-44 rounded-[0.95rem] bg-[#17393c] px-6 text-[0.9rem] font-medium text-white hover:bg-[#1d4a4d] disabled:text-white/85"
             >
-              {contributeGoal.isPending ? "Recording..." : "Record contribution"}
+              {contributeGoal.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Recording
+                </>
+              ) : (
+                "Record contribution"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

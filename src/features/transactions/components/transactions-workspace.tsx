@@ -13,7 +13,7 @@ import {
   HandCoins,
   Landmark,
   Loader2,
-  MoreHorizontal,
+  MoreVertical,
   Pencil,
   Search,
   ShieldAlert,
@@ -23,6 +23,7 @@ import {
   TrendingDown,
   TrendingUp,
   Wand2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +46,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -122,7 +124,7 @@ function TransactionActionsMenu({
           className="h-8 w-8 rounded-full"
           aria-label={`Open actions for ${event.description}`}
         >
-          <MoreHorizontal className="size-4" />
+          <MoreVertical className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-40">
@@ -377,6 +379,74 @@ function getEventAccountsSummary(event: TransactionEventItem) {
     default:
       return "";
   }
+}
+
+function getTransactionGuardrailMessage(input: {
+  accountsById: Map<string, AccountItem>;
+  draft: EventDraft;
+  editingEvent: TransactionEventItem | null;
+}) {
+  const amount = Math.round(Number(input.draft.amount) * 1000);
+  const feeAmount = Math.round(Number(input.draft.feeAmount) * 1000);
+
+  if (Number.isNaN(amount) || amount <= 0) return null;
+
+  const workingBalances = new Map<string, number>();
+  for (const account of input.accountsById.values()) {
+    workingBalances.set(account.id, account.balance);
+  }
+
+  for (const entry of input.editingEvent?.entries ?? []) {
+    workingBalances.set(
+      entry.accountId,
+      (workingBalances.get(entry.accountId) ?? 0) - entry.amountDelta,
+    );
+  }
+
+  const applyDelta = (accountId: string, delta: number) => {
+    workingBalances.set(accountId, (workingBalances.get(accountId) ?? 0) + delta);
+  };
+
+  if (input.draft.type === "expense") {
+    const account = input.accountsById.get(input.draft.accountId);
+    if (!account) return null;
+    if (account.type === "cash" || account.type === "wallet") {
+      applyDelta(account.id, -amount);
+    }
+  }
+
+  if (input.draft.type === "transfer") {
+    const source = input.accountsById.get(input.draft.sourceAccountId);
+    if (!source) return null;
+    applyDelta(source.id, -amount - (Number.isNaN(feeAmount) || feeAmount < 0 ? 0 : feeAmount));
+  }
+
+  if (input.draft.type === "credit_payment") {
+    const source = input.accountsById.get(input.draft.sourceAccountId);
+    const credit = input.accountsById.get(input.draft.creditAccountId);
+    if (!source || !credit) return null;
+    applyDelta(source.id, -amount - (Number.isNaN(feeAmount) || feeAmount < 0 ? 0 : feeAmount));
+    applyDelta(credit.id, -amount);
+  }
+
+  for (const [accountId, nextBalance] of workingBalances) {
+    const account = input.accountsById.get(accountId);
+    if (!account) continue;
+
+    if ((account.type === "cash" || account.type === "wallet") && nextBalance < 0) {
+      return `${account.name} cannot go below zero.`;
+    }
+
+    if (account.type === "credit" && nextBalance < 0) {
+      return `${account.name} payment is higher than the current credit balance.`;
+    }
+
+    if (account.type === "credit" && nextBalance > account.creditLimit) {
+      return `${account.name} cannot go above its credit limit.`;
+    }
+  }
+
+  return null;
 }
 
 function EventTypeButton({
@@ -642,6 +712,10 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     () => (accountsQuery.data ?? []).filter((account) => account.type === "loan"),
     [accountsQuery.data],
   );
+  const accountsById = useMemo(
+    () => new Map((accountsQuery.data ?? []).map((account) => [account.id, account])),
+    [accountsQuery.data],
+  );
 
   const activeBudgetOptions = useMemo(
     () =>
@@ -660,6 +734,10 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   );
 
   const visibleEvents = useMemo(() => eventsQuery.data?.items ?? [], [eventsQuery.data]);
+  const editingEvent = useMemo(
+    () => visibleEvents.find((event) => event.id === editingEventId) ?? null,
+    [editingEventId, visibleEvents],
+  );
   const datePreferences = resolveDatePreferences(settingsQuery.data);
   const formatEventDate = (value: Date | string) =>
     formatDateWithPreferences(value, datePreferences, "date");
@@ -672,6 +750,15 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   };
   const heroTransferAndPaymentCount =
     (summaryQuery.data?.transferEvents ?? 0) + (summaryQuery.data?.creditPaymentEvents ?? 0);
+  const transactionGuardrailMessage = useMemo(
+    () =>
+      getTransactionGuardrailMessage({
+        accountsById,
+        draft,
+        editingEvent,
+      }),
+    [accountsById, draft, editingEvent],
+  );
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
@@ -695,7 +782,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
   const submitEvent = () => {
     const amount = Math.round(Number(draft.amount) * 1000);
     const feeAmount = Math.round(Number(draft.feeAmount) * 1000);
-    if (Number.isNaN(amount) || amount <= 0) return;
+    if (Number.isNaN(amount) || amount <= 0 || transactionGuardrailMessage) return;
     const normalizedDescription =
       draft.description.trim() ||
       (draft.type === "income"
@@ -814,6 +901,20 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
     setDraft(buildDraftFromEvent(event));
     setOpen(true);
   };
+
+  const ComposerRoot = isMobile ? Sheet : Dialog;
+  const ComposerSurface = isMobile ? SheetContent : DialogContent;
+  const composerSurfaceProps = isMobile
+    ? {
+        side: "bottom" as const,
+        showCloseButton: false,
+        className: "h-[84dvh] rounded-t-[1.15rem] border border-border/70 bg-card p-0",
+      }
+    : {
+        mobileBehavior: "adaptive" as const,
+        className:
+          "h-[100dvh] overflow-hidden border border-border/70 bg-white px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4",
+      };
 
   return (
     <div className="space-y-6 lg:space-y-7">
@@ -1472,68 +1573,74 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               </div>
             ) : (
               <div className="mx-auto max-w-[78rem] overflow-hidden rounded-[1.55rem] border border-border/70 bg-white dark:bg-[#141d1f]">
-                <div className="hidden md:grid md:grid-cols-[minmax(0,1.55fr)_120px_minmax(0,1.3fr)_112px_130px_84px] md:items-center md:gap-3 md:border-b md:border-border/70 md:px-5 md:py-3">
-                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <div className="hidden md:grid md:grid-cols-[minmax(0,1.65fr)_168px_minmax(0,1.38fr)_112px_124px_56px] md:items-center md:gap-4 md:border-b md:border-border/70 md:px-5 md:py-3">
+                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     Event
                   </p>
-                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     Category
                   </p>
-                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     Account / details
                   </p>
-                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     Date
                   </p>
-                  <p className="text-right text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <p className="text-right text-[0.64rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                     Amount
                   </p>
-                  <p className="text-right text-[0.64rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Actions
-                  </p>
+                  <div />
                 </div>
 
                 <div className="divide-y divide-border/70">
                   {visibleEvents.map((event) => (
                     <div
                       key={event.id}
-                      className="px-4 py-4 sm:px-5 md:grid md:grid-cols-[minmax(0,1.55fr)_120px_minmax(0,1.3fr)_112px_130px_84px] md:items-center md:gap-3 md:px-5 md:py-3.5"
+                      className="px-4 py-4 sm:px-5 md:grid md:grid-cols-[minmax(0,1.65fr)_168px_minmax(0,1.38fr)_112px_124px_56px] md:items-center md:gap-4 md:px-5 md:py-3.5"
                     >
                       <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2 md:block">
-                          <p className="truncate text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.9rem]">
-                            {event.description}
-                          </p>
-                          <span
-                            className={`inline-flex rounded-full border px-2.5 py-1 text-[0.72rem] font-medium md:hidden ${getEventTypeTone(event.type)}`}
-                          >
-                            {getEventTypeLabel(event.type)}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-[0.8rem] leading-5.5 text-muted-foreground md:hidden">
-                          {getEventAccountsSummary(event)}
-                        </p>
-                        <p className="mt-1 text-[0.76rem] leading-5 text-muted-foreground md:hidden">
-                          {formatEventDate(event.occurredAt)}
-                          {event.category ? ` · ${event.category.name}` : ""}
-                          {event.notes ? ` · ${event.notes}` : ""}
-                        </p>
-                        <div className="mt-3 flex items-end justify-between gap-4 md:hidden">
-                          <div className="min-w-0">
-                            <p className="text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                              Amount
-                            </p>
-                            <p className="mt-1 text-[0.9rem] font-medium tracking-tight text-[#17393c] dark:text-foreground/90">
-                              {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
-                            </p>
+                        <div className="grid gap-3 md:block md:gap-0">
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 md:block">
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2 md:block">
+                                <p className="truncate text-[0.96rem] font-semibold tracking-tight text-[#10292B] dark:text-foreground md:text-[0.9rem]">
+                                  {event.description}
+                                </p>
+                                <span
+                                  className={`inline-flex rounded-full border px-2.5 py-1 text-[0.72rem] font-medium md:hidden ${getEventTypeTone(event.type)}`}
+                                >
+                                  {getEventTypeLabel(event.type)}
+                                </span>
+                              </div>
+                              <p className="mt-2 text-[0.8rem] leading-5.5 text-muted-foreground md:hidden">
+                                {getEventAccountsSummary(event)}
+                              </p>
+                              <p className="mt-1 text-[0.76rem] leading-5.5 text-muted-foreground md:hidden">
+                                {formatEventDate(event.occurredAt)}
+                                {event.category ? ` · ${event.category.name}` : ""}
+                              </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-3 md:hidden">
+                              <TransactionActionsMenu
+                                event={event}
+                                onDelete={setDeleteTarget}
+                                onEdit={openEditComposer}
+                              />
+                              <div className="text-right">
+                                <p className="text-[0.62rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                                  Amount
+                                </p>
+                                <p className="mt-1 text-[1rem] font-semibold tracking-tight text-[#17393c] dark:text-foreground/90">
+                                  {formatCurrencyMiliunits(getPrimaryAmount(event), event.currency)}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex justify-end">
-                            <TransactionActionsMenu
-                              event={event}
-                              onDelete={setDeleteTarget}
-                              onEdit={openEditComposer}
-                            />
-                          </div>
+                          {event.notes ? (
+                            <p className="max-w-[30ch] text-[0.72rem] leading-5 text-muted-foreground md:hidden">
+                              {event.notes}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
 
@@ -1541,7 +1648,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                         <span className="inline-flex rounded-full border border-border/70 bg-background px-2.5 py-1 text-[0.72rem] font-medium text-foreground">
                           {event.category?.name ?? "Uncategorized"}
                         </span>
-                        <p className="mt-1 text-[0.68rem] text-muted-foreground">
+                        <p className="mt-1.5 text-[0.68rem] leading-5 text-muted-foreground">
                           {getEventTypeLabel(event.type)}
                         </p>
                       </div>
@@ -1616,7 +1723,7 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
         </Card>
       </section>
 
-      <Dialog
+      <ComposerRoot
         open={open}
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen);
@@ -1626,11 +1733,30 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
           }
         }}
       >
-        <DialogContent
-          mobileBehavior="adaptive"
-          className="h-[100dvh] overflow-hidden border border-border/70 bg-white px-0 py-0 dark:border-white/8 dark:bg-[linear-gradient(180deg,rgba(24,33,35,0.98),rgba(18,27,29,0.98))] [&>button[data-slot='dialog-close']]:right-3 [&>button[data-slot='dialog-close']]:top-3 sm:[&>button[data-slot='dialog-close']]:right-4 sm:[&>button[data-slot='dialog-close']]:top-4"
-        >
-          <DialogHeader className="sticky top-0 z-10 shrink-0 border-b border-border/70 bg-white px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pb-5 sm:pt-6 sm:pr-16 dark:bg-[#1a2325]">
+        <ComposerSurface {...composerSurfaceProps}>
+          {isMobile ? (
+            <div className="mx-auto mt-2 h-1.5 w-12 shrink-0 rounded-full bg-border" />
+          ) : null}
+          <div
+            className={
+              isMobile ? "h-[calc(84dvh-0.5rem)] overflow-y-auto" : "flex min-h-0 flex-1 flex-col"
+            }
+          >
+            {isMobile ? (
+              <div className="relative">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute right-4 top-3 z-20 rounded-full border border-border/70 bg-white text-muted-foreground hover:bg-muted hover:text-foreground"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close event composer"
+                >
+                  <X className="size-4" />
+                </Button>
+              </div>
+            ) : null}
+            <DialogHeader className="sticky top-0 z-10 shrink-0 border-b border-border/70 bg-white px-5 pb-4 pt-[max(1rem,env(safe-area-inset-top))] pr-14 sm:px-6 sm:pb-5 sm:pt-6 sm:pr-16 dark:bg-[#1a2325]">
             <div className="inline-flex w-fit rounded-full border border-[#17393c]/10 bg-white px-3 py-1 text-[0.62rem] font-semibold uppercase tracking-[0.18em] text-[#17393c] dark:border-white/8 dark:bg-white/6 dark:text-primary">
               Event composer
             </div>
@@ -1644,10 +1770,10 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 ? "Update the event details and Veyra will reapply the account effects underneath."
                 : currentTypeMeta.description}
             </DialogDescription>
-          </DialogHeader>
+            </DialogHeader>
 
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
               <div className="grid grid-cols-2 gap-2.5">
                 {eventTypeOptions.map((option) => (
                   <EventTypeButton
@@ -2151,12 +2277,17 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                   </div>
                 )}
               </div>
+              {transactionGuardrailMessage ? (
+                <p className="rounded-[0.95rem] border border-amber-200/70 bg-amber-50/80 px-3.5 py-2.5 text-[0.84rem] text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                  {transactionGuardrailMessage}
+                </p>
+              ) : null}
             </div>
             <DialogFooter className="sticky bottom-0 z-10 !mx-0 !mb-0 shrink-0 flex-row items-center justify-end gap-3 border-t border-border/60 bg-white px-5 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-4 sm:pt-3 dark:bg-[#1a2325] [&>button]:w-auto">
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 min-w-[5.5rem] rounded-full bg-white px-5 text-[0.95rem]"
+                className="h-11 min-w-[5.5rem] rounded-full bg-white px-5 text-[0.95rem] hover:bg-muted"
                 onClick={() => setOpen(false)}
                 disabled={createEvent.isPending || updateEvent.isPending}
               >
@@ -2166,18 +2297,22 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
                 type="button"
                 className="h-11 min-w-[8.5rem] rounded-full bg-[#17393c] px-6 text-[0.95rem] text-white hover:bg-[#1d4a4d] disabled:text-white/85"
                 onClick={submitEvent}
-                disabled={createEvent.isPending || updateEvent.isPending}
+                disabled={createEvent.isPending || updateEvent.isPending || Boolean(transactionGuardrailMessage)}
               >
                 {createEvent.isPending || updateEvent.isPending
-                  ? editingEventId
-                    ? "Saving..."
-                    : "Recording..."
+                  ? (
+                      <>
+                        <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                        {editingEventId ? "Saving" : "Recording"}
+                      </>
+                    )
                   : `${editingEventId ? "Save" : "Record"} ${currentTypeMeta.label.toLowerCase()}`}
               </Button>
             </DialogFooter>
           </div>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </ComposerSurface>
+      </ComposerRoot>
 
       <Dialog
         open={deleteTarget !== null}
@@ -2221,7 +2356,14 @@ export function TransactionsWorkspace({ initialQuery = "" }: TransactionsWorkspa
               onClick={() => deleteTarget && deleteEvent.mutate({ id: deleteTarget.id })}
               disabled={deleteEvent.isPending}
             >
-              {deleteEvent.isPending ? "Deleting..." : "Delete event"}
+              {deleteEvent.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Deleting
+                </>
+              ) : (
+                "Delete event"
+              )}
             </Button>
           </div>
         </DialogContent>

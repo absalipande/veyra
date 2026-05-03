@@ -2,9 +2,12 @@
 
 import { FormEvent, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Bot, Loader2, Send, Sparkles } from "lucide-react";
+import type { inferRouterInputs } from "@trpc/server";
+import { Bot, Brain, Loader2, Send, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
+import type { AppRouter } from "@/server/api/root";
+import { updateSettingsSchema } from "@/features/settings/server/schema";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +19,9 @@ import {
 } from "@/components/ui/sheet";
 import { trpc } from "@/trpc/react";
 
+type RouterInputs = inferRouterInputs<AppRouter>;
+type UpdateSettingsInput = RouterInputs["settings"]["update"];
+
 type AssistantMessage = {
   id: string;
   role: "user" | "assistant";
@@ -23,10 +29,9 @@ type AssistantMessage = {
   dataBasis?: string;
   generatedAt?: string;
   intent?: string;
-  memoryEnabled?: boolean;
-  remembered?: boolean;
-  sourceQuestion?: string;
 };
+
+type SessionMemoryMode = "unknown" | "temporary" | "remember";
 
 const starterPrompts = [
   "What changed in my spending this month?",
@@ -40,15 +45,24 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function AssistantMessageBubble({
-  message,
-  onRemember,
-  remembering,
-}: {
-  message: AssistantMessage;
-  onRemember?: (message: AssistantMessage) => void;
-  remembering?: boolean;
-}) {
+function serializeSessionMessages(messages: AssistantMessage[]) {
+  return messages.slice(-12).map((message) => ({
+    role: message.role,
+    content: message.content,
+  }));
+}
+
+function sessionModeCardClassName(selected = false) {
+  return [
+    "w-full rounded-[1.15rem] border px-4 py-3.5 text-left transition",
+    "whitespace-normal break-words",
+    selected
+      ? "border-[#0f766e] bg-[#eef7f3] shadow-[inset_0_0_0_2px_rgba(15,118,110,0.55)] dark:border-primary/60 dark:bg-primary/10"
+      : "border-border/70 bg-white/72 hover:border-[#8db8b3]/45 hover:bg-[#eef7f3] dark:border-white/8 dark:bg-white/5 dark:hover:bg-white/8",
+  ].join(" ");
+}
+
+function AssistantMessageBubble({ message }: { message: AssistantMessage }) {
   const isUser = message.role === "user";
 
   return (
@@ -74,20 +88,6 @@ function AssistantMessageBubble({
             Based on {message.dataBasis}.
           </p>
         ) : null}
-        {!isUser && message.memoryEnabled && onRemember ? (
-          <div className="mt-2 flex justify-end">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-7 rounded-full px-2.5 text-[0.7rem]"
-              disabled={message.remembered || remembering}
-              onClick={() => onRemember(message)}
-            >
-              {message.remembered ? "Remembered" : remembering ? "Saving..." : "Remember"}
-            </Button>
-          </div>
-        ) : null}
       </div>
     </div>
   );
@@ -97,25 +97,35 @@ export function AssistantLauncher() {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
+  const [sessionMemoryMode, setSessionMemoryMode] = useState<SessionMemoryMode>("unknown");
+  const [sessionMemoryId, setSessionMemoryId] = useState<string | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const settingsQuery = trpc.settings.get.useQuery(undefined, {
     staleTime: 60_000,
   });
+  const utils = trpc.useUtils();
   const askAssistant = trpc.assistant.ask.useMutation({
-    onSuccess: (result, variables) => {
-      setMessages((current) => [
-        ...current,
-        {
-          id: createMessageId(),
-          role: "assistant",
-          content: result.answer,
-          dataBasis: result.dataBasis,
-          generatedAt: result.generatedAt,
-          intent: result.intent,
-          memoryEnabled: result.memoryEnabled,
-          sourceQuestion: variables.message,
-        },
-      ]);
+    onSuccess: (result) => {
+      const assistantMessage: AssistantMessage = {
+        id: createMessageId(),
+        role: "assistant",
+        content: result.answer,
+        dataBasis: result.dataBasis,
+        generatedAt: result.generatedAt,
+        intent: result.intent,
+      };
+      let nextMessages: AssistantMessage[] = [];
+      setMessages((current) => {
+        nextMessages = [...current, assistantMessage];
+        return nextMessages;
+      });
+
+      if (sessionMemoryMode === "remember" && result.memoryEnabled) {
+        rememberAssistantSession.mutate({
+          memoryId: sessionMemoryId ?? undefined,
+          messages: serializeSessionMessages(nextMessages),
+        });
+      }
     },
     onError: (error) => {
       setMessages((current) => [
@@ -135,45 +145,63 @@ export function AssistantLauncher() {
       });
     },
   });
-  const rememberAssistant = trpc.assistant.remember.useMutation({
-    onSuccess: () => {
-      toast.success("Memory saved", {
-        description: "Ask Veyra will use this as a lightweight future hint.",
+  const rememberAssistantSession = trpc.assistant.rememberSession.useMutation({
+    onSuccess: (result) => {
+      if (!result.saved) return;
+      setSessionMemoryId(result.memoryId);
+    },
+    onError: (error) => {
+      toast.error("Could not save session memory", {
+        description: error.message,
+      });
+    },
+  });
+  const enableAssistantMemory = trpc.settings.update.useMutation({
+    onSuccess: async () => {
+      await utils.settings.get.invalidate();
+      setSessionMemoryMode("remember");
+      toast.success("Session memory enabled", {
+        description: "Ask Veyra will save a compact summary for this session.",
       });
     },
     onError: (error) => {
-      toast.error("Could not save memory", {
+      toast.error("Could not enable session memory", {
         description: error.message,
       });
     },
   });
 
   const aiEnabled = settingsQuery.data?.allowAiCoaching ?? true;
+  const memoryAvailable = settingsQuery.data?.allowAssistantMemory ?? false;
   const isBusy = askAssistant.isPending;
-  const canSend = draft.trim().length >= 3 && !isBusy && aiEnabled;
+  const canSend = draft.trim().length >= 3 && !isBusy && aiEnabled && sessionMemoryMode !== "unknown";
   const hasMessages = messages.length > 0;
 
   const assistantStatus = useMemo(() => {
     if (settingsQuery.isLoading) return "Checking settings";
     if (!aiEnabled) return "Disabled";
-    return "Read-only";
-  }, [aiEnabled, settingsQuery.isLoading]);
+    if (sessionMemoryMode === "remember") return "Memory on";
+    if (sessionMemoryMode === "temporary") return "Temporary";
+    return "Choose session mode";
+  }, [aiEnabled, sessionMemoryMode, settingsQuery.isLoading]);
 
   const submitQuestion = (question: string) => {
     const normalized = question.replace(/\s+/g, " ").trim();
-    if (normalized.length < 3 || isBusy || !aiEnabled) return;
+    if (normalized.length < 3 || isBusy || !aiEnabled || sessionMemoryMode === "unknown") return;
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: createMessageId(),
-        role: "user",
-        content: normalized,
-        generatedAt: new Date().toISOString(),
-      },
-    ]);
+    const userMessage: AssistantMessage = {
+      id: createMessageId(),
+      role: "user",
+      content: normalized,
+      generatedAt: new Date().toISOString(),
+    };
+    let nextMessages: AssistantMessage[] = [];
+    setMessages((current) => {
+      nextMessages = [...current, userMessage];
+      return nextMessages;
+    });
     setDraft("");
-    const history = messages.slice(-6).map((message) => ({
+    const history = nextMessages.slice(0, -1).slice(-6).map((message) => ({
       role: message.role,
       content: message.content,
     }));
@@ -183,6 +211,21 @@ export function AssistantLauncher() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     submitQuestion(draft);
+  };
+
+  const handleEnableSessionMemory = () => {
+    if (!settingsQuery.data || enableAssistantMemory.isPending) return;
+    const nextSettings = updateSettingsSchema.parse({
+      defaultCurrency: settingsQuery.data.defaultCurrency,
+      locale: settingsQuery.data.locale,
+      weekStartsOn: settingsQuery.data.weekStartsOn,
+      dateFormat: settingsQuery.data.dateFormat,
+      timezone: settingsQuery.data.timezone,
+      allowAiCoaching: settingsQuery.data.allowAiCoaching,
+      allowAssistantMemory: true,
+      allowUsageAnalytics: settingsQuery.data.allowUsageAnalytics,
+    }) satisfies UpdateSettingsInput;
+    enableAssistantMemory.mutate(nextSettings);
   };
 
   return (
@@ -233,6 +276,82 @@ export function AssistantLauncher() {
                   </Link>{" "}
                   to use Ask Veyra.
                 </div>
+              ) : sessionMemoryMode === "unknown" ? (
+                <div className="space-y-4">
+                  <div className="rounded-2xl border border-border/70 bg-white/78 p-4 shadow-[0_18px_50px_-42px_rgba(10,31,34,0.45)] dark:border-white/8 dark:bg-white/5">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[#8db8b3]/35 bg-[#dfeee9]/80 text-[#17393c] dark:border-primary/25 dark:bg-primary/12 dark:text-primary">
+                        <Brain className="size-4.5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Choose how this chat should behave</p>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                          Ask Veyra chats are temporary. If the page refreshes or you log out, this session will disappear.
+                          If you turn memory on, Veyra will save a compact AI summary of the session instead of the full chat.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-4 space-y-2.5">
+                      <button
+                        type="button"
+                        className={sessionModeCardClassName(false)}
+                        onClick={() => setSessionMemoryMode("temporary")}
+                      >
+                        <span className="block">
+                          <span className="block text-sm font-medium text-foreground">Keep this session temporary</span>
+                          <span className="mt-0.5 block text-[0.78rem] font-normal leading-5 text-muted-foreground">
+                            Nothing gets remembered after the session ends.
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className={sessionModeCardClassName(false)}
+                        onClick={() => {
+                          if (memoryAvailable) {
+                            setSessionMemoryMode("remember");
+                            return;
+                          }
+                          handleEnableSessionMemory();
+                        }}
+                        disabled={!settingsQuery.data || enableAssistantMemory.isPending}
+                      >
+                        <span className="block">
+                          <span className="block text-sm font-medium text-foreground">Turn on session memory</span>
+                          <span className="mt-0.5 block text-[0.78rem] font-normal leading-5 text-muted-foreground">
+                            {memoryAvailable
+                              ? "Save a compact summary so future chats have better context."
+                              : "Enable memory now and save a compact summary for future chats."}
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                    {!memoryAvailable ? (
+                      <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
+                        <p className="text-[0.76rem] leading-5 text-muted-foreground">
+                          Session memory is currently off. You can enable it here without leaving chat.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-full px-3 hover:bg-muted"
+                          onClick={handleEnableSessionMemory}
+                          disabled={!settingsQuery.data || enableAssistantMemory.isPending}
+                        >
+                          {enableAssistantMemory.isPending ? (
+                            <>
+                              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                              Enabling
+                            </>
+                          ) : (
+                            "Enable memory"
+                          )}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               ) : !hasMessages ? (
                 <div className="space-y-4">
                   <div className="rounded-2xl border border-border/70 bg-white/78 p-4 shadow-[0_18px_50px_-42px_rgba(10,31,34,0.45)] dark:border-white/8 dark:bg-white/5">
@@ -240,6 +359,11 @@ export function AssistantLauncher() {
                     <p className="mt-1 text-sm leading-6 text-muted-foreground">
                       Ask about spending, budgets, bills, loans, or account pressure. Veyra answers from
                       deterministic app data.
+                    </p>
+                    <p className="mt-2 text-[0.76rem] leading-5 text-muted-foreground">
+                      {sessionMemoryMode === "remember"
+                        ? "Session memory is on. Veyra will keep updating one compact summary as you chat."
+                        : "This session is temporary and will reset on refresh or logout."}
                     </p>
                   </div>
 
@@ -259,40 +383,7 @@ export function AssistantLauncher() {
               ) : (
                 <div className="space-y-3">
                   {messages.map((message) => (
-                    <AssistantMessageBubble
-                      key={message.id}
-                      message={message}
-                      remembering={rememberAssistant.isPending}
-                      onRemember={(target) => {
-                        if (!target.sourceQuestion || !target.dataBasis) return;
-                        rememberAssistant.mutate(
-                          {
-                            message: target.sourceQuestion,
-                            answer: target.content,
-                            intent:
-                              target.intent === "accounts" ||
-                              target.intent === "budgets" ||
-                              target.intent === "bills" ||
-                              target.intent === "loans" ||
-                              target.intent === "spending" ||
-                              target.intent === "cashflow" ||
-                              target.intent === "general"
-                                ? target.intent
-                                : "general",
-                            dataBasis: target.dataBasis,
-                          },
-                          {
-                            onSuccess: () => {
-                              setMessages((current) =>
-                                current.map((messageItem) =>
-                                  messageItem.id === target.id ? { ...messageItem, remembered: true } : messageItem
-                                )
-                              );
-                            },
-                          }
-                        );
-                      }}
-                    />
+                    <AssistantMessageBubble key={message.id} message={message} />
                   ))}
                   {isBusy ? (
                     <div className="flex justify-start">
@@ -301,6 +392,15 @@ export function AssistantLauncher() {
                         Reading Veyra context...
                       </div>
                     </div>
+                  ) : null}
+                  {sessionMemoryMode === "remember" && hasMessages ? (
+                    <p className="px-1 text-[0.72rem] leading-4 text-muted-foreground">
+                      {rememberAssistantSession.isPending
+                        ? "Updating session memory..."
+                        : sessionMemoryId
+                          ? "Session memory is being kept as a compact summary."
+                          : "Session memory will be saved as a compact summary."}
+                    </p>
                   ) : null}
                 </div>
               )}
@@ -315,8 +415,14 @@ export function AssistantLauncher() {
                   ref={composerRef}
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder={aiEnabled ? "Ask about your money..." : "Enable AI coaching in Settings"}
-                  disabled={!aiEnabled}
+                  placeholder={
+                    !aiEnabled
+                      ? "Enable AI coaching in Settings"
+                      : sessionMemoryMode === "unknown"
+                        ? "Choose a session mode first"
+                        : "Ask about your money..."
+                  }
+                  disabled={!aiEnabled || sessionMemoryMode === "unknown"}
                   rows={2}
                   className="max-h-28 min-h-10 flex-1 resize-none bg-transparent px-2 py-2 text-sm leading-5 text-foreground outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
                   onKeyDown={(event) => {

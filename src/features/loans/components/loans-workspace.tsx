@@ -9,6 +9,7 @@ import {
   Check,
   HandCoins,
   Landmark,
+  Loader2,
   MoreHorizontal,
   Pencil,
   Search,
@@ -2306,7 +2307,12 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
               {isChoosingLoanType
                 ? "Continue"
                 : isSaving
-                ? "Saving..."
+                ? (
+                    <>
+                      <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                      Saving
+                    </>
+                  )
                 : draft.id
                 ? "Save changes"
                 : "Create loan"}
@@ -2351,7 +2357,14 @@ export function LoansWorkspace({ initialQuery = "" }: { initialQuery?: string })
               onClick={() => deleteTarget && removeLoan.mutate({ id: deleteTarget.id })}
               disabled={removeLoan.isPending}
             >
-              {removeLoan.isPending ? "Deleting..." : "Delete loan"}
+              {removeLoan.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Deleting
+                </>
+              ) : (
+                "Delete loan"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

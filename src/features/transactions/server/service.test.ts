@@ -503,4 +503,83 @@ describe("transactions service", () => {
       code: "BAD_REQUEST",
     });
   });
+
+  it("rejects expense when a bank or wallet account would go negative", async () => {
+    const accountId = "d6e04d4f-f2c4-458f-b40e-80489e6d4b54";
+    const db = createTransactionHarness({
+      accounts: [
+        {
+          id: accountId,
+          clerkUserId: "user_1",
+          name: "Main wallet",
+          type: "wallet",
+          currency: "PHP",
+          balance: 1_000,
+        },
+      ],
+    });
+
+    await expect(
+      createTransactionEvent(
+        { db: db as never, userId: "user_1" },
+        {
+          type: "expense",
+          accountId,
+          amount: 1_500,
+          budgetId: undefined,
+          categoryId: undefined,
+          date: new Date("2026-04-22T00:00:00.000Z"),
+          description: "Overspend",
+          notes: "",
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Main wallet cannot go below zero.",
+    });
+  });
+
+  it("rejects credit payment when it would overpay the credit balance", async () => {
+    const sourceId = "5dd5f71a-ea31-4314-9cfa-737daf1e4199";
+    const creditId = "8a990a56-b4a7-469d-8d17-ed19dc9e12f6";
+    const db = createTransactionHarness({
+      accounts: [
+        {
+          id: sourceId,
+          clerkUserId: "user_1",
+          name: "Cash wallet",
+          type: "wallet",
+          currency: "PHP",
+          balance: 10_000,
+        },
+        {
+          id: creditId,
+          clerkUserId: "user_1",
+          name: "Main card",
+          type: "credit",
+          currency: "PHP",
+          balance: 2_000,
+        },
+      ],
+    });
+
+    await expect(
+      createTransactionEvent(
+        { db: db as never, userId: "user_1" },
+        {
+          type: "credit_payment",
+          sourceAccountId: sourceId,
+          creditAccountId: creditId,
+          amount: 3_000,
+          feeAmount: 0,
+          date: new Date("2026-04-22T00:00:00.000Z"),
+          description: "Too much payment",
+          notes: "",
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+      message: "Main card payment is higher than the current credit balance.",
+    });
+  });
 });

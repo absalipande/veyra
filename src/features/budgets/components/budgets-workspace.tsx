@@ -187,6 +187,8 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
   const [formError, setFormError] = useState<string | null>(null);
   const summaryScrollerRef = useRef<HTMLDivElement | null>(null);
   const [activeSummaryIndex, setActiveSummaryIndex] = useState(0);
+  const workspaceHelpScrollerRef = useRef<HTMLDivElement | null>(null);
+  const [activeWorkspaceHelpIndex, setActiveWorkspaceHelpIndex] = useState(0);
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -423,6 +425,25 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
       detail: "Warning, danger, or exceeded.",
     },
   ];
+  const workspaceHelpCards = [
+    {
+      icon: PiggyBank,
+      tone:
+        "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/18 dark:text-emerald-200",
+      copy: "Pick the right cadence first so the budget window matches how money actually arrives and gets spent.",
+    },
+    {
+      icon: ShieldAlert,
+      tone: "bg-sky-100 text-sky-700 dark:bg-sky-500/18 dark:text-sky-200",
+      copy: "Use parent budgets for broader control and child budgets when one cycle needs finer operating detail.",
+    },
+    {
+      icon: AlertTriangle,
+      tone:
+        "bg-amber-100 text-amber-700 dark:bg-amber-500/18 dark:text-amber-200",
+      copy: "Watch the status and remaining amount to catch pressure before a budget slips over the line.",
+    },
+  ];
 
   useEffect(() => {
     if (!summaryScrollerRef.current) return;
@@ -475,8 +496,59 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
     });
   };
 
+  useEffect(() => {
+    if (!workspaceHelpScrollerRef.current) return;
+
+    const handleScroll = () => {
+      const scroller = workspaceHelpScrollerRef.current;
+      if (!scroller) return;
+
+      const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-help-slide]"));
+      if (cards.length === 0) return;
+
+      const scrollerCenter = scroller.scrollLeft + scroller.clientWidth / 2;
+      let closestIndex = 0;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      cards.forEach((card, index) => {
+        const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+        const distance = Math.abs(cardCenter - scrollerCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      setActiveWorkspaceHelpIndex(closestIndex);
+    };
+
+    handleScroll();
+    const scroller = workspaceHelpScrollerRef.current;
+    if (!scroller) return;
+    scroller.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      scroller.removeEventListener("scroll", handleScroll);
+    };
+  }, [workspaceHelpCards.length]);
+
+  const scrollWorkspaceHelpCards = (index: number) => {
+    const scroller = workspaceHelpScrollerRef.current;
+    if (!scroller) return;
+
+    const cards = Array.from(scroller.querySelectorAll<HTMLElement>("[data-help-slide]"));
+    const nextCard = cards[index];
+    if (!nextCard) return;
+
+    nextCard.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 sm:pb-6">
       <section>
         <Card className="rounded-[1.5rem] border-white/10 bg-[linear-gradient(145deg,rgba(16,41,43,0.98),rgba(29,78,77,0.94))] text-white shadow-[0_26px_80px_-52px_rgba(10,31,34,0.62)]">
           <CardContent className="space-y-4 p-4 sm:p-5 md:space-y-4 md:p-6 lg:p-7.5">
@@ -759,15 +831,15 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
         </Card>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.58fr)_minmax(300px,0.62fr)]">
-        <Card className="rounded-[1.65rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.58fr)_minmax(300px,0.62fr)] [&>*]:min-w-0">
+        <Card className="min-w-0 rounded-[1.65rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#182123]">
           <CardHeader className="space-y-3 border-b border-border/60 px-5 py-4 sm:px-6 sm:py-5">
-            <div className="flex flex-col gap-4 2xl:grid 2xl:grid-cols-[minmax(320px,1fr)_auto] 2xl:items-start">
+            <div className="flex min-w-0 flex-col gap-4 2xl:grid 2xl:grid-cols-[minmax(320px,1fr)_auto] 2xl:items-start">
               <div className="min-w-0 max-w-[34rem] space-y-2">
                 <CardTitle className="text-[1.28rem] tracking-tight sm:text-[1.35rem]">
                   Active budgets
                 </CardTitle>
-                <CardDescription className="max-w-[30rem] text-[0.88rem] leading-6">
+                <CardDescription className="max-w-[30rem] text-[0.88rem] leading-6 [overflow-wrap:anywhere]">
                   Keep the list focused on active budget windows first. Child budgets roll upward;
                   the workspace helps you spot pressure before the cycle closes.
                 </CardDescription>
@@ -784,8 +856,8 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2 text-[0.84rem] text-muted-foreground">
+                <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:flex sm:flex-wrap sm:items-center">
+                  <div className="flex min-w-0 items-center gap-2 text-[0.84rem] text-muted-foreground">
                     <span>View</span>
                     <Select value="all" onValueChange={() => undefined}>
                       <SelectTrigger className="h-10 w-[82px] rounded-full border-border/70 bg-white">
@@ -800,7 +872,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   <Button
                     type="button"
                     onClick={startCreate}
-                    className="h-10 rounded-full px-4 text-[0.86rem]"
+                    className="h-10 min-w-0 rounded-full px-4 text-[0.86rem] sm:w-auto"
                   >
                     Create budget
                   </Button>
@@ -831,7 +903,7 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
                   <Button
                     type="button"
                     onClick={startCreate}
-                    className="mt-4 h-9 rounded-full px-4 text-[0.84rem] sm:text-[0.88rem]"
+                    className="mt-4 h-9 w-full rounded-full px-4 text-[0.84rem] sm:w-auto sm:text-[0.88rem]"
                   >
                     Create your first budget
                   </Button>
@@ -1112,68 +1184,94 @@ export function BudgetsWorkspace({ initialQuery = "" }: { initialQuery?: string 
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <Card className="rounded-[1.45rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#151f21]">
+        <div className="min-w-0 space-y-4">
+          <Card className="min-w-0 rounded-[1.45rem] border-white/75 bg-white dark:border-white/8 dark:bg-[#151f21]">
             <CardHeader className="px-5 pb-3 pt-5">
               <CardTitle className="text-[1.1rem] tracking-tight">
                 What this workspace helps you see
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 px-5 pb-5">
-              {[
-                {
-                  icon: PiggyBank,
-                  tone:
-                    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/18 dark:text-emerald-200",
-                  copy: "Pick the right cadence first so the budget window matches how money actually arrives and gets spent.",
-                },
-                {
-                  icon: ShieldAlert,
-                  tone: "bg-sky-100 text-sky-700 dark:bg-sky-500/18 dark:text-sky-200",
-                  copy: "Use parent budgets for broader control and child budgets when one cycle needs finer operating detail.",
-                },
-                {
-                  icon: AlertTriangle,
-                  tone:
-                    "bg-amber-100 text-amber-700 dark:bg-amber-500/18 dark:text-amber-200",
-                  copy: "Watch the status and remaining amount to catch pressure before a budget slips over the line.",
-                },
-              ].map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div
-                    key={item.copy}
-                    className="flex items-start gap-3 rounded-[1rem] border border-border/70 bg-white px-3.5 py-3.5 dark:border-white/10 dark:bg-[#11191b]"
-                  >
-                    <span
-                      className={`flex size-9 shrink-0 items-center justify-center rounded-full ${item.tone}`}
+              <div
+                ref={workspaceHelpScrollerRef}
+                className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1 xl:hidden [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {workspaceHelpCards.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.copy}
+                      data-help-slide
+                      className="min-w-[calc(100%-0.25rem)] shrink-0 basis-[calc(100%-0.25rem)] snap-center"
                     >
-                      <Icon className="size-4" />
-                    </span>
-                    <p className="text-[0.82rem] leading-6 text-muted-foreground dark:text-slate-300">
-                      {item.copy}
-                    </p>
-                  </div>
-                );
-              })}
+                      <div className="flex min-w-0 max-w-full items-start gap-3 rounded-[1rem] border border-border/70 bg-white px-3.5 py-3.5 dark:border-white/10 dark:bg-[#11191b]">
+                        <span
+                          className={`flex size-9 shrink-0 items-center justify-center rounded-full ${item.tone}`}
+                        >
+                          <Icon className="size-4" />
+                        </span>
+                        <p className="min-w-0 flex-1 text-[0.82rem] leading-6 text-muted-foreground [overflow-wrap:anywhere] dark:text-slate-300">
+                          {item.copy}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {workspaceHelpCards.length > 1 ? (
+                <div className="flex items-center justify-center gap-2 xl:hidden">
+                  {workspaceHelpCards.map((item, index) => (
+                    <button
+                      key={item.copy}
+                      type="button"
+                      aria-label={`Go to workspace help card ${index + 1}`}
+                      aria-pressed={activeWorkspaceHelpIndex === index}
+                      className={`h-2.5 rounded-full transition-all ${
+                        activeWorkspaceHelpIndex === index ? "w-6 bg-primary" : "w-2.5 bg-border"
+                      }`}
+                      onClick={() => scrollWorkspaceHelpCards(index)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+              <div className="hidden space-y-3 xl:block">
+                {workspaceHelpCards.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={item.copy}
+                      className="flex min-w-0 items-start gap-3 rounded-[1rem] border border-border/70 bg-white px-3.5 py-3.5 dark:border-white/10 dark:bg-[#11191b]"
+                    >
+                      <span
+                        className={`flex size-9 shrink-0 items-center justify-center rounded-full ${item.tone}`}
+                      >
+                        <Icon className="size-4" />
+                      </span>
+                      <p className="min-w-0 text-[0.82rem] leading-6 text-muted-foreground [overflow-wrap:anywhere] dark:text-slate-300">
+                        {item.copy}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="rounded-[1.25rem] border-white/75 bg-[linear-gradient(135deg,#17393c_0%,#204a4d_100%)] text-white shadow-[0_24px_55px_-42px_rgba(23,57,60,0.75)] sm:rounded-[1.45rem]">
+          <Card className="min-w-0 rounded-[1.25rem] border-white/75 bg-[linear-gradient(135deg,#17393c_0%,#204a4d_100%)] text-white shadow-[0_24px_55px_-42px_rgba(23,57,60,0.75)] sm:rounded-[1.45rem]">
             <CardHeader className="px-4 pb-2 pt-4 sm:px-5 sm:pb-2 sm:pt-5">
               <CardDescription className="text-[0.62rem] uppercase tracking-[0.22em] text-white/70 sm:text-[0.7rem] sm:tracking-[0.24em]">
                 Budget posture
               </CardDescription>
-              <CardTitle className="text-[1.12rem] font-semibold leading-snug tracking-tight text-white sm:text-[1.32rem]">
+              <CardTitle className="min-w-0 text-[1.12rem] font-semibold leading-snug tracking-tight text-white [overflow-wrap:anywhere] sm:text-[1.32rem]">
                 Keep the cycle readable without turning the page into a control tower.
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 px-4 pb-4 text-[0.82rem] leading-6 text-white/78 sm:px-5 sm:pb-5 sm:text-[0.84rem]">
-              <p className="max-w-[34rem]">
+              <p className="max-w-[34rem] min-w-0 [overflow-wrap:anywhere]">
                 The key numbers should tell you whether the current budget window is healthy, tight,
                 or already exceeded at a glance.
               </p>
-              <div className="rounded-[1rem] border border-white/15 px-3 py-3 text-[0.8rem] leading-6 sm:text-[0.82rem]">
+              <div className="min-w-0 rounded-[1rem] border border-white/15 px-3 py-3 text-[0.8rem] leading-6 [overflow-wrap:anywhere] sm:text-[0.82rem]">
                 Total budgeted {formatBudgetMoney(totalBudgetAmount)} · Remaining{" "}
                 {formatBudgetMoney(totalRemaining)}
               </div>

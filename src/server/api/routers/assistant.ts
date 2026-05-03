@@ -5,12 +5,14 @@ import {
   askAssistantSchema,
   deleteAssistantMemorySchema,
   rememberAssistantMemorySchema,
+  rememberAssistantSessionSchema,
 } from "@/features/assistant/server/schema";
 import {
   deleteAllAssistantMemories,
   deleteAssistantMemory,
   listAssistantMemories,
   rememberAssistantMemory,
+  rememberAssistantSession,
 } from "@/features/assistant/server/memory";
 import { askAssistant, detectAssistantIntent } from "@/features/assistant/server/service";
 import { logAuditEvent } from "@/features/trust/server/audit";
@@ -44,6 +46,9 @@ export const assistantRouter = createTRPCRouter({
   remember: protectedProcedure
     .input(rememberAssistantMemorySchema)
     .mutation(({ ctx, input }) => rememberAssistantMemory(ctx, input)),
+  rememberSession: protectedProcedure
+    .input(rememberAssistantSessionSchema)
+    .mutation(({ ctx, input }) => rememberAssistantSession(ctx, input)),
   deleteMemory: protectedProcedure
     .input(deleteAssistantMemorySchema)
     .mutation(({ ctx, input }) => deleteAssistantMemory(ctx, input.id)),

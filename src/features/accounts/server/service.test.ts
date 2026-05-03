@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 
 import { createAccount, deleteAccount, updateAccount } from "@/features/accounts/server/service";
+import { createAccountSchema } from "@/features/accounts/server/schema";
 
 function createAccountsDbMock() {
   const findFirst = vi.fn();
@@ -123,6 +125,32 @@ describe("accounts service", () => {
         creditLimit: 0,
       }),
     );
+  });
+
+  it("rejects negative bank or wallet opening balances", () => {
+    expect(() =>
+      createAccountSchema.parse({
+        name: "Emergency fund",
+        currency: "PHP",
+        institution: "",
+        type: "cash",
+        balance: -1_000,
+        creditLimit: 0,
+      }),
+    ).toThrow(ZodError);
+  });
+
+  it("rejects credit balances higher than the credit limit", () => {
+    expect(() =>
+      createAccountSchema.parse({
+        name: "Main card",
+        currency: "PHP",
+        institution: "",
+        type: "credit",
+        balance: 55_000,
+        creditLimit: 50_000,
+      }),
+    ).toThrow(ZodError);
   });
 
   it("deleteAccount throws NOT_FOUND when record belongs to a different user", async () => {

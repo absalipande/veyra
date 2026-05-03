@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
 
-import { accounts, billOccurrences, billSeries, loanInstallments, loans, userPreferences } from "@/db/schema";
+import { accounts, billOccurrences, billSeries, loanInstallments, loans, transactionEvents, userPreferences } from "@/db/schema";
 import { getCashflowForecastSchema } from "@/features/forecast/server/schema";
 import type { TRPCContext } from "@/server/api/trpc";
 
@@ -16,6 +16,19 @@ type ForecastObligation = {
   name: string;
   dueDate: Date;
   amount: number;
+};
+
+type ForecastActivity = {
+  amount: number;
+  date: Date;
+  description: string;
+  type: "income" | "expense" | "transfer";
+};
+
+type ActivityTotals = {
+  income: number;
+  spending: number;
+  transfer: number;
 };
 
 function assertUserId(userId: string | null | undefined): string {
@@ -44,6 +57,111 @@ function addDays(date: Date, days: number) {
 
 function toDateKey(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function normalizePatternKey(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function average(values: number[]) {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function detectRecurringCadence(daysBetweenEvents: number[]) {
+  if (daysBetweenEvents.length === 0) return null;
+
+  const averageGap = average(daysBetweenEvents);
+  const spread = Math.max(...daysBetweenEvents) - Math.min(...daysBetweenEvents);
+  const candidates = [
+    { days: 7, tolerance: 2 },
+    { days: 14, tolerance: 3 },
+    { days: 30, tolerance: 5 },
+  ];
+
+  let bestMatch: { days: number; tolerance: number } | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const candidate of candidates) {
+    const distance = Math.abs(candidate.days - averageGap);
+    if (distance <= candidate.tolerance && distance < bestDistance) {
+      bestMatch = candidate;
+      bestDistance = distance;
+    }
+  }
+
+  if (!bestMatch || spread > bestMatch.tolerance * 2) {
+    return null;
+  }
+
+  return bestMatch.days;
+}
+
+function deriveRecurringActivities(
+  events: Array<typeof transactionEvents.$inferSelect>,
+  obligations: ForecastObligation[],
+  horizonStart: Date,
+  horizonEnd: Date,
+) {
+  const obligationNames = new Set(obligations.map((entry) => normalizePatternKey(entry.name)));
+  const grouped = new Map<string, Array<typeof transactionEvents.$inferSelect>>();
+
+  for (const event of events) {
+    const descriptionKey = normalizePatternKey(event.description);
+    if (!descriptionKey) continue;
+    const key = `${event.type}:${descriptionKey}`;
+    const current = grouped.get(key) ?? [];
+    current.push(event);
+    grouped.set(key, current);
+  }
+
+  const projections: ForecastActivity[] = [];
+
+  for (const [key, group] of grouped.entries()) {
+    if (group.length < 2) continue;
+
+    const sorted = [...group].sort(
+      (left, right) => left.occurredAt.getTime() - right.occurredAt.getTime(),
+    );
+    const recent = sorted.slice(-3);
+    const gaps: number[] = [];
+
+    for (let index = 1; index < recent.length; index += 1) {
+      const previous = startOfDay(recent[index - 1]!.occurredAt).getTime();
+      const current = startOfDay(recent[index]!.occurredAt).getTime();
+      gaps.push(Math.round((current - previous) / (24 * 60 * 60 * 1000)));
+    }
+
+    const cadenceDays = detectRecurringCadence(gaps);
+    if (!cadenceDays) continue;
+
+    const latest = recent[recent.length - 1]!;
+    const type = latest.type;
+    if (type !== "income" && type !== "expense" && type !== "transfer") continue;
+
+    const descriptionKey = key.split(":")[1] ?? "";
+    if (type === "expense" && obligationNames.has(descriptionKey)) continue;
+
+    const averageAmount = Math.round(average(recent.map((entry) => entry.amount)));
+    if (averageAmount <= 0) continue;
+
+    let nextDate = addDays(startOfDay(latest.occurredAt), cadenceDays);
+    while (nextDate < horizonStart) {
+      nextDate = addDays(nextDate, cadenceDays);
+    }
+
+    while (nextDate <= horizonEnd) {
+      projections.push({
+        amount: averageAmount,
+        date: nextDate,
+        description: latest.description,
+        type,
+      });
+      nextDate = addDays(nextDate, cadenceDays);
+    }
+  }
+
+  return projections.sort((left, right) => left.date.getTime() - right.date.getTime());
 }
 
 function determineRiskLevel(startingBalance: number, lowestBalance: number) {
@@ -190,6 +308,16 @@ export async function getCashflowForecast(
         });
   const loanMap = new Map(loanRows.map((row) => [row.id, row]));
 
+  const historicalEvents = await ctx.db.query.transactionEvents.findMany({
+    where: and(
+      eq(transactionEvents.clerkUserId, userId),
+      inArray(transactionEvents.type, ["income", "expense", "transfer"]),
+      eq(transactionEvents.currency, currency),
+      gte(transactionEvents.occurredAt, startOfDay(addDays(horizonStart, -90))),
+      lte(transactionEvents.occurredAt, endOfDay(addDays(horizonStart, -1))),
+    ),
+  });
+
   const obligations = [
     ...deriveBillsObligations(pendingOccurrences, billMap, currency),
     ...deriveLoanObligations(dueInstallments, loanMap, currency),
@@ -201,6 +329,13 @@ export async function getCashflowForecast(
     return left.name.localeCompare(right.name);
   });
 
+  const recurringActivities = deriveRecurringActivities(
+    historicalEvents,
+    obligations,
+    horizonStart,
+    horizonEnd,
+  );
+
   const obligationsByDate = new Map<string, ForecastObligation[]>();
   for (const obligation of obligations) {
     const dateKey = toDateKey(obligation.dueDate);
@@ -209,12 +344,29 @@ export async function getCashflowForecast(
     obligationsByDate.set(dateKey, existing);
   }
 
+  const activitiesByDate = new Map<string, ActivityTotals>();
+  for (const activity of recurringActivities) {
+    const dateKey = toDateKey(activity.date);
+    const current = activitiesByDate.get(dateKey) ?? { income: 0, spending: 0, transfer: 0 };
+    if (activity.type === "income") {
+      current.income += activity.amount;
+    } else if (activity.type === "expense") {
+      current.spending += activity.amount;
+    } else if (activity.type === "transfer") {
+      current.transfer += activity.amount;
+    }
+    activitiesByDate.set(dateKey, current);
+  }
+
   let runningBalance = startingBalance;
   const dailyProjection = Array.from({ length: input.days }, (_, index) => {
     const date = addDays(horizonStart, index);
     const key = toDateKey(date);
     const dayObligations = obligationsByDate.get(key) ?? [];
-    const outflow = dayObligations.reduce((sum, obligation) => sum + obligation.amount, 0);
+    const dayActivity = activitiesByDate.get(key) ?? { income: 0, spending: 0, transfer: 0 };
+    const outflow =
+      dayObligations.reduce((sum, obligation) => sum + obligation.amount, 0) + dayActivity.spending;
+    runningBalance += dayActivity.income;
     runningBalance -= outflow;
 
     return {
@@ -222,6 +374,9 @@ export async function getCashflowForecast(
       balance: runningBalance,
       outflow,
       dueCount: dayObligations.length,
+      income: dayActivity.income,
+      spending: dayActivity.spending,
+      transfer: dayActivity.transfer,
     };
   });
 
@@ -255,7 +410,7 @@ export async function getCashflowForecast(
     assumptions: [
       "Forecast includes cash and wallet accounts only.",
       "Scheduled outflows include pending bills and unpaid loan installments.",
-      "Unscheduled spend and future income are not included.",
+      "Repeated recent income, expense, and transfer patterns are projected as soft future spikes.",
     ],
   };
 }

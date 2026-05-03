@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import { Pencil, Search, Tags, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { Loader2, Pencil, Search, Tags, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import type { AppRouter } from "@/server/api/root";
@@ -804,7 +804,12 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
                 disabled={createCategory.isPending || updateCategory.isPending}
               >
                 {createCategory.isPending || updateCategory.isPending
-                  ? "Saving..."
+                  ? (
+                      <>
+                        <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                        Saving
+                      </>
+                    )
                   : draft.id
                     ? "Save changes"
                     : "Create category"}
@@ -856,7 +861,14 @@ export function CategoriesWorkspace({ initialQuery = "" }: CategoriesWorkspacePr
               onClick={() => deleteTarget && deleteCategory.mutate({ id: deleteTarget.id })}
               disabled={deleteCategory.isPending}
             >
-              {deleteCategory.isPending ? "Deleting..." : "Delete category"}
+              {deleteCategory.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Deleting
+                </>
+              ) : (
+                "Delete category"
+              )}
             </Button>
           </div>
         </DialogContent>

@@ -1008,7 +1008,7 @@ export function GlobalQuickCapture() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Recording...
+                    Recording
                   </>
                 ) : activeIntent ? (
                   `Record ${intentMeta.label.toLowerCase()}`

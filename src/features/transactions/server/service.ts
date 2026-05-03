@@ -36,6 +36,11 @@ type BalanceEntry = {
     | "disbursement_account";
 };
 
+type BalanceState = {
+  account: AccountRecord;
+  nextBalance: number;
+};
+
 function assertUserId(userId: string | null | undefined): string {
   if (!userId) {
     throw new TRPCError({
@@ -94,6 +99,73 @@ function assertDifferentAccounts(leftId: string, rightId: string, message: strin
       message,
     });
   }
+}
+
+function validateProjectedBalances(balanceStates: BalanceState[]) {
+  for (const state of balanceStates) {
+    const { account, nextBalance } = state;
+
+    if ((account.type === "cash" || account.type === "wallet") && nextBalance < 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `${account.name} cannot go below zero.`,
+      });
+    }
+
+    if (account.type === "credit") {
+      if (nextBalance < 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `${account.name} payment is higher than the current credit balance.`,
+        });
+      }
+
+      if (nextBalance > account.creditLimit) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `${account.name} cannot go above its credit limit.`,
+        });
+      }
+    }
+
+    if (account.type === "loan" && nextBalance < 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `${account.name} cannot go below zero.`,
+      });
+    }
+  }
+}
+
+function buildProjectedBalanceStates(input: {
+  accountMap: Map<string, AccountRecord>;
+  newEntries: BalanceEntry[];
+  existingEntries?: Array<Pick<BalanceEntry, "accountId" | "amountDelta">>;
+}) {
+  const balanceByAccountId = new Map<string, number>();
+
+  for (const account of input.accountMap.values()) {
+    balanceByAccountId.set(account.id, account.balance);
+  }
+
+  for (const entry of input.existingEntries ?? []) {
+    balanceByAccountId.set(
+      entry.accountId,
+      (balanceByAccountId.get(entry.accountId) ?? 0) - entry.amountDelta,
+    );
+  }
+
+  for (const entry of input.newEntries) {
+    balanceByAccountId.set(
+      entry.accountId,
+      (balanceByAccountId.get(entry.accountId) ?? 0) + entry.amountDelta,
+    );
+  }
+
+  return Array.from(balanceByAccountId.entries()).map(([accountId, nextBalance]) => ({
+    account: requireAccount(input.accountMap, accountId, "Account"),
+    nextBalance,
+  }));
 }
 
 async function getUserAccounts(
@@ -582,6 +654,12 @@ export async function createTransactionEvent(
 
   const accountMap = await getUserAccounts(ctx, getAccountIdsForEventInput(input));
   const { currency, entries } = buildEntriesForEvent(input, accountMap);
+  validateProjectedBalances(
+    buildProjectedBalanceStates({
+      accountMap,
+      newEntries: entries,
+    }),
+  );
   const description = buildEventDisplayTitle(
     input,
     accountMap,
@@ -683,8 +761,21 @@ export async function updateTransactionEvent(
 
   await validateEventReferences(ctx, input);
 
-  const accountMap = await getUserAccounts(ctx, getAccountIdsForEventInput(input));
+  const accountIds = Array.from(
+    new Set([
+      ...getAccountIdsForEventInput(input),
+      ...existingEntries.map((entry) => entry.accountId),
+    ]),
+  );
+  const accountMap = await getUserAccounts(ctx, accountIds);
   const { currency, entries } = buildEntriesForEvent(input, accountMap);
+  validateProjectedBalances(
+    buildProjectedBalanceStates({
+      accountMap,
+      newEntries: entries,
+      existingEntries,
+    }),
+  );
   const description = buildEventDisplayTitle(
     input,
     accountMap,

@@ -791,7 +791,7 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                 {isSavingBill ? (
                   <>
                     <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-                    Saving...
+                    Saving
                   </>
                 ) : editingBill ? (
                   "Save changes"
@@ -849,7 +849,14 @@ export function BillsWorkspace({ initialQuery = "" }: BillsWorkspaceProps) {
                 deleteBill.mutate({ id: deleteTarget.id });
               }}
             >
-              {deleteBill.isPending ? "Deleting..." : "Delete bill"}
+              {deleteBill.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Deleting
+                </>
+              ) : (
+                "Delete bill"
+              )}
             </Button>
           </div>
         </DialogContent>

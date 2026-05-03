@@ -8,7 +8,8 @@ import {
   CreditCard,
   Globe2,
   HandCoins,
-  MoreHorizontal,
+  Loader2,
+  MoreVertical,
   Pencil,
   Sparkles,
   Search,
@@ -181,6 +182,32 @@ const LIABILITY_SORT_STORAGE_KEY = "veyra.accounts.liability-sort";
 
 function formatCount(count: number, singular: string, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function getAccountBalanceGuardrailMessage(input: {
+  balance: number;
+  creditLimit: number;
+  type: CreateState["type"];
+}) {
+  if ((input.type === "cash" || input.type === "wallet") && input.balance < 0) {
+    return "Bank and wallet accounts cannot start below zero.";
+  }
+
+  if (input.type === "loan" && input.balance < 0) {
+    return "Loan balances should be zero or greater.";
+  }
+
+  if (input.type === "credit") {
+    if (input.balance < 0) {
+      return "Credit card balances should be zero or greater.";
+    }
+
+    if (input.balance > input.creditLimit) {
+      return "Credit card balance cannot be higher than the credit limit.";
+    }
+  }
+
+  return null;
 }
 
 function toDateInputLocal(value: Date) {
@@ -415,7 +442,7 @@ function AccountActionsMenu({
           className="h-8 w-8 cursor-pointer rounded-full"
           aria-label={`Open actions for ${account.name}`}
         >
-          <MoreHorizontal className="size-4" />
+          <MoreVertical className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-44">
@@ -537,10 +564,10 @@ function AccountSection({
           </div>
         ) : (
           <div className="overflow-hidden rounded-[1.85rem] border border-border/70 bg-white dark:bg-[#141d1f]">
-            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(10.5rem,12rem)_3rem] items-center gap-3 border-b border-border/70 px-4 py-3.5 text-[0.66rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground md:grid">
+            <div className="hidden grid-cols-[minmax(0,1fr)_minmax(10.5rem,12rem)_3rem] items-center gap-3 border-b border-border/70 px-4 py-3.5 text-[0.64rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground md:grid">
               <p>Account</p>
               <p className="text-right">Balance</p>
-              <p className="text-right">Actions</p>
+              <div />
             </div>
 
             <div className="space-y-2.5 p-2.5 md:space-y-0 md:p-0 md:divide-y md:divide-border/70">
@@ -831,6 +858,15 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
     if (Number.isNaN(numeric)) return 0;
     return Math.max(Math.round(numeric * 1000), 0);
   }, [form.availableCredit]);
+  const accountBalanceGuardrailMessage = useMemo(
+    () =>
+      getAccountBalanceGuardrailMessage({
+        balance: parsedBalance,
+        creditLimit: parsedCreditLimit,
+        type: form.type,
+      }),
+    [form.type, parsedBalance, parsedCreditLimit],
+  );
 
   const accountGroups = useMemo(() => {
     const accounts = accountsQuery.data ?? [];
@@ -1086,7 +1122,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
   };
 
   const onSubmit = () => {
-    if (!form.name.trim()) return;
+    if (!form.name.trim() || accountBalanceGuardrailMessage) return;
 
     if (editingId) {
       updateAccount.mutate({
@@ -1268,7 +1304,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                 type="button"
                 onClick={startCreate}
                 variant="outline"
-                className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white sm:hidden"
+                className="h-8 rounded-full border-white/24 bg-white/[0.08] px-3 text-[0.76rem] font-medium text-white shadow-none hover:bg-white/[0.13] hover:text-white md:h-8 md:px-3.5 md:text-[0.79rem]"
               >
                 Add account
               </Button>
@@ -1543,8 +1579,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                               </div>
 
                               <p className="max-w-[420px] rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
-                                Balances are stored in each account’s native currency.
-                                Cross-currency rollups can be layered on later.
+                                {form.type === "loan"
+                                  ? "Loan balances should reflect what is still owed and must stay at zero or above."
+                                  : "Bank and wallet balances should start at zero or above. Balances are stored in each account’s native currency."}
                               </p>
                             </div>
                           </section>
@@ -1650,12 +1687,19 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                               </div>
 
                               <p className="rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
-                                For credit cards, credit limit stays fixed while current balance
-                                tracks what you owe. If you only know the available credit from your
-                                banking app, Veyra can derive the balance for you.
+                                For credit cards, current balance tracks what you owe and must stay
+                                between zero and the card’s credit limit. If you only know the
+                                available credit from your banking app, Veyra can derive the balance
+                                for you.
                               </p>
                             </div>
                           </section>
+                        ) : null}
+
+                        {accountBalanceGuardrailMessage ? (
+                          <p className="rounded-[0.95rem] border border-amber-200/70 bg-amber-50/80 px-3.5 py-2.5 text-[0.84rem] text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                            {accountBalanceGuardrailMessage}
+                          </p>
                         ) : null}
 
                         {(createAccount.error || updateAccount.error) && (
@@ -1677,7 +1721,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                         </Button>
                         <Button
                           onClick={onSubmit}
-                          disabled={!form.name.trim() || isSubmitting}
+                          disabled={!form.name.trim() || isSubmitting || Boolean(accountBalanceGuardrailMessage)}
                           className="h-10 flex-1 rounded-lg bg-[#17393c] px-4 text-[0.9rem] font-medium text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:min-w-44 sm:flex-none"
                         >
                           {isSubmitting
@@ -1813,8 +1857,9 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           </div>
 
                           <p className="max-w-[420px] rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
-                            Balances are stored in each account’s native currency. Cross-currency
-                            rollups can be layered on later.
+                            {form.type === "loan"
+                              ? "Loan balances should reflect what is still owed and must stay at zero or above."
+                              : "Bank and wallet balances should start at zero or above. Balances are stored in each account’s native currency."}
                           </p>
                         </div>
                       </section>
@@ -1917,12 +1962,18 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                           </div>
 
                           <p className="rounded-[0.9rem] border border-dashed border-border/70 bg-white px-3.5 py-2.5 text-[0.78rem] leading-5.5 text-muted-foreground dark:bg-[#162022]">
-                            For credit cards, credit limit stays fixed while current balance tracks
-                            what you owe. If you only know the available credit from your banking
-                            app, Veyra can derive the balance for you.
+                            For credit cards, current balance tracks what you owe and must stay
+                            between zero and the card’s credit limit. If you only know the available
+                            credit from your banking app, Veyra can derive the balance for you.
                           </p>
                         </div>
                       </section>
+                    ) : null}
+
+                    {accountBalanceGuardrailMessage ? (
+                      <p className="rounded-[0.95rem] border border-amber-200/70 bg-amber-50/80 px-3.5 py-2.5 text-[0.84rem] text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                        {accountBalanceGuardrailMessage}
+                      </p>
                     ) : null}
 
                     {(createAccount.error || updateAccount.error) && (
@@ -1944,7 +1995,7 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
                     </Button>
                     <Button
                       onClick={onSubmit}
-                      disabled={!form.name.trim() || isSubmitting}
+                      disabled={!form.name.trim() || isSubmitting || Boolean(accountBalanceGuardrailMessage)}
                       className="h-10 w-full rounded-[0.95rem] bg-[#17393c] px-6 text-[0.9rem] font-medium text-white hover:bg-[#1d4a4d] disabled:text-white/85 sm:min-w-44 sm:w-auto"
                     >
                       {isSubmitting
@@ -2002,7 +2053,14 @@ export function AccountsWorkspace({ initialQuery = "" }: AccountsWorkspaceProps)
               onClick={onConfirmDelete}
               disabled={isDeleting}
             >
-              {isDeleting ? "Deleting..." : "Delete account"}
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+                  Deleting
+                </>
+              ) : (
+                "Delete account"
+              )}
             </Button>
           </div>
         </DialogContent>

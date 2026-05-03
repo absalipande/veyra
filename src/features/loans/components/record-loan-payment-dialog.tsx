@@ -251,7 +251,7 @@ export function RecordLoanPaymentDialog({
             {recordPayment.isPending ? (
               <>
                 <Loader2 className="mr-1.5 size-4 animate-spin" />
-                Saving...
+                Saving
               </>
             ) : (
               "Confirm payment"
